@@ -1,0 +1,106 @@
+site_name: Chimeric
+site_description: Unified interface for multiple LLM providers with automatic provider detection and seamless switching
+site_url: https://verdenroz.github.io/chimeric/
+repo_name: Verdenroz/chimeric
+repo_url: https://github.com/Verdenroz/chimeric
+edit_uri: edit/main/docs/
+
+# Copyright and author info from pyproject.toml
+copyright: Copyright &copy; 2023 - 2025 Harvey Tseng
+site_author: Harvey Tseng
+
+# Theme configuration
+theme:
+  name: material
+  palette:
+    # Use system preference for light/dark mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.expand
+    - navigation.indexes
+    - navigation.top
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+  icon:
+    repo: fontawesome/brands/github
+
+# Extensions
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - toc:
+      permalink: true
+
+# Plugins
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            show_source: true
+            show_root_heading: true
+            heading_level: 2
+            show_category_heading: true
+            docstring_style: google
+            show_signature_annotations: true
+  - autorefs
+
+# Navigation structure
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Usage:
+    - Getting Started: usage/getting-started.md
+    - Configuration: usage/configuration.md
+  - Providers:
+    - Overview: providers/index.md
+    - OpenAI: providers/openai.md
+    - Anthropic: providers/anthropic.md
+    - Google Gemini: providers/gemini.md
+    - Cohere: providers/cohere.md
+    - AWS: providers/aws.md
+    - Groq: providers/groq.md
+    - Replicate: providers/replicate.md
+    - HuggingFace: providers/huggingface.md
+  - API Reference:
+    - Core: api/core.md
+    - Providers: api/providers.md
+  - Development:
+    - Contributing: development.md
+    - Publishing: publishing.md
+  - Changelog: changelog.md
+
+# Extra settings
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Verdenroz/chimeric
+      name: Chimeric on GitHub
+  version:
+    provider: mike
