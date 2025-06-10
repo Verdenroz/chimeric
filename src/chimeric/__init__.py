@@ -1,24 +1,59 @@
-from .base import BaseClient, CompletionResponse, MediaType, Message, StreamChunk, Tool, ToolType
-from .client import Chimeric
-from .exceptions import ChimericError, ProviderNotFoundError
+from .base import (
+    BaseClient,
+    Capability,
+    CompletionResponse,
+    MediaProcessingResult,
+    MediaType,
+    Message,
+    ModelInfo,
+    ModelSummary,
+    StreamChunk,
+    Tool,
+    ToolType,
+    Usage,
+)
+from .client import Chimeric, Provider
+from .exceptions import (
+    AuthenticationError,
+    ChimericError,
+    ConfigurationError,
+    ModelNotSupportedError,
+    ProviderError,
+    ProviderNotFoundError,
+    RateLimitError,
+    ToolRegistrationError,
+    ValidationError,
+)
+from .tools import ToolManager, ToolParameterMetadata, tool_parameter
 
-# Main exports
 __all__ = [
-    # Main client
-    "Chimeric",
-    # Base classes
+    # Base models
+    "AuthenticationError",
     "BaseClient",
-    # Data types
-    "Message",
-    "Tool",
-    "CompletionResponse",
-    "StreamChunk",
-    # Enums
-    "MediaType",
-    "ToolType",
-    # Exceptions
+    "Capability",
+    "Chimeric",
     "ChimericError",
+    "CompletionResponse",
+    "ConfigurationError",
+    "MediaProcessingResult",
+    "MediaType",
+    "Message",
+    "ModelInfo",
+    "ModelNotSupportedError",
+    "ModelSummary",
+    "Provider",
+    "ProviderError",
     "ProviderNotFoundError",
+    "RateLimitError",
+    "StreamChunk",
+    "Tool",
+    "ToolManager",
+    "ToolParameterMetadata",
+    "ToolRegistrationError",
+    "ToolType",
+    "Usage",
+    "ValidationError",
+    "tool_parameter",
 ]
 
 __version__ = "0.1.0"

@@ -23,7 +23,9 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Typing :: Typed",
 ]
-dependencies = []
+dependencies = [
+    "pydantic>=2.11.5",
+]
 
 
 [project.urls]
