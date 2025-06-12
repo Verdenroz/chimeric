@@ -1,16 +1,23 @@
 from abc import ABC, abstractmethod
-from collections.abc import AsyncGenerator, Awaitable, Generator
+from collections.abc import AsyncGenerator, Generator
 import contextlib
-from typing import Any, cast
+from datetime import datetime
+import inspect
+import time
+from typing import Any, Generic, TypeVar
 
+from .exceptions import (
+    ProviderError,
+    ToolRegistrationError,
+)
 from .types import (
     AgentResponse,
     Capability,
     CompletionResponse,
     FileUploadResponse,
+    Input,
     MediaProcessingResult,
     MediaType,
-    Message,
     ModelInfo,
     ModelSummary,
     StreamChunk,
@@ -25,9 +32,9 @@ __all__ = [
     "Capability",
     "CompletionResponse",
     "FileUploadResponse",
+    "Input",
     "MediaProcessingResult",
     "MediaType",
-    "Message",
     "ModelInfo",
     "ModelSummary",
     "StreamChunk",
@@ -36,44 +43,71 @@ __all__ = [
     "Usage",
 ]
 
+# Generic type for the client instance
+ClientType = TypeVar("ClientType")
 
-class BaseClient(ABC):
+
+class BaseClient(ABC, Generic[ClientType]):
     """Abstract base class for all LLM provider clients.
 
     This defines the unified interface that provider-specific clients must
     implement to ensure consistent behavior across different backends.
+
+    Attributes:
+        api_key: API key for authentication.
+        provider_kwargs: Additional provider-specific options.
+        created_at: Timestamp when the client was instantiated.
     """
 
     def __init__(
         self,
         api_key: str | None = None,
-        base_url: str | None = None,
-        timeout: float | None = None,
-        max_retries: int | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize common client settings.
 
         Args:
             api_key: API key for authentication.
-            base_url: Base endpoint for requests.
-            timeout: Request timeout in seconds.
-            max_retries: Maximum retry count for failed requests.
-            **kwargs: Additional provider-specific options.
+            **kwargs: Additional provider-specific options. Invalid options
+                     for this provider will be automatically filtered out.
         """
         self.api_key = api_key
-        self.base_url = base_url
-        self.timeout = timeout
-        self.max_retries = max_retries
-        self.provider_kwargs = kwargs
+        # Filter kwargs before storing to avoid issues
+        self.provider_kwargs = self._filter_init_kwargs(kwargs)
+        self.created_at = datetime.now()
+        self._request_count = 0
+        self._last_request_time = None
+        self._error_count = 0
 
-        self._client = self._init_client(**kwargs)
-        self._async_client: Any = None
+        # Initialize with filtered kwargs
+        self._client: ClientType = self._init_client(**self.provider_kwargs)
+        self._async_client: ClientType | None = None
         self._capabilities = self._get_capabilities()
 
+    def _filter_init_kwargs(self, kwargs: dict[str, Any]) -> dict[str, Any]:
+        """Filter kwargs for the _init_client method.
+
+        This method inspects the _init_client signature and only passes
+        kwargs that the method can accept.
+
+        Args:
+            kwargs: Original kwargs to filter
+
+        Returns:
+            Filtered kwargs suitable for _init_client
+        """
+        return self._filter_kwargs(self._init_client, kwargs)
+
+    # ====================================================================
+    # Core abstract methods (must be implemented by provider-specific clients)
+    # ====================================================================
+
     @abstractmethod
-    def _init_client(self, **kwargs: Any) -> Any:
+    def _init_client(self, **kwargs: Any) -> ClientType:
         """Initialize the provider-specific SDK or connection.
+
+        Args:
+            **kwargs: Provider-specific initialization options.
 
         Returns:
             An instance of the provider's client.
@@ -90,26 +124,87 @@ class BaseClient(ABC):
         pass
 
     @abstractmethod
+    def list_models(self) -> list[ModelSummary]:
+        """List available models.
+
+        Retrieves a list of models available through this provider.
+
+        Returns:
+            List of ModelSummary objects containing model information.
+        """
+        pass
+
+    # ====================================================================
+    # Chat completion methods
+    # ====================================================================
+
     def chat_completion(
         self,
-        messages: list[Message],
+        messages: Input,
         model: str,
-        temperature: float | None = None,
-        max_tokens: int | None = None,
-        stream: bool = False,
-        tools: list[Tool] | None = None,
         **kwargs: Any,
     ) -> CompletionResponse | Generator[StreamChunk, None, None]:
         """Synchronously generate a chat completion.
 
         Args:
-            messages: Conversation history as Message objects.
+            messages: Input for the completion - can be a string prompt, list of messages,
+                  or dictionary of provider-specific parameters.
             model: Model identifier to use.
-            temperature: Sampling temperature.
-            max_tokens: Max tokens to generate.
-            stream: Whether to emit partial results.
-            tools: Tools available for function-calling.
-            **kwargs: Provider-specific overrides.
+            **kwargs: Provider-specific parameters that will be passed directly to the underlying SDK.
+
+        Returns:
+            Either a full CompletionResponse or a stream of StreamChunks.
+        """
+        try:
+            self._request_count += 1
+            self._last_request_time = time.time()
+            filtered_kwargs = self._filter_kwargs(self._chat_completion_impl, kwargs)
+            return self._chat_completion_impl(messages, model, **filtered_kwargs)
+        except Exception:
+            self._error_count += 1
+            raise
+
+    async def achat_completion(
+        self,
+        messages: Input,
+        model: str,
+        **kwargs: Any,
+    ) -> CompletionResponse | AsyncGenerator[StreamChunk, None]:
+        """Asynchronously generate a chat completion.
+
+        Args:
+            messages: Input for the completion - can be a string prompt, list of messages,
+                  or dictionary of provider-specific parameters.
+            model: Model identifier to use.
+            **kwargs: Provider-specific parameters that will be passed directly to the underlying SDK.
+
+        Returns:
+            Either a full CompletionResponse or a stream of StreamChunks.
+        """
+        try:
+            self._request_count += 1
+            self._last_request_time = time.time()
+            filtered_kwargs = self._filter_kwargs(self._achat_completion_impl, kwargs)
+            return await self._achat_completion_impl(messages, model, **filtered_kwargs)
+        except Exception:
+            self._error_count += 1
+            raise
+
+    @abstractmethod
+    def _chat_completion_impl(
+        self,
+        messages: Input,
+        model: str,
+        **kwargs: Any,
+    ) -> CompletionResponse | Generator[StreamChunk, None, None]:
+        """Provider-specific implementation of synchronous chat completion.
+
+        This method should be implemented by provider-specific subclasses.
+
+        Args:
+            messages: Input for the completion.
+            model: Model identifier to use.
+            **kwargs: Provider-specific parameters.
 
         Returns:
             Either a full CompletionResponse or a stream of StreamChunks.
@@ -117,35 +212,57 @@ class BaseClient(ABC):
         pass
 
     @abstractmethod
-    async def achat_completion(
+    async def _achat_completion_impl(
         self,
-        messages: list[Message],
+        messages: Input,
         model: str,
-        temperature: float | None = None,
-        max_tokens: int | None = None,
-        stream: bool = False,
-        tools: list[Tool] | None = None,
         **kwargs: Any,
     ) -> CompletionResponse | AsyncGenerator[StreamChunk, None]:
-        """Asynchronously generate a chat completion.
+        """Provider-specific implementation of asynchronous chat completion.
+
+        This method should be implemented by provider-specific subclasses.
 
         Args:
-            messages: Conversation history as Message objects.
+            messages: Input for the completion.
             model: Model identifier to use.
-            temperature: Sampling temperature.
-            max_tokens: Max tokens to generate.
-            stream: Whether to emit partial results.
-            tools: Tools available for function-calling.
-            **kwargs: Provider-specific overrides.
+            **kwargs: Provider-specific parameters.
 
         Returns:
             Either a full CompletionResponse or a stream of StreamChunks.
         """
         pass
 
-    def supports_multimodal(self) -> bool:
-        """Return True if image/audio/video inputs are supported."""
-        return self._capabilities.multimodal
+    # ====================================================================
+    # Model information methods
+    # ====================================================================
+
+    def get_model_info(self, model_id: str) -> ModelInfo:
+        """Get information about a specific model.
+
+        Retrieves detailed information about a specific model.
+
+        Args:
+            model_id: ID or name of the model to get information for.
+
+        Returns:
+            ModelInfo object containing detailed model information.
+
+        Raises:
+            ValueError: If model is not found.
+        """
+        models = self.list_models()
+        for model in models:
+            if model.id == model_id or model.name == model_id:
+                return ModelInfo(
+                    id=model.id,
+                    name=model.name,
+                    description=model.description,
+                )
+        raise ValueError(f"Model {model_id} not found")
+
+    # ====================================================================
+    # Multimodal methods
+    # ====================================================================
 
     def process_media(
         self, media_type: MediaType, content: bytes | str, **kwargs: Any
@@ -165,7 +282,14 @@ class BaseClient(ABC):
         """
         if not self.supports_multimodal():
             raise NotImplementedError("Multimodal not supported.")
-        return self._process_media(media_type, content, **kwargs)
+
+        try:
+            self._request_count += 1
+            self._last_request_time = time.time()
+            return self._process_media(media_type, content, **kwargs)
+        except Exception:
+            self._error_count += 1
+            raise
 
     def _process_media(
         self, media_type: MediaType, content: bytes | str, **kwargs: Any
@@ -175,26 +299,21 @@ class BaseClient(ABC):
         Provider-specific implementation of media processing.
 
         Args:
-            media_type: Type of media being processed
-            content: Media content as bytes or string
-            **kwargs: Additional provider-specific arguments
+            media_type: Type of media being processed.
+            content: Media content as bytes or string.
+            **kwargs: Additional provider-specific arguments.
 
         Returns:
-            MediaProcessingResult with provider-specific media representation
+            MediaProcessingResult with provider-specific media representation.
 
         Raises:
-            NotImplementedError: By default, as this needs to be implemented by subclasses
+            NotImplementedError: By default, as this needs to be implemented by subclasses.
         """
         raise NotImplementedError("Multimodal processing not implemented")
 
-    # Tool/Function calling methods
-    def supports_tools(self) -> bool:
-        """Check if the provider supports tool/function calling.
-
-        Returns:
-            True if tool/function calling is supported, False otherwise
-        """
-        return self._capabilities.tools
+    # ====================================================================
+    # Tool and function calling methods
+    # ====================================================================
 
     def register_tool(self, tool: Tool) -> None:
         """Register a tool for use in conversations.
@@ -202,14 +321,22 @@ class BaseClient(ABC):
         Makes a tool available for use in later conversations.
 
         Args:
-            tool: Tool definition to register
+            tool: Tool definition to register.
 
         Raises:
-            NotImplementedError: If provider does not support tools
+            NotImplementedError: If provider does not support tools.
+            ToolRegistrationError: If the tool cannot be registered.
         """
         if not self.supports_tools():
             raise NotImplementedError("Provider does not support tools")
-        self._register_tool(tool)
+
+        try:
+            self._request_count += 1
+            self._last_request_time = time.time()
+            self._register_tool(tool)
+        except Exception as e:
+            self._error_count += 1
+            raise ToolRegistrationError(tool.name, f"Provider error: {e!s}") from e
 
     def _register_tool(self, tool: Tool) -> None:
         """Override in subclasses that support tools.
@@ -217,21 +344,16 @@ class BaseClient(ABC):
         Provider-specific implementation of tool registration.
 
         Args:
-            tool: Tool definition to register
+            tool: Tool definition to register.
 
         Raises:
-            NotImplementedError: By default, as this needs to be implemented by subclasses
+            NotImplementedError: By default, as this needs to be implemented by subclasses.
         """
         raise NotImplementedError("Tool registration not implemented")
 
-    # Agent creation methods
-    def supports_agents(self) -> bool:
-        """Check if the provider supports agent creation.
-
-        Returns:
-            True if agent creation is supported, False otherwise
-        """
-        return self._capabilities.agents
+    # ====================================================================
+    # Agent methods
+    # ====================================================================
 
     def create_agent(
         self, name: str, instructions: str, tools: list[Tool] | None = None, **kwargs: Any
@@ -241,20 +363,34 @@ class BaseClient(ABC):
         Creates a persistent agent with specific instructions and capabilities.
 
         Args:
-            name: Name of the agent
-            instructions: Instructions for the agent
-            tools: Optional list of tools available to the agent
-            **kwargs: Additional provider-specific arguments
+            name: Name of the agent.
+            instructions: Instructions for the agent.
+            tools: Optional list of tools available to the agent.
+            **kwargs: Additional provider-specific arguments.
 
         Returns:
-            AgentResponse with provider-specific agent representation
+            AgentResponse with provider-specific agent representation.
 
         Raises:
-            NotImplementedError: If provider does not support agents
+            NotImplementedError: If provider does not support agents.
+            ProviderError: If there is an error creating the agent.
         """
         if not self.supports_agents():
             raise NotImplementedError("Provider does not support agents")
-        return self._create_agent(name, instructions, tools, **kwargs)
+
+        try:
+            self._request_count += 1
+            self._last_request_time = time.time()
+            return self._create_agent(name, instructions, tools, **kwargs)
+        except Exception as e:
+            self._error_count += 1
+            if hasattr(self, "_provider_name"):
+                provider_name = self._provider_name
+            else:
+                provider_name = self.__class__.__name__
+            raise ProviderError(
+                provider=provider_name, response_text=f"Failed to create agent: {e!s}"
+            ) from e
 
     def _create_agent(
         self, name: str, instructions: str, tools: list[Tool] | None = None, **kwargs: Any
@@ -264,27 +400,22 @@ class BaseClient(ABC):
         Provider-specific implementation of agent creation.
 
         Args:
-            name: Name of the agent
-            instructions: Instructions for the agent
-            tools: Optional list of tools available to the agent
-            **kwargs: Additional provider-specific arguments
+            name: Name of the agent.
+            instructions: Instructions for the agent.
+            tools: Optional list of tools available to the agent.
+            **kwargs: Additional provider-specific arguments.
 
         Returns:
-            AgentResponse with provider-specific agent representation
+            AgentResponse with provider-specific agent representation.
 
         Raises:
-            NotImplementedError: By default, as this needs to be implemented by subclasses
+            NotImplementedError: By default, as this needs to be implemented by subclasses.
         """
         raise NotImplementedError("Agent creation not implemented")
 
-    # File/Document processing
-    def supports_files(self) -> bool:
-        """Check if the provider supports file uploads.
-
-        Returns:
-            True if file uploads are supported, False otherwise
-        """
-        return self._capabilities.files
+    # ====================================================================
+    # File/Document processing methods
+    # ====================================================================
 
     def upload_file(self, file_path: str, purpose: str = "assistants") -> FileUploadResponse:
         """Upload a file to the provider.
@@ -292,18 +423,34 @@ class BaseClient(ABC):
         Uploads a file to the provider's storage for use in conversations.
 
         Args:
-            file_path: Path to the file to upload
-            purpose: Purpose of the file upload (e.g., "assistants", "fine-tuning")
+            file_path: Path to the file to upload.
+            purpose: Purpose of the file upload (e.g., "assistants", "fine-tuning").
 
         Returns:
-            FileUploadResponse with provider-specific file information
+            FileUploadResponse with provider-specific file information.
 
         Raises:
-            NotImplementedError: If provider does not support file uploads
+            NotImplementedError: If provider does not support file uploads.
+            ProviderError: If there is an error uploading the file.
         """
         if not self.supports_files():
             raise NotImplementedError("Provider does not support file uploads")
-        return self._upload_file(file_path, purpose)
+
+        try:
+            self._request_count += 1
+            self._last_request_time = time.time()
+            return self._upload_file(file_path, purpose)
+        except Exception as e:
+            self._error_count += 1
+            if hasattr(self, "_provider_name"):
+                provider_name = self._provider_name
+            else:
+                provider_name = self.__class__.__name__
+            raise ProviderError(
+                provider=provider_name,
+                response_text=f"Failed to upload file '{file_path}': {e!s}",
+                endpoint="file_upload",
+            ) from e
 
     def _upload_file(self, file_path: str, purpose: str) -> FileUploadResponse:
         """Override in subclasses that support file uploads.
@@ -311,67 +458,168 @@ class BaseClient(ABC):
         Provider-specific implementation of file upload.
 
         Args:
-            file_path: Path to the file to upload
-            purpose: Purpose of the file upload
+            file_path: Path to the file to upload.
+            purpose: Purpose of the file upload.
 
         Returns:
-            FileUploadResponse with provider-specific file information
+            FileUploadResponse with provider-specific file information.
 
         Raises:
-            NotImplementedError: By default, as this needs to be implemented by subclasses
+            NotImplementedError: By default, as this needs to be implemented by subclasses.
         """
         raise NotImplementedError("File upload not implemented")
 
-    # Model listing and info
-    @abstractmethod
-    def list_models(self) -> list[ModelSummary]:
-        """List available models.
+    # ====================================================================
+    # Capability check methods
+    # ====================================================================
 
-        Retrieves a list of models available through this provider.
+    def supports_multimodal(self) -> bool:
+        """Check if the provider supports image/audio/video inputs.
 
         Returns:
-            List of ModelSummary objects containing model information
+            True if multimodal inputs are supported, False otherwise.
         """
-        pass
+        return self._capabilities.multimodal
 
-    def get_model_info(self, model_id: str) -> ModelInfo:
-        """Get information about a specific model.
+    def supports_tools(self) -> bool:
+        """Check if the provider supports tool/function calling.
 
-        Retrieves detailed information about a specific model.
+        Returns:
+            True if tool/function calling is supported, False otherwise.
+        """
+        return self._capabilities.tools
+
+    def supports_agents(self) -> bool:
+        """Check if the provider supports agent creation.
+
+        Returns:
+            True if agent creation is supported, False otherwise.
+        """
+        return self._capabilities.agents
+
+    def supports_files(self) -> bool:
+        """Check if the provider supports file uploads.
+
+        Returns:
+            True if file uploads are supported, False otherwise.
+        """
+        return self._capabilities.files
+
+    def supports_streaming(self) -> bool:
+        """Check if the provider supports streaming responses.
+
+        Returns:
+            True if streaming responses are supported, False otherwise.
+        """
+        return self._capabilities.streaming
+
+    # ====================================================================
+    # Utility methods and properties
+    # ====================================================================
+
+    @staticmethod
+    def _filter_kwargs(func: Any, kwargs: dict[str, Any]) -> dict[str, Any]:
+        """Filter keyword arguments to only include those valid for a specific function.
+
+        This helper ensures only relevant arguments are passed to the provider SDK methods.
+        It inspects the function signature and only passes kwargs that the function can accept.
 
         Args:
-            model_id: ID or name of the model to get information for
+            func: The function whose signature will be used to filter kwargs.
+            kwargs: Original keyword arguments to filter.
 
         Returns:
-            ModelInfo object containing detailed model information
-
-        Raises:
-            ValueError: If model is not found
+            A filtered dictionary containing only the kwargs that are valid for the specified function.
         """
-        models = self.list_models()
-        for model in models:
-            if model.id == model_id or model.name == model_id:
-                return ModelInfo(
-                    id=model.id,
-                    name=model.name,
-                    description=model.description,
-                )
-        raise ValueError(f"Model {model_id} not found")
+        try:
+            sig = inspect.signature(func)
+            # Create a set of parameter names that aren't positional-only
+            param_names = {
+                name
+                for name, param in sig.parameters.items()
+                if param.kind not in (inspect.Parameter.POSITIONAL_ONLY,)
+            }
 
-    # Utility methods
-    def get_capabilities(self) -> Capability:
-        """Return capabilities supported by this provider.
+            # Include **kwargs-style parameters by checking for VAR_KEYWORD
+            has_var_kwargs = any(
+                param.kind == inspect.Parameter.VAR_KEYWORD for param in sig.parameters.values()
+            )
+
+            if has_var_kwargs:
+                # Function accepts arbitrary kwargs, so return all kwargs
+                return kwargs.copy()
+
+            # Filter kwargs to only include those in the function signature
+            return {k: v for k, v in kwargs.items() if k in param_names}
+        except (ValueError, TypeError, AttributeError):
+            # If we can't inspect the signature, return empty dict
+            return {}
+
+    @property
+    def capabilities(self) -> Capability:
+        """Get supported capabilities and features of the provider.
 
         Returns:
-            Capability object with supported features
+            Capability object with supported features.
         """
         return self._capabilities
 
-    def __enter__(self) -> "BaseClient":
+    @property
+    def client(self) -> ClientType:
+        """Get the underlying provider client instance.
+
+        This is the actual client used to make API requests.
+
+        Returns:
+            The provider-specific client instance.
+        """
+        return self._client
+
+    @property
+    def request_count(self) -> int:
+        """Get the number of API requests made by this client instance.
+
+        Returns:
+            The total number of API requests made through this client.
+        """
+        return self._request_count
+
+    @property
+    def error_count(self) -> int:
+        """Get the number of errors encountered by this client instance.
+
+        Returns:
+            The total number of errors encountered during API requests.
+        """
+        return self._error_count
+
+    @property
+    def last_request_time(self) -> float | None:
+        """Get the timestamp of the last API request made.
+
+        Returns:
+            Unix timestamp of the last request, or None if no requests made.
+        """
+        return self._last_request_time
+
+    @property
+    def client_age(self) -> float:
+        """Get the age of this client in seconds.
+
+        Returns:
+            Number of seconds since this client was instantiated.
+        """
+        return (datetime.now() - self.created_at).total_seconds()
+
+    # ====================================================================
+    # Context manager methods
+    # ====================================================================
+
+    def __enter__(self) -> "BaseClient[ClientType]":
         """Context manager entry.
 
         Returns:
-            Self for use in context manager
+            Self for use in context manager.
         """
         return self
 
@@ -381,18 +629,18 @@ class BaseClient(ABC):
         Ensures proper cleanup of resources when exiting a context manager.
 
         Args:
-            exc_type: Exception type if an exception was raised
-            exc_val: Exception value if an exception was raised
-            exc_tb: Exception traceback if an exception was raised
+            exc_type: Exception type if an exception was raised.
+            exc_val: Exception value if an exception was raised.
+            exc_tb: Exception traceback if an exception was raised.
         """
         if hasattr(self._client, "close"):
             self._client.close()
 
-    async def __aenter__(self) -> "BaseClient":
+    async def __aenter__(self) -> "BaseClient[ClientType]":
         """Async context manager entry.
 
         Returns:
-            Self for use in async context manager
+            Self for use in async context manager.
         """
         return self
 
@@ -402,33 +650,53 @@ class BaseClient(ABC):
         Ensures proper cleanup of async resources when exiting an async context manager.
 
         Args:
-            exc_type: Exception type if an exception was raised
-            exc_val: Exception value if an exception was raised
-            exc_tb: Exception traceback if an exception was raised
+            exc_type: Exception type if an exception was raised.
+            exc_val: Exception value if an exception was raised.
+            exc_tb: Exception traceback if an exception was raised.
         """
-        if self._async_client is None:
-            return
+        if self._async_client is not None:
+            # Try async close if available
+            aclose_method = getattr(self._async_client, "aclose", None)
+            if callable(aclose_method):
+                with contextlib.suppress(Exception):
+                    result = aclose_method()
+                    # Check if the result is a coroutine object that can be awaited
+                    if inspect.iscoroutine(result):
+                        await result
 
-        # Try synchronous close first if available
-        if hasattr(self._async_client, "close"):
-            with contextlib.suppress(Exception):
-                self._async_client.close()
-            return
+            # Fallback to synchronous close if async close is not available
+            close_method = getattr(self._async_client, "close", None)
+            if callable(close_method):
+                with contextlib.suppress(Exception):
+                    close_method()
 
-        # Try async close if available
-        if not hasattr(self._async_client, "aclose"):
-            return
-
-        aclose_method = self._async_client.aclose
-        if not callable(aclose_method):
-            return
-
-        with contextlib.suppress(Exception):
-            result = aclose_method()
-            if result is not None:
-                awaitable = cast("Awaitable[None]", result)
-                await awaitable
+    # ====================================================================
+    # String representation
+    # ====================================================================
 
     def __repr__(self) -> str:
-        """Return a string representation of the client."""
-        return f"{self.__class__.__name__}(capabilities={self._capabilities})"
+        """Return a string representation of the client.
+
+        Returns:
+            A string with the class name and key properties.
+        """
+        return (
+            f"{self.__class__.__name__}("
+            f"capabilities={self._capabilities}, "
+            f"requests={self._request_count}, "
+            f"errors={self._error_count})"
+        )
+
+    def __str__(self) -> str:
+        """Return a human-readable string representation of the client.
+
+        Returns:
+            A formatted string with client details.
+        """
+        return (
+            f"{self.__class__.__name__} Client\n"
+            f"- Created: {self.created_at}\n"
+            f"- Requests: {self._request_count}\n"
+            f"- Errors: {self._error_count}\n"
+            f"- Capabilities: {self._capabilities}"
+        )

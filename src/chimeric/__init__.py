@@ -1,18 +1,5 @@
-from .base import (
-    BaseClient,
-    Capability,
-    CompletionResponse,
-    MediaProcessingResult,
-    MediaType,
-    Message,
-    ModelInfo,
-    ModelSummary,
-    StreamChunk,
-    Tool,
-    ToolType,
-    Usage,
-)
-from .client import Chimeric, Provider
+from .base import BaseClient
+from .chimeric import Chimeric
 from .exceptions import (
     AuthenticationError,
     ChimericError,
@@ -24,10 +11,37 @@ from .exceptions import (
     ToolRegistrationError,
     ValidationError,
 )
-from .tools import ToolManager, ToolParameterMetadata, tool_parameter
+from .tools import ToolManager, tool_parameter
+from .types import (
+    AgentResponse,
+    Capability,
+    CompletionResponse,
+    FileUploadResponse,
+    Input,
+    JSONSchemaArray,
+    JSONSchemaBoolean,
+    JSONSchemaInteger,
+    JSONSchemaNumber,
+    JSONSchemaObject,
+    JSONSchemaString,
+    JSONSchemaType,
+    MediaProcessingResult,
+    MediaType,
+    Metadata,
+    ModelCapabilities,
+    ModelInfo,
+    ModelSummary,
+    Provider,
+    StreamChunk,
+    Tool,
+    ToolParameterMetadata,
+    ToolParameters,
+    ToolType,
+    Usage,
+)
 
 __all__ = [
-    # Base models
+    "AgentResponse",
     "AuthenticationError",
     "BaseClient",
     "Capability",
@@ -35,9 +49,19 @@ __all__ = [
     "ChimericError",
     "CompletionResponse",
     "ConfigurationError",
+    "FileUploadResponse",
+    "Input",
+    "JSONSchemaArray",
+    "JSONSchemaBoolean",
+    "JSONSchemaInteger",
+    "JSONSchemaNumber",
+    "JSONSchemaObject",
+    "JSONSchemaString",
+    "JSONSchemaType",
     "MediaProcessingResult",
     "MediaType",
-    "Message",
+    "Metadata",
+    "ModelCapabilities",
     "ModelInfo",
     "ModelNotSupportedError",
     "ModelSummary",
@@ -49,6 +73,7 @@ __all__ = [
     "Tool",
     "ToolManager",
     "ToolParameterMetadata",
+    "ToolParameters",
     "ToolRegistrationError",
     "ToolType",
     "Usage",

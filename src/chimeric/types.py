@@ -1,15 +1,16 @@
 from collections.abc import Callable
 from enum import Enum
-from typing import Any, TypedDict
+from typing import Any, TypeAlias
 
 from pydantic import BaseModel, ConfigDict, Field
+from typing_extensions import TypedDict
 
 __all__ = [
     "AgentResponse",
     "Capability",
     "CompletionResponse",
-    "FileMetadata",
     "FileUploadResponse",
+    "Input",
     "JSONSchemaArray",
     "JSONSchemaBoolean",
     "JSONSchemaInteger",
@@ -19,16 +20,11 @@ __all__ = [
     "JSONSchemaType",
     "MediaProcessingResult",
     "MediaType",
-    "Message",
-    "MessageDict",
-    "MessageMetadata",
+    "Metadata",
     "ModelCapabilities",
     "ModelInfo",
-    "ModelMetadata",
     "ModelSummary",
     "Provider",
-    "ProviderConfig",
-    "ResponseMetadata",
     "StreamChunk",
     "Tool",
     "ToolParameterMetadata",
@@ -37,35 +33,74 @@ __all__ = [
     "Usage",
 ]
 
+# Generic type aliases
+Input: TypeAlias = str | list[Any] | dict[str, Any]
+Metadata: TypeAlias = dict[str, Any]
 
-class MessageMetadata(TypedDict, total=False):
-    """Metadata associated with a message.
 
-    Attributes:
-        timestamp: Epoch timestamp (seconds since epoch) when this message was sent.
-        user_id: Identifier for the user who sent the message.
-        session_id: Unique identifier for the ongoing conversation session.
-        request_id: Identifier for the specific LLM provider request, if available.
+###################
+# PROVIDER TYPES
+###################
+
+
+class Provider(Enum):
+    """Supported LLM providers.
+
+    Enum values correspond to the string identifiers used in configuration.
     """
 
-    timestamp: int
-    user_id: str
-    session_id: str
-    request_id: str
+    OPENAI = "openai"
+    ANTHROPIC = "anthropic"
+    GOOGLE = "google"
+    CEREBRAS = "cerebras"
+    COHERE = "cohere"
+    GROQ = "groq"
+    HUGGINGFACE = "huggingface"
+    REPLICATE = "replicate"
 
 
-class ToolParameters(TypedDict, total=False):
-    """JSON Schema for tool/function parameters.
+###################
+# MEDIA TYPES
+###################
+
+
+class MediaType(Enum):
+    """Types of media content supported in multimodal contexts.
 
     Attributes:
-        type: The JSON Schema type, typically "object" for tool parameters.
-        properties: A dictionary mapping parameter names to their JSON Schema definitions.
-        required: An optional list of parameter names that are mandatory for the tool's execution.
+        TEXT: Plain text content.
+        IMAGE: Image data in various formats.
+        AUDIO: Audio recordings and sound data.
+        VIDEO: Video recordings and motion picture data.
+        DOCUMENT: Formatted documents like PDFs or Word files.
     """
 
-    type: str
-    properties: dict[str, Any]
-    required: list[str]
+    TEXT = "text"
+    IMAGE = "image"
+    AUDIO = "audio"
+    VIDEO = "video"
+    DOCUMENT = "document"
+
+
+class MediaProcessingResult(BaseModel):
+    """Outcome of preparing media for multimodal inputs.
+
+    Attributes:
+        media_type: The `MediaType` of the content that was processed (e.g., IMAGE, AUDIO).
+        content_id: A unique identifier for the processed media content. This could be a
+                    file ID, a data URI, or another reference usable by the LLM.
+        metadata: Optional dictionary containing additional metadata about the
+                  processed media, such as dimensions for an image or duration for audio.
+    """
+
+    media_type: MediaType
+    content_id: str
+    metadata: dict[str, Any] | None = None
+
+
+###################
+# MODEL TYPES
+###################
 
 
 class ModelCapabilities(TypedDict, total=False):
@@ -84,113 +119,209 @@ class ModelCapabilities(TypedDict, total=False):
     tools: bool
 
 
-class ResponseMetadata(TypedDict, total=False):
-    """Metadata returned with each chat completion.
+class Capability(BaseModel):
+    """Features supported by an LLM provider or a specific model.
 
     Attributes:
-        finish_reason: The reason the model stopped generating output (e.g., "stop", "length").
-        model_name: Identifier of the model that processed the request.
-        latency_ms: Round-trip time for the request in milliseconds.
-        token_count: Number of tokens processed during the request (may include prompt and completion).
-        request_id: The provider's unique identifier for this specific request.
+        multimodal: Indicates if multiple input/output modalities (e.g., text, images) are supported.
+        streaming: Indicates if responses can be streamed token-by-token.
+        tools: Indicates if function/tool calling capabilities are supported.
+        agents: Indicates if the provider supports autonomous agent functionalities.
+        files: Indicates if file uploading, processing, and referencing are supported.
     """
 
-    finish_reason: str
-    model_name: str
-    latency_ms: float
-    token_count: int
-    request_id: str
+    model_config = ConfigDict(frozen=True)
+
+    multimodal: bool = False
+    streaming: bool = False
+    tools: bool = False
+    agents: bool = False
+    files: bool = False
 
 
-class FileMetadata(TypedDict, total=False):
-    """Metadata for uploaded files.
+class ModelInfo(BaseModel):
+    """Detailed metadata for a specific model.
 
     Attributes:
-        content_type: MIME type of the file (e.g., "image/jpeg", "application/pdf").
-        created_by: Identifier of the user or system entity that uploaded the file.
-        purpose: The intended use of the file (e.g., "assistants", "vision").
-        status: Current status of the file (e.g., "uploaded", "processing", "ready").
-        usage_permissions: List of allowed operations or access levels for the file.
+        id: Unique identifier for the model (e.g., "gpt-4", "claude-3-opus").
+        name: Human-readable name of the model.
+        description: Optional longer description of the model's capabilities, use cases, or characteristics.
+        max_tokens: Optional integer representing the maximum context window size (input + output tokens).
+        supported_media_types: Optional list of `MediaType` enums indicating the types of media the model can process.
+        capabilities: Optional `ModelCapabilities` object detailing features like streaming, vision, etc.
     """
 
-    content_type: str
-    created_by: str
-    purpose: str
-    status: str
-    usage_permissions: list[str]
+    model_config = ConfigDict(frozen=True)
+
+    id: str
+    name: str
+    description: str | None = None
+    max_tokens: int | None = None
+    supported_media_types: list[MediaType] | None = None
+    capabilities: ModelCapabilities | None = None
 
 
-class ModelMetadata(TypedDict, total=False):
-    """Extended model information.
+class ModelSummary(BaseModel):
+    """Concise summary of a model's attributes, often from a model listing operation.
 
     Attributes:
-        version: Specific version identifier of the model.
-        created_at: Epoch timestamp (seconds since epoch) when this model entry was created/registered.
-        updated_at: Epoch timestamp (seconds since epoch) when this model entry was last updated.
-        owner: The entity or organization that owns or provides the model.
-        pricing: A dictionary detailing pricing information, e.g., per token or per request.
-        context_window: The maximum number of tokens the model can process in a single context.
-        training_data: A description of the data used to train the model, if available.
-        parameters: The number of parameters in the model, often indicating its size.
+        id: Unique identifier for the model (e.g., "gpt-4", "claude-2").
+        name: Human-readable name of the model.
+        description: Optional brief description of the model's capabilities or purpose.
+        owned_by: Optional identifier of the entity that owns or provides the model (e.g., "openai", "anthropic").
+        created_at: Optional epoch timestamp (seconds since epoch) indicating when the model entry was created or made available.
+        metadata: Optional dictionary for any other relevant model metadata not covered by specific fields.
+        provider: Optional name or identifier of the LLM provider offering this model.
     """
 
-    version: str
-    created_at: int
-    updated_at: int
-    owner: str
-    pricing: dict[str, float]
-    context_window: int
-    training_data: str
-    parameters: int
+    id: str
+    name: str
+    description: str | None = None
+    owned_by: str | None = None
+    created_at: int | None = None
+    metadata: dict[str, Any] | None = None
+    provider: str | None = None
+
+    def __str__(self) -> str:
+        """Return a string representation of the model summary."""
+        return f"{self.name} ({self.provider})"
 
 
-class Provider(Enum):
-    """Supported LLM providers.
-
-    Enum values correspond to the string identifiers used in configuration.
-    """
-
-    OPENAI = "openai"
-    ANTHROPIC = "anthropic"
-    GOOGLE = "google"
-    CEREBRAS = "cerebras"
-    COHERE = "cohere"
-    GROQ = "groq"
-    HUGGINGFACE = "huggingface"
-    REPLICATE = "replicate"
-    AWS = "aws"
+###################
+# RESPONSE TYPES
+###################
 
 
-class ProviderConfig(TypedDict, total=False):
-    """Configuration options for each provider.
+class Usage(BaseModel):
+    """Token-usage summary for a completion request.
 
     Attributes:
-        api_key: Authentication key for accessing the provider's API.
-        base_url: Custom API endpoint URL, overriding the provider's default.
-        organization: Identifier for a specific organization, used by some providers for billing or access.
-        aws_access_key_id: AWS access key ID for authentication with AWS services (e.g., Bedrock).
-        aws_secret_access_key: AWS secret access key for authentication with AWS services.
-        region: AWS region or similar geographic specifier for the service endpoint.
+        prompt_tokens: Number of tokens in the input prompt.
+        completion_tokens: Number of tokens generated in the response by the model.
+        total_tokens: Total tokens processed, typically the sum of `prompt_tokens` and `completion_tokens`.
     """
 
-    api_key: str
-    base_url: str
-    organization: str
-    aws_access_key_id: str
-    aws_secret_access_key: str
-    region: str
+    model_config = ConfigDict(frozen=True)
+
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
 
 
-class MessageDict(TypedDict):
-    """Simple dict form of a chat message.
+class CompletionResponse(BaseModel):
+    """Standardized response from a chat completion call.
 
     Attributes:
-        role: The role of the entity that generated the message (e.g., "user", "assistant", "system", "tool").
-        content: The textual content of the message.
+        content: The primary response content, typically text generated by the LLM.
+        usage: Optional `Usage` object detailing token usage statistics for the completion.
+        model: Optional string identifier of the model that generated the response.
+        finish_reason: Optional string indicating why the model stopped generating tokens (e.g., "stop", "length", "tool_calls").
+        metadata: Optional `Metadata` containing additional provider-specific information about the response.
     """
 
-    role: str
     content: str
+    usage: Usage | None = None
+    model: str | None = None
+    finish_reason: str | None = None
+    metadata: Metadata | None = None
+
+    def __str__(self) -> str:
+        """Return a string representation of the completion response."""
+        content_preview = self.content[:100] + "..." if len(self.content) > 100 else self.content
+        return f"CompletionResponse(content='{content_preview}', model={self.model})"
+
+
+class StreamChunk(BaseModel):
+    """Single chunk in a streaming chat response.
+
+    Attributes:
+        content: Text content of the current chunk. For some providers or configurations,
+                 this might represent the full accumulated message up to this chunk.
+        delta: Optional incremental text change in this chunk. If present, this is typically
+               the new piece of text to append to the stream.
+        finish_reason: Optional string indicating why the model stopped generating tokens,
+                       usually sent with the final chunk of the stream.
+        metadata: Optional `Metadata,` which may be sent with any chunk, or exclusively
+                  with the final chunk, containing details like token counts or request IDs.
+    """
+
+    content: str
+    delta: str | None = None
+    finish_reason: str | None = None
+    metadata: Metadata | None = None
+
+
+class FileUploadResponse(BaseModel):
+    """Information returned after uploading a file to a provider.
+
+    Attributes:
+        file_id: Unique identifier assigned to the uploaded file by the provider.
+        filename: Original name of the file that was uploaded.
+        bytes: Size of the uploaded file in bytes.
+        purpose: The intended use of the file, as specified during upload (e.g., "assistants", "vision").
+        created_at: Optional epoch timestamp (seconds since epoch) indicating when the file was uploaded/created.
+        status: Optional current status of the file (e.g., "uploaded", "processing", "ready", "error").
+        metadata: Optional dictionary for any additional provider-specific metadata about the file.
+    """
+
+    file_id: str
+    filename: str
+    bytes: int
+    purpose: str
+    created_at: int | None = None
+    status: str | None = None
+    metadata: dict[str, Any] | None = None
+
+
+class AgentResponse(BaseModel):
+    """Information returned when creating or retrieving a persistent agent.
+
+    Attributes:
+        agent_id: Unique identifier for the agent.
+        name: Name assigned to the agent.
+        created_at: Optional epoch timestamp (seconds since epoch) indicating when the agent was created.
+        metadata: Optional dictionary for any additional provider-specific metadata about the agent.
+    """
+
+    agent_id: str
+    name: str
+    created_at: int | None = None
+    metadata: Metadata | None = None
+
+
+###################
+# TOOL TYPES
+###################
+
+
+class ToolType(Enum):
+    """Kinds of external tools that can be invoked.
+
+    Attributes:
+        FUNCTION: Simple function call with defined parameters.
+        CODE_INTERPRETER: Tool for executing code snippets.
+        FILE_SEARCH: Tool for searching through files/documents.
+        WEB_SEARCH: Tool for retrieving information from the web.
+    """
+
+    FUNCTION = "function"
+    CODE_INTERPRETER = "code_interpreter"
+    FILE_SEARCH = "file_search"
+    WEB_SEARCH = "web_search"
+
+
+class ToolParameters(TypedDict, total=False):
+    """JSON Schema for tool/function parameters.
+
+    Attributes:
+        type: The JSON Schema type, typically "object" for tool parameters.
+        properties: A dictionary mapping parameter names to their JSON Schema definitions.
+        required: An optional list of parameter names that are mandatory for the tool's execution.
+    """
+
+    type: str
+    properties: dict[str, Any]
+    required: list[str]
 
 
 class ToolParameterMetadata(TypedDict, total=False):
@@ -207,6 +338,33 @@ class ToolParameterMetadata(TypedDict, total=False):
     required: bool
     enum: list[Any]
     format: str
+
+
+class Tool(BaseModel):
+    """Definition for a callable tool/function exposed to models.
+
+    Attributes:
+        type: The `ToolType` of the tool (e.g., FUNCTION, CODE_INTERPRETER).
+        name: Unique identifier for this tool, used by the model to specify which tool to call.
+        description: Human-readable explanation of what the tool does, its purpose, and when to use it.
+        parameters: Optional `ToolParameters` (JSON Schema) defining the arguments the tool accepts.
+        function: Optional Python callable that implements the tool's functionality. Not serialized.
+    """
+
+    type: ToolType
+    name: str
+    description: str
+    parameters: ToolParameters | None = None
+    function: Callable[..., Any] | None = Field(default=None, exclude=True)
+
+    def __str__(self) -> str:
+        """Return a string representation of the tool."""
+        return f"Tool({self.name}: {self.description[:50]}...)"
+
+
+###################
+# JSON SCHEMA TYPES
+###################
 
 
 class JSONSchemaType(TypedDict, total=False):
@@ -335,262 +493,3 @@ class JSONSchemaObject(JSONSchemaType, total=False):
     additionalProperties: bool
     default: dict[str, Any]
     nullable: bool
-
-
-class MediaType(Enum):
-    """Types of media content supported in multimodal contexts.
-
-    Attributes:
-        TEXT: Plain text content.
-        IMAGE: Image data in various formats.
-        AUDIO: Audio recordings and sound data.
-        VIDEO: Video recordings and motion picture data.
-        DOCUMENT: Formatted documents like PDFs or Word files.
-    """
-
-    TEXT = "text"
-    IMAGE = "image"
-    AUDIO = "audio"
-    VIDEO = "video"
-    DOCUMENT = "document"
-
-
-class ToolType(Enum):
-    """Kinds of external tools that can be invoked.
-
-    Attributes:
-        FUNCTION: Simple function call with defined parameters.
-        CODE_INTERPRETER: Tool for executing code snippets.
-        FILE_SEARCH: Tool for searching through files/documents.
-        WEB_SEARCH: Tool for retrieving information from the web.
-    """
-
-    FUNCTION = "function"
-    CODE_INTERPRETER = "code_interpreter"
-    FILE_SEARCH = "file_search"
-    WEB_SEARCH = "web_search"
-
-
-class Capability(BaseModel):
-    """Features supported by an LLM provider or a specific model.
-
-    Attributes:
-        multimodal: Indicates if multiple input/output modalities (e.g., text, images) are supported.
-        streaming: Indicates if responses can be streamed token-by-token.
-        tools: Indicates if function/tool calling capabilities are supported.
-        agents: Indicates if the provider supports autonomous agent functionalities.
-        files: Indicates if file uploading, processing, and referencing are supported.
-    """
-
-    model_config = ConfigDict(frozen=True)
-
-    multimodal: bool = False
-    streaming: bool = False
-    tools: bool = False
-    agents: bool = False
-    files: bool = False
-
-
-class ModelInfo(BaseModel):
-    """Detailed metadata for a specific model.
-
-    Attributes:
-        id: Unique identifier for the model (e.g., "gpt-4", "claude-3-opus").
-        name: Human-readable name of the model.
-        description: Optional longer description of the model's capabilities, use cases, or characteristics.
-        max_tokens: Optional integer representing the maximum context window size (input + output tokens).
-        supported_media_types: Optional list of `MediaType` enums indicating the types of media the model can process.
-        capabilities: Optional `ModelCapabilities` object detailing features like streaming, vision, etc.
-    """
-
-    model_config = ConfigDict(frozen=True)
-
-    id: str
-    name: str
-    description: str | None = None
-    max_tokens: int | None = None
-    supported_media_types: list[MediaType] | None = None
-    capabilities: ModelCapabilities | None = None
-
-
-class Message(BaseModel):
-    """A single chat message in a standardized format.
-
-    Attributes:
-        role: The role of the message sender (e.g., "user", "assistant", "system", "tool").
-        content: Text content or a structured list of content blocks (e.g., for multimodal input).
-                 If a list, each item is a dictionary, typically with "type" and content-specific keys.
-        metadata: Optional `MessageMetadata` containing additional information about the message.
-    """
-
-    role: str
-    content: str | list[dict[str, Any]]
-    metadata: MessageMetadata | None = None
-
-    def __str__(self) -> str:
-        """Return a string representation of the message."""
-        content_preview = (
-            str(self.content)[:100] + "..." if len(str(self.content)) > 100 else str(self.content)
-        )
-        return f"{self.role}: {content_preview}"
-
-
-class Tool(BaseModel):
-    """Definition for a callable tool/function exposed to models.
-
-    Attributes:
-        type: The `ToolType` of the tool (e.g., FUNCTION, CODE_INTERPRETER).
-        name: Unique identifier for this tool, used by the model to specify which tool to call.
-        description: Human-readable explanation of what the tool does, its purpose, and when to use it.
-        parameters: Optional `ToolParameters` (JSON Schema) defining the arguments the tool accepts.
-        function: Optional Python callable that implements the tool's functionality. Not serialized.
-    """
-
-    type: ToolType
-    name: str
-    description: str
-    parameters: ToolParameters | None = None
-    function: Callable[..., Any] | None = Field(default=None, exclude=True)
-
-    def __str__(self) -> str:
-        """Return a string representation of the tool."""
-        return f"Tool({self.name}: {self.description[:50]}...)"
-
-
-class Usage(BaseModel):
-    """Token-usage summary for a completion request.
-
-    Attributes:
-        prompt_tokens: Number of tokens in the input prompt.
-        completion_tokens: Number of tokens generated in the response by the model.
-        total_tokens: Total tokens processed, typically the sum of `prompt_tokens` and `completion_tokens`.
-    """
-
-    model_config = ConfigDict(frozen=True)
-
-    prompt_tokens: int = 0
-    completion_tokens: int = 0
-    total_tokens: int = 0
-
-
-class CompletionResponse(BaseModel):
-    """Standardized response from a chat completion call.
-
-    Attributes:
-        content: The primary response content, typically text generated by the LLM.
-        usage: Optional `Usage` object detailing token usage statistics for the completion.
-        model: Optional string identifier of the model that generated the response.
-        finish_reason: Optional string indicating why the model stopped generating tokens (e.g., "stop", "length", "tool_calls").
-        metadata: Optional `ResponseMetadata` containing additional provider-specific information about the response.
-    """
-
-    content: str
-    usage: Usage | None = None
-    model: str | None = None
-    finish_reason: str | None = None
-    metadata: ResponseMetadata | None = None
-
-    def __str__(self) -> str:
-        """Return a string representation of the completion response."""
-        content_preview = self.content[:100] + "..." if len(self.content) > 100 else self.content
-        return f"CompletionResponse(content='{content_preview}', model={self.model})"
-
-
-class StreamChunk(BaseModel):
-    """Single chunk in a streaming chat response.
-
-    Attributes:
-        content: Text content of the current chunk. For some providers or configurations,
-                 this might represent the full accumulated message up to this chunk.
-        delta: Optional incremental text change in this chunk. If present, this is typically
-               the new piece of text to append to the stream.
-        finish_reason: Optional string indicating why the model stopped generating tokens,
-                       usually sent with the final chunk of the stream.
-        metadata: Optional `ResponseMetadata,` which may be sent with any chunk, or exclusively
-                  with the final chunk, containing details like token counts or request IDs.
-    """
-
-    content: str
-    delta: str | None = None
-    finish_reason: str | None = None
-    metadata: ResponseMetadata | None = None
-
-
-class MediaProcessingResult(BaseModel):
-    """Outcome of preparing media for multimodal inputs.
-
-    Attributes:
-        media_type: The `MediaType` of the content that was processed (e.g., IMAGE, AUDIO).
-        content_id: A unique identifier for the processed media content. This could be a
-                    file ID, a data URI, or another reference usable by the LLM.
-        metadata: Optional dictionary containing additional metadata about the
-                  processed media, such as dimensions for an image or duration for audio.
-    """
-
-    media_type: MediaType
-    content_id: str
-    metadata: dict[str, Any] | None = None
-
-
-class FileUploadResponse(BaseModel):
-    """Information returned after uploading a file to a provider.
-
-    Attributes:
-        file_id: Unique identifier assigned to the uploaded file by the provider.
-        filename: Original name of the file that was uploaded.
-        bytes: Size of the uploaded file in bytes.
-        purpose: The intended use of the file, as specified during upload (e.g., "assistants", "vision").
-        created_at: Optional epoch timestamp (seconds since epoch) indicating when the file was uploaded/created.
-        status: Optional current status of the file (e.g., "uploaded", "processing", "ready", "error").
-        metadata: Optional dictionary for any additional provider-specific metadata about the file.
-    """
-
-    file_id: str
-    filename: str
-    bytes: int
-    purpose: str
-    created_at: int | None = None
-    status: str | None = None
-    metadata: dict[str, Any] | None = None
-
-
-class AgentResponse(BaseModel):
-    """Information returned when creating or retrieving a persistent agent.
-
-    Attributes:
-        agent_id: Unique identifier for the agent.
-        name: Name assigned to the agent.
-        created_at: Optional epoch timestamp (seconds since epoch) indicating when the agent was created.
-        metadata: Optional dictionary for any additional provider-specific metadata about the agent.
-    """
-
-    agent_id: str
-    name: str
-    created_at: int | None = None
-    metadata: dict[str, Any] | None = None
-
-
-class ModelSummary(BaseModel):
-    """Concise summary of a model's attributes, often from a model listing operation.
-
-    Attributes:
-        id: Unique identifier for the model (e.g., "gpt-4", "claude-2").
-        name: Human-readable name of the model.
-        description: Optional brief description of the model's capabilities or purpose.
-        owned_by: Optional identifier of the entity that owns or provides the model (e.g., "openai", "anthropic").
-        created_at: Optional epoch timestamp (seconds since epoch) indicating when the model entry was created or made available.
-        metadata: Optional dictionary for any other relevant model metadata not covered by specific fields.
-        provider: Optional name or identifier of the LLM provider offering this model.
-    """
-
-    id: str
-    name: str
-    description: str | None = None
-    owned_by: str | None = None
-    created_at: int | None = None
-    metadata: dict[str, Any] | None = None
-    provider: str | None = None
-
-    def __str__(self) -> str:
-        """Return a string representation of the model summary."""
-        return f"{self.name} ({self.provider})"
