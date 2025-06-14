@@ -4,6 +4,7 @@ from typing import Any
 
 from .base import BaseClient
 from .exceptions import ChimericError, ProviderError, ProviderNotFoundError
+from .providers.anthropic.client import AnthropicClient
 from .providers.cerebras.client import CerebrasClient
 from .providers.cohere.client import CohereClient
 from .providers.google.client import GoogleClient
@@ -25,12 +26,12 @@ from .types import (
 __all__ = [
     "PROVIDER_CLIENTS",
     "Chimeric",
-    "Provider",
 ]
 
 # Mapping of provider enums to their corresponding client classes.
-PROVIDER_CLIENTS: dict[Provider, type[BaseClient[Any]]] = {
+PROVIDER_CLIENTS: dict[Provider, type[BaseClient[Any, Any, Any, Any, Any]]] = {
     Provider.OPENAI: OpenAIClient,
+    Provider.ANTHROPIC: AnthropicClient,
     Provider.GOOGLE: GoogleClient,
     Provider.CEREBRAS: CerebrasClient,
     Provider.COHERE: CohereClient,
@@ -76,6 +77,13 @@ class Chimeric:
             model="claude-3-opus-20240229",
             messages=[{"role": "user", "content": "Hello"}]
         )
+
+        # Force specific provider (bypass model detection)
+        response = chimeric.generate(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": "Hello"}],
+            provider="openai"
+        )
     """
 
     def __init__(
@@ -103,8 +111,11 @@ class Chimeric:
             replicate_api_token: Replicate API token for authentication.
             **kwargs: Additional provider-specific configuration options.
         """
-        self.providers: dict[Provider, BaseClient[Any]] = {}
+        self.providers: dict[Provider, BaseClient[Any, Any, Any, Any, Any]] = {}
         self.primary_provider: Provider | None = None
+
+        # Cache for model-to-provider mapping to avoid repeated API calls
+        self._model_provider_cache: dict[str, Provider] = {}
 
         # Initialize providers from explicit API keys.
         self._initialize_providers_from_config(
@@ -172,8 +183,8 @@ class Chimeric:
         # Map providers to their possible environment variable names.
         env_variable_map: dict[Provider, list[str]] = {
             Provider.OPENAI: ["OPENAI_API_KEY"],
-            Provider.GOOGLE: ["GOOGLE_API_KEY", "GEMINI_API_KEY"],
             Provider.ANTHROPIC: ["ANTHROPIC_API_KEY"],
+            Provider.GOOGLE: ["GOOGLE_API_KEY", "GEMINI_API_KEY"],
             Provider.CEREBRAS: ["CEREBRAS_API_KEY"],
             Provider.COHERE: ["COHERE_API_KEY", "CO_API_KEY"],
             Provider.GROQ: ["GROQ_API_KEY"],
@@ -189,7 +200,7 @@ class Chimeric:
             for env_var in env_vars:
                 env_value = os.environ.get(env_var)
                 if env_value:
-                    # Create clean kwargs without conflicting api_key parameter.
+                    # Create clean kwargs without a conflicting api_key parameter.
                     clean_kwargs = kwargs.copy()
                     clean_kwargs.pop("api_key", None)
 
@@ -227,13 +238,21 @@ class Chimeric:
         self,
         model: str,
         messages: Input,
+        tools: list[Tool] | None = None,
+        auto_tool: bool = True,
+        native: bool = False,
+        provider: str | None = None,
         **kwargs: Any,
     ) -> CompletionResponse | Generator[StreamChunk, None, None]:
         """Generates chat completion using the appropriate provider for the model.
 
         Args:
-            model: Model name to use (determines provider automatically).
+            model: Model name to use (determines provider automatically unless provider is specified).
             messages: List of messages in provider-compatible format.
+            tools: Optional list of tools to use in the chat completion.
+            auto_tool: If True, automatically uses registered tools if none are provided.
+            native: If True, uses the provider's native chat completion method.
+            provider: Optional provider name to force using a specific provider.
             **kwargs: Additional provider-specific arguments (temperature, tools, etc.).
 
         Returns:
@@ -242,27 +261,39 @@ class Chimeric:
 
         Raises:
             ChimericError: If no suitable provider is found for the model.
+            ProviderNotFoundError: If the specified provider is not configured.
         """
-        target_provider = self._select_provider_by_model(model)
+        target_provider = self._select_provider(model, provider)
         client = self.providers[target_provider]
 
-        return client.chat_completion(
-            messages=messages,
+        chimeric_completion = client.chat_completion(
             model=model,
+            messages=messages,
+            tools=tools or self._tool_manager.get_all_tools() if auto_tool else None,
+            native=native,
             **kwargs,
         )
+        return chimeric_completion.native if native else chimeric_completion.completion
 
     async def agenerate(
         self,
         model: str,
         messages: Input,
+        tools: list[Tool] | None = None,
+        auto_tool: bool = True,
+        native: bool = False,
+        provider: str | None = None,
         **kwargs: Any,
     ) -> CompletionResponse | AsyncGenerator[StreamChunk, None]:
         """Asynchronously generates chat completion.
 
         Args:
-            model: Model name to use (determines provider automatically).
+            model: Model name to use (determines provider automatically unless provider is specified).
             messages: List of messages in provider-compatible format.
+            tools: Optional list of tools to use in the chat completion.
+            auto_tool: If True, automatically uses registered tools if none are provided.
+            native: If True, uses the provider's native chat completion method.
+            provider: Optional provider name to force using a specific provider.
             **kwargs: Additional provider-specific arguments (temperature, tools, etc.).
 
         Returns:
@@ -271,18 +302,55 @@ class Chimeric:
 
         Raises:
             ChimericError: If no suitable provider is found for the model.
+            ProviderNotFoundError: If the specified provider is not configured.
         """
-        target_provider = self._select_provider_by_model(model)
+        target_provider = self._select_provider(model, provider)
         client = self.providers[target_provider]
 
-        return await client.achat_completion(
-            messages=messages,
+        chimeric_completion = await client.achat_completion(
             model=model,
+            messages=messages,
+            tools=tools or self._tool_manager.get_all_tools() if auto_tool else None,
+            native=native,
             **kwargs,
         )
+        return chimeric_completion.native if native else chimeric_completion.completion
+
+    def _select_provider(self, model: str, provider: str | None = None) -> Provider:
+        """Selects the appropriate provider based on explicit provider or model availability.
+
+        Args:
+            model: The name of the model to use.
+            provider: Optional provider name to force using a specific provider.
+
+        Returns:
+            The provider enum to use for this model.
+
+        Raises:
+            ProviderNotFoundError: If the specified provider is not configured or
+                                 if no provider supports the requested model.
+        """
+        if provider:
+            # Use explicitly specified provider
+            try:
+                provider_enum = Provider(provider.lower())
+            except ValueError as e:
+                raise ProviderNotFoundError(f"Unknown provider: {provider}") from e
+
+            if provider_enum not in self.providers:
+                raise ProviderNotFoundError(f"Provider {provider} not configured")
+
+            return provider_enum
+
+        # Auto-detect provider by model
+        return self._select_provider_by_model(model)
 
     def _select_provider_by_model(self, model: str) -> Provider:
-        """Selects the appropriate provider based on model name patterns.
+        """Selects the appropriate provider based on model availability.
+
+        This method dynamically queries each configured provider to find which
+        one supports the requested model. It uses caching to avoid repeated
+        API calls for the same model.
 
         Args:
             model: The name of the model to use.
@@ -291,37 +359,64 @@ class Chimeric:
             The provider enum to use for this model.
 
         Raises:
-            ChimericError: If no suitable provider is found.
+            ProviderNotFoundError: If no provider supports the requested model.
         """
-        model_lower = model.lower()
+        # Check cache first
+        if model in self._model_provider_cache:
+            cached_provider = self._model_provider_cache[model]
+            # Verify the cached provider is still available
+            if cached_provider in self.providers:
+                return cached_provider
+            # Remove stale cache entry
+            del self._model_provider_cache[model]
 
-        # Define model patterns for each provider.
-        provider_patterns = [
-            (Provider.OPENAI, ["gpt", "chatgpt", "davinci", "curie", "babbage", "ada", "o1"]),
-            (Provider.GOOGLE, ["google", "palm", "bison", "gemini"]),
-            (Provider.CEREBRAS, ["cerebras", "llama3.1"]),
-            (Provider.COHERE, ["command", "cohere"]),
-            (Provider.GROQ, ["mixtral", "llama2", "gemma"]),
-        ]
+        # Query each provider to find the model
+        for provider, client in self.providers.items():
+            try:
+                models = client.list_models()
+                model_ids = {m.id for m in models}
+                model_names = {m.name for m in models if m.name}
 
-        # Check each provider's patterns.
-        for provider, patterns in provider_patterns:
-            if provider in self.providers and any(pattern in model_lower for pattern in patterns):
-                return provider
+                # Check if the requested model matches by ID or name
+                if model in model_ids or model in model_names:
+                    # Cache the result for future use
+                    self._model_provider_cache[model] = provider
+                    return provider
 
-        # HuggingFace models typically have "org/model" format.
-        if "/" in model_lower and Provider.HUGGINGFACE in self.providers:
-            return Provider.HUGGINGFACE
+            except (
+                ImportError,
+                ModuleNotFoundError,
+                ValueError,
+                ProviderError,
+                ConnectionError,
+                TimeoutError,
+            ):
+                # Skip providers that fail due to connection or API issues
+                continue
 
-        # Fallback to primary provider if available.
-        if self.primary_provider and self.primary_provider in self.providers:
-            return self.primary_provider
+        # If no provider found, raise exception
+        available_models = []
+        for provider, client in self.providers.items():
+            try:
+                models = client.list_models()
+                for m in models:
+                    available_models.append(f"{m.id} ({provider.value})")
+            except (
+                ImportError,
+                ModuleNotFoundError,
+                ValueError,
+                ProviderError,
+                ConnectionError,
+                TimeoutError,
+            ):
+                # Skip providers that fail due to connection or API issues
+                continue
 
-        # Use the first available provider as last resort.
-        if self.providers:
-            return next(iter(self.providers.keys()))
-
-        raise ChimericError(f"No suitable provider found for model: {model}")
+        raise ProviderNotFoundError(
+            f"No provider found for model '{model}'. "
+            f"Available models: {', '.join(available_models[:10])}"
+            f"{'...' if len(available_models) > 10 else ''}"
+        )
 
     def list_models(self, provider: str | None = None) -> list[ModelSummary]:
         """Lists available models from specified provider or all providers.
@@ -395,7 +490,7 @@ class Chimeric:
                     setattr(merged_capabilities, field_name, True)
         return merged_capabilities
 
-    def get_provider_client(self, provider: str) -> BaseClient[Any]:
+    def get_provider_client(self, provider: str) -> BaseClient[Any, Any, Any, Any, Any]:
         """Gets direct access to a provider's client instance.
 
         Args:
@@ -412,6 +507,13 @@ class Chimeric:
             raise ProviderNotFoundError(f"Provider {provider} not configured")
         return self.providers[provider_enum]
 
+    def clear_model_cache(self) -> None:
+        """Clears the model-to-provider cache.
+
+        This can be useful if providers add or remove models dynamically.
+        """
+        self._model_provider_cache.clear()
+
     def tool(
         self, name: str | None = None, description: str | None = None
     ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
@@ -422,8 +524,8 @@ class Chimeric:
         return types are automatically inferred from type annotations.
 
         Args:
-            name: Optional name for the tool. Defaults to function name.
-            description: Optional description. Defaults to function's docstring.
+            name: Optional name for the tool. Default to function name.
+            description: Optional description. Default to function's docstring.
 
         Returns:
             A decorator function that registers the decorated function as a tool.
