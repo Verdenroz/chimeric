@@ -15,6 +15,7 @@ from .providers.replicate.client import ReplicateClient
 from .tools import ToolManager
 from .types import (
     Capability,
+    ChimericStreamChunk,
     CompletionResponse,
     Input,
     ModelSummary,
@@ -234,6 +235,22 @@ class Chimeric:
         except (ImportError, ModuleNotFoundError, ValueError) as e:
             raise ChimericError(f"Failed to initialize provider {provider.value}: {e}") from e
 
+    @staticmethod
+    def _transform_stream(
+        stream: Generator[ChimericStreamChunk[Any], None, None], native: bool = False
+    ) -> Generator[StreamChunk, None, None]:
+        """Transform a ChimericStreamChunk generator to return the native or common format."""
+        for chunk in stream:
+            yield chunk.native if native else chunk.common
+
+    @staticmethod
+    async def _atransform_stream(
+        stream: AsyncGenerator[ChimericStreamChunk[Any]], native: bool = False
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """Transform an async ChimericStreamChunk generator to return the native or common format."""
+        async for chunk in stream:
+            yield chunk.native if native else chunk.common
+
     def generate(
         self,
         model: str,
@@ -273,7 +290,11 @@ class Chimeric:
             native=native,
             **kwargs,
         )
-        return chimeric_completion.native if native else chimeric_completion.completion
+        if isinstance(chimeric_completion, Generator):
+            # If the response is a generator, it means streaming is enabled.
+            return self._transform_stream(chimeric_completion, native=native)
+
+        return chimeric_completion.native if native else chimeric_completion.common
 
     async def agenerate(
         self,
@@ -314,7 +335,11 @@ class Chimeric:
             native=native,
             **kwargs,
         )
-        return chimeric_completion.native if native else chimeric_completion.completion
+        if isinstance(chimeric_completion, AsyncGenerator):
+            # If the response is an async generator, it means streaming is enabled.
+            return self._atransform_stream(chimeric_completion, native=native)
+
+        return chimeric_completion.native if native else chimeric_completion.common
 
     def _select_provider(self, model: str, provider: str | None = None) -> Provider:
         """Selects the appropriate provider based on explicit provider or model availability.
@@ -482,13 +507,23 @@ class Chimeric:
             return self.providers[provider_enum].capabilities
 
         # Merge capabilities from all providers (union of all features).
-        merged_capabilities = Capability()
+        merged_values = {
+            "multimodal": False,
+            "streaming": False,
+            "tools": False,
+            "agents": False,
+            "files": False,
+        }
+
+        # Collect capabilities from all providers
         for client in self.providers.values():
             capabilities = client.capabilities
-            for field_name in merged_capabilities.model_dump():
+            for field_name in merged_values:
                 if getattr(capabilities, field_name):
-                    setattr(merged_capabilities, field_name, True)
-        return merged_capabilities
+                    merged_values[field_name] = True
+
+        # Create a new instance with the merged values
+        return Capability(**merged_values)
 
     def get_provider_client(self, provider: str) -> BaseClient[Any, Any, Any, Any, Any]:
         """Gets direct access to a provider's client instance.

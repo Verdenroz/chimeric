@@ -69,7 +69,7 @@ class BaseClient(
 
     def __init__(
         self,
-        api_key: str | None = None,
+        api_key: str,
         **kwargs: Any,
     ) -> None:
         """Initializes the base client with common settings.
