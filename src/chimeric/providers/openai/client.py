@@ -117,7 +117,7 @@ class OpenAIClient(BaseClient[OpenAI, AsyncOpenAI, Response, ResponseStreamEvent
             outputs = getattr(response, "output", []) or []
             first = outputs[0] if outputs else None
             contents = getattr(first, "content", []) or []
-            final_text = getattr(contents[0], "text", "") or ""
+            final_text = getattr(contents[0], "text", "") if contents else None
             finish_reason = getattr(response, "status", None)
             chunk = ChimericStreamChunk(
                 native=event,

@@ -62,6 +62,7 @@ class Provider(Enum):
     GOOGLE = "google"
     CEREBRAS = "cerebras"
     COHERE = "cohere"
+    GROK = "grok"
     GROQ = "groq"
     HUGGINGFACE = "huggingface"
     REPLICATE = "replicate"
@@ -186,6 +187,14 @@ class CompletionResponse(BaseModel):
     model: str | None = None
     metadata: Metadata | None = None
 
+    def __str__(self) -> str:
+        """Return a string representation of the completion response."""
+        return (
+            self.content
+            if isinstance(self.content, str)
+            else " ".join(str(c) for c in self.content if c)
+        )
+
 
 class StreamChunk(BaseModel):
     """Single chunk in a streaming chat response.
@@ -205,6 +214,10 @@ class StreamChunk(BaseModel):
     delta: str | None = None
     finish_reason: str | None = None
     metadata: Metadata | None = None
+
+    def __str__(self) -> str:
+        """Return a string representation of the stream chunk."""
+        return self.delta if self.delta is not None else ""
 
 
 class FileUploadResponse(BaseModel):

@@ -3,7 +3,7 @@ from typing import Any
 from chimeric import BaseClient
 
 
-class CerebrasClient(BaseClient[Any, Any, Any, Any, Any]):
+class AnthropicClient(BaseClient[Any, Any, Any, Any, Any]):
     """Cerebras Client for interacting with Cerebras services."""
 
     pass

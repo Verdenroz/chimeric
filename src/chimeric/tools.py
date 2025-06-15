@@ -19,7 +19,6 @@ from .types import (
 
 __all__ = [
     "ToolManager",
-    "ToolParameterMetadata",
     "tool_parameter",
 ]
 

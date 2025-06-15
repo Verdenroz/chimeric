@@ -8,6 +8,7 @@ from .providers.anthropic.client import AnthropicClient
 from .providers.cerebras.client import CerebrasClient
 from .providers.cohere.client import CohereClient
 from .providers.google.client import GoogleClient
+from .providers.grok.client import GrokClient
 from .providers.groq.client import GroqClient
 from .providers.huggingface.client import HuggingFaceClient
 from .providers.openai.client import OpenAIClient
@@ -36,6 +37,7 @@ PROVIDER_CLIENTS: dict[Provider, type[BaseClient[Any, Any, Any, Any, Any]]] = {
     Provider.GOOGLE: GoogleClient,
     Provider.CEREBRAS: CerebrasClient,
     Provider.COHERE: CohereClient,
+    Provider.GROK: GrokClient,
     Provider.GROQ: GroqClient,
     Provider.HUGGINGFACE: HuggingFaceClient,
     Provider.REPLICATE: ReplicateClient,
@@ -59,6 +61,7 @@ class Chimeric:
             google_api_key="...",
             cerebras_api_key="...",
             cohere_api_key="...",
+            grok_api_key="...",
             groq_api_key="...",
             huggingface_api_key="...",
             replicate_api_token="...",
@@ -94,6 +97,7 @@ class Chimeric:
         google_api_key: str | None = None,
         cerebras_api_key: str | None = None,
         cohere_api_key: str | None = None,
+        grok_api_key: str | None = None,
         groq_api_key: str | None = None,
         huggingface_token: str | None = None,
         replicate_api_token: str | None = None,
@@ -107,6 +111,7 @@ class Chimeric:
             google_api_key: Google API key for authentication.
             cerebras_api_key: Cerebras API key for authentication.
             cohere_api_key: Cohere API key for authentication.
+            grok_api_key: Grok API key for authentication.
             groq_api_key: Groq API key for authentication.
             huggingface_token: HuggingFace token for authentication.
             replicate_api_token: Replicate API token for authentication.
@@ -125,6 +130,7 @@ class Chimeric:
             google_api_key,
             cerebras_api_key,
             cohere_api_key,
+            grok_api_key,
             groq_api_key,
             huggingface_token,
             replicate_api_token,
@@ -143,6 +149,7 @@ class Chimeric:
         google_api_key: str | None = None,
         cerebras_api_key: str | None = None,
         cohere_api_key: str | None = None,
+        grok_api_key: str | None = None,
         groq_api_key: str | None = None,
         huggingface_token: str | None = None,
         replicate_api_token: str | None = None,
@@ -155,6 +162,7 @@ class Chimeric:
             google_api_key: Google API key.
             cerebras_api_key: Cerebras API key.
             cohere_api_key: Cohere API key.
+            grok_api_key: Grok API key.
             groq_api_key: Groq API key.
             huggingface_token: HuggingFace token.
             replicate_api_token: Replicate API token.
@@ -165,6 +173,7 @@ class Chimeric:
             (Provider.GOOGLE, google_api_key),
             (Provider.CEREBRAS, cerebras_api_key),
             (Provider.COHERE, cohere_api_key),
+            (Provider.GROK, grok_api_key),
             (Provider.GROQ, groq_api_key),
             (Provider.HUGGINGFACE, huggingface_token),
             (Provider.REPLICATE, replicate_api_token),
@@ -188,6 +197,7 @@ class Chimeric:
             Provider.GOOGLE: ["GOOGLE_API_KEY", "GEMINI_API_KEY"],
             Provider.CEREBRAS: ["CEREBRAS_API_KEY"],
             Provider.COHERE: ["COHERE_API_KEY", "CO_API_KEY"],
+            Provider.GROK: ["GROK_API_KEY", "GROK_API_TOKEN"],
             Provider.GROQ: ["GROQ_API_KEY"],
             Provider.HUGGINGFACE: ["HUGGINGFACE_API_KEY", "HF_TOKEN"],
             Provider.REPLICATE: ["REPLICATE_API_TOKEN"],
