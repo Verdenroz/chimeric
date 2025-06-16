@@ -178,6 +178,12 @@ force-sort-within-sections = true
 
 [tool.basedpyright]
 include = ["src", "tests"]
+executionEnvironments = [
+  # Tests folder: disable private-usage and unknown-parameter warnings
+  { root = "tests", reportPrivateUsage = false, reportUnknownParameterType = false },
+  # Default for the rest of your code
+  { root = "src" }
+]
 pythonVersion = "3.11"
 pythonPlatform = "All"
 
@@ -207,6 +213,7 @@ addopts = [
     "--cov-report=xml",
     "--cov-fail-under=95",
 ]
+asyncio_mode = "auto"
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
@@ -215,9 +222,6 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
-    "openai: tests requiring OpenAI API",
-    "anthropic: tests requiring Anthropic API",
-    "google: tests requiring Google API",
 ]
 filterwarnings = [
     "error",
@@ -250,13 +254,4 @@ exclude_lines = [
 ]
 
 [tool.codespell]
-skip = "*.git,*.lock,*.json,__pycache__,*.pyc,*.egg-info"
-ignore-words-list = [
-    "openai",
-    "gemini",
-    "cerebras",
-    "cohere",
-    "groq",
-    "replicate",
-    "huggingface",
-]
+skip = "*.git,*.lock,*.json,__pycache__,*.pyc,*.egg-info,htmlcov,.coverage,coverage.xml"
