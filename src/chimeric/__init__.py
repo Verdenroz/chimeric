@@ -18,7 +18,7 @@ from .exceptions import (
     ToolRegistrationError,
     ValidationError,
 )
-from .tools import ToolManager, tool_parameter
+from .tools import ToolManager
 from .types import (
     Capability,
     ChimericCompletionResponse,
@@ -27,13 +27,6 @@ from .types import (
     CompletionResponse,
     FileUploadResponse,
     Input,
-    JSONSchemaArray,
-    JSONSchemaBoolean,
-    JSONSchemaInteger,
-    JSONSchemaNumber,
-    JSONSchemaObject,
-    JSONSchemaString,
-    JSONSchemaType,
     Metadata,
     ModelCapabilities,
     ModelInfo,
@@ -44,9 +37,8 @@ from .types import (
     Provider,
     StreamChunk,
     Tool,
-    ToolParameterMetadata,
     ToolParameters,
-    ToolType,
+    Tools,
     Usage,
 )
 
@@ -68,13 +60,6 @@ __all__ = [
     "FileUploadResponse",
     "FileUploadResponseType",
     "Input",
-    "JSONSchemaArray",
-    "JSONSchemaBoolean",
-    "JSONSchemaInteger",
-    "JSONSchemaNumber",
-    "JSONSchemaObject",
-    "JSONSchemaString",
-    "JSONSchemaType",
     "Metadata",
     "ModelCapabilities",
     "ModelInfo",
@@ -91,13 +76,11 @@ __all__ = [
     "StreamType",
     "Tool",
     "ToolManager",
-    "ToolParameterMetadata",
     "ToolParameters",
     "ToolRegistrationError",
-    "ToolType",
+    "Tools",
     "Usage",
     "ValidationError",
-    "tool_parameter",
 ]
 
 __version__ = "0.1.0"

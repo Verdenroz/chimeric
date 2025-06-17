@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from enum import Enum
 from typing import Any, Generic, TypeAlias, TypeVar
 
@@ -30,9 +30,8 @@ __all__ = [
     "Provider",
     "StreamChunk",
     "Tool",
-    "ToolParameterMetadata",
     "ToolParameters",
-    "ToolType",
+    "Tools",
     "Usage",
 ]
 
@@ -43,6 +42,7 @@ NativeFileUploadType = TypeVar("NativeFileUploadType")
 
 # Generic type aliases
 Input: TypeAlias = str | list[Any]
+Tools: TypeAlias = Iterable[Any] | None
 Metadata: TypeAlias = dict[str, Any]
 
 
@@ -247,64 +247,32 @@ class FileUploadResponse(BaseModel):
 ###################
 
 
-class ToolType(Enum):
-    """Kinds of external tools that can be invoked.
+class ToolParameters(BaseModel):
+    """JSON Schema for tool parameters with flexible additional properties."""
 
-    Attributes:
-        FUNCTION: Simple function call with defined parameters.
-        CODE_INTERPRETER: Tool for executing code snippets.
-        FILE_SEARCH: Tool for searching through files/documents.
-        WEB_SEARCH: Tool for retrieving information from the web.
-    """
+    model_config = ConfigDict(extra="allow")
 
-    FUNCTION = "function"
-    CODE_INTERPRETER = "code_interpreter"
-    FILE_SEARCH = "file_search"
-    WEB_SEARCH = "web_search"
+    type: str = "object"
+    strict: bool = True
+    properties: dict[str, Any] = Field(default_factory=dict)
+    required: list[str] | None = None
+    additionalProperties: bool = False
 
-
-class ToolParameters(TypedDict, total=False):
-    """JSON Schema for tool/function parameters.
-
-    Attributes:
-        type: The JSON Schema type, typically "object" for tool parameters.
-        properties: A dictionary mapping parameter names to their JSON Schema definitions.
-        required: An optional list of parameter names that are mandatory for the tool's execution.
-    """
-
-    type: str
-    properties: dict[str, Any]
-    required: list[str]
-
-
-class ToolParameterMetadata(TypedDict, total=False):
-    """Metadata for an individual tool parameter, often part of a JSON Schema property.
-
-    Attributes:
-        description: Human-readable description of what the parameter is for.
-        required: Boolean indicating if this parameter must be provided when calling the tool.
-        enum: An optional list of allowed discrete values for this parameter.
-        format: An optional string specifying a semantic format (e.g., "date", "email", "uri").
-    """
-
-    description: str
-    required: bool
-    enum: list[Any]
-    format: str
+    def model_dump(self, exclude_none: bool = True, **kwargs: Any) -> dict[str, Any]:
+        """Return dictionary representation, optionally excluding None values."""
+        return super().model_dump(exclude_none=exclude_none, **kwargs)
 
 
 class Tool(BaseModel):
     """Definition for a callable tool/function exposed to models.
 
     Attributes:
-        type: The `ToolType` of the tool (e.g., FUNCTION, CODE_INTERPRETER).
         name: Unique identifier for this tool, used by the model to specify which tool to call.
         description: Human-readable explanation of what the tool does, its purpose, and when to use it.
         parameters: Optional `ToolParameters` (JSON Schema) defining the arguments the tool accepts.
         function: Optional Python callable that implements the tool's functionality. Not serialized.
     """
 
-    type: ToolType
     name: str
     description: str
     parameters: ToolParameters | None = None

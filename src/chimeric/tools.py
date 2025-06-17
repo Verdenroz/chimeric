@@ -1,82 +1,27 @@
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 import inspect
-from typing import Any, Union, cast, get_type_hints
+import re
+from types import UnionType
+from typing import Any, Union, get_args, get_origin, get_type_hints
 
 from .exceptions import ToolRegistrationError
-from .types import (
-    JSONSchemaArray,
-    JSONSchemaBoolean,
-    JSONSchemaInteger,
-    JSONSchemaNumber,
-    JSONSchemaObject,
-    JSONSchemaString,
-    JSONSchemaType,
-    Tool,
-    ToolParameterMetadata,
-    ToolParameters,
-    ToolType,
-)
+from .types import Tool, ToolParameters
 
 __all__ = [
     "ToolManager",
-    "tool_parameter",
 ]
 
 
-def tool_parameter(
-    description: str,
-    *,
-    required: bool = True,
-    enum: Iterable[Any] | None = None,
-    format: str | None = None,
-) -> ToolParameterMetadata:
-    """Create a parameter definition for tool functions.
-
-    This function can be used to annotate function parameters with additional
-    metadata for tool registration.
-
-    Args:
-        description: Description of the parameter
-        required: Whether the parameter is required
-        enum: List of possible values for the parameter
-        format: Format specifier for the parameter (e.g., 'date-time', 'uri')
-
-    Returns:
-        ToolParameterMetadata dictionary with parameter metadata
-    """
-    metadata: ToolParameterMetadata = {"description": description}
-
-    if not required:
-        metadata["required"] = False
-
-    if enum:
-        # Convert callable to list to handle the case where a function is passed instead of an iterable
-        if callable(enum):
-            enum_result = enum()
-            # Ensure the callable actually returns an iterable
-            if hasattr(enum_result, "__iter__") or isinstance(enum_result, Iterable):
-                metadata["enum"] = list(enum_result)
-            else:
-                # Handle the error case or use a default empty list
-                metadata["enum"] = []
-        else:
-            metadata["enum"] = list(enum)
-
-    if format:
-        metadata["format"] = format
-
-    return metadata
-
-
 class ToolManager:
-    """Tool registration and management system.
+    """Tool registration and management system with multiple docstring style support.
 
-    This class handles the registration and management of tool functions that can
-    be used with LLM providers that support function calling/tools.
+    This class provides functionality to register Python functions as tools with
+    automatic parameter schema generation from type hints and docstring parsing.
+    Supports Google, NumPy, and Sphinx docstring styles.
     """
 
     def __init__(self) -> None:
-        """Initialize the tool manager."""
+        """Initialize the ToolManager with empty tool registry."""
         self.tools: dict[str, Tool] = {}
 
     def register(
@@ -84,265 +29,66 @@ class ToolManager:
         func: Callable[..., Any],
         name: str | None = None,
         description: str | None = None,
+        strict: bool = True,
     ) -> Callable[..., Any]:
-        """Register a function as a tool.
-
-        This method registers a function as a tool, making it available for use
-        with LLM providers that support function calling. The function's parameters
-        and their types are automatically extracted and converted to a compatible
-        JSON schema.
+        """Register a function as a tool with automatic docstring parsing.
 
         Args:
-            func: The function to register
-            name: Optional name for the tool. If None, the function name is used.
-            description: Optional description for the tool. If None, the function's docstring is used.
+            func: The function to register as a tool.
+            name: Optional custom name for the tool. Defaults to function name.
+            description: Optional custom description. If None, parses from docstring.
+            strict: Whether to use strict parameter validation.
 
         Returns:
-            The original function, unchanged
+            The original function (for use as a decorator).
 
         Raises:
-            ToolRegistrationError: If the function cannot be registered as a tool
+            ToolRegistrationError: If a tool with the same name already exists.
         """
         tool_name = name or func.__name__
-        tool_description = description or (func.__doc__ or "").strip()
-
-        # Check for name conflicts
         if tool_name in self.tools:
             raise ToolRegistrationError(tool_name=tool_name, existing_tool=True)
 
-        # Get parameter info from function signature and type annotations
-        params = self._extract_parameters(func)
+        # Extract description and parameter descriptions
+        if description is None:
+            parsed = self._parse_docstring(func.__doc__ or "")
+            tool_description = parsed["description"]
+            param_descriptions = parsed["args"]
+        else:
+            tool_description = description
+            param_descriptions = {}
 
-        # Create the function parameters schema
-        function_params: ToolParameters = {
-            "type": "object",
-            "properties": dict(params.items()),
-            "required": [name for name, schema in params.items() if schema.get("required", True)],
-        }
+        # Generate parameter schema
+        properties, required = self._extract_parameters(func, param_descriptions)
+        function_params = ToolParameters(
+            type="object",
+            strict=strict,
+            properties=properties,
+            required=required or None,
+            additionalProperties=False,
+        )
 
-        # Create the tool and register it
+        # Create and register the tool
         tool = Tool(
-            type=ToolType.FUNCTION,
             name=tool_name,
-            description=tool_description if tool_description else f"Call {tool_name}",
+            description=tool_description or f"Call {tool_name}",
             parameters=function_params,
             function=func,
         )
-
         self.tools[tool_name] = tool
         return func
-
-    def _extract_parameters(self, func: Callable[..., Any]) -> dict[str, JSONSchemaType]:
-        """Extract parameter information from function signature and annotations.
-
-        Args:
-            func: The function to extract parameters from
-
-        Returns:
-            Dictionary mapping parameter names to their JSON schema
-        """
-        signature = inspect.signature(func)
-        hints = get_type_hints(func)
-        parameters: dict[str, JSONSchemaType] = {}
-
-        for name, param in signature.parameters.items():
-            # Skip self parameter for methods
-            if name == "self":
-                continue
-
-            param_type = hints.get(name, Any)
-            metadata = None
-
-            # Check if the default value is a ToolParameterMetadata
-            if (
-                param.default is not inspect.Parameter.empty
-                and isinstance(param.default, dict)
-                and "description" in param.default
-            ):
-                metadata = cast("ToolParameterMetadata", param.default)
-
-            # Create parameter schema
-            param_schema = self._create_parameter_schema(
-                param_type,
-                name,
-                param.default if param.default is not inspect.Parameter.empty else None,
-                metadata,
-            )
-
-            # Mark as required unless it has a default value
-            if param.default is inspect.Parameter.empty and not param_schema.get("required", False):
-                parameters[name] = param_schema
-
-        return parameters
-
-    def _create_parameter_schema(
-        self,
-        param_type: Any,
-        name: str,
-        default: Any = None,
-        metadata: ToolParameterMetadata | None = None,
-    ) -> JSONSchemaType:
-        """Create JSON Schema for a parameter based on its Python type.
-
-        Args:
-            param_type: Python type annotation
-            name: Parameter name
-            default: Default value, if any
-            metadata: Additional parameter metadata
-
-        Returns:
-            JSONSchemaType with JSON Schema for the parameter
-        """
-        # Determine the appropriate JSON Schema type
-        json_type = self._get_json_type(param_type)
-        description = (
-            metadata.get("description", f"Parameter: {name}") if metadata else f"Parameter: {name}"
-        )
-
-        # Create the appropriate schema based on the type
-        if json_type == "string":
-            string_schema: JSONSchemaString = {
-                "type": "string",
-                "description": description,
-            }
-            if metadata and "enum" in metadata:
-                string_schema["enum"] = metadata["enum"]
-            if metadata and "format" in metadata:
-                string_schema["format"] = metadata["format"]
-            if default is not None:
-                string_schema["default"] = str(default)
-            schema = cast("JSONSchemaType", string_schema)
-
-        elif json_type == "number":
-            number_schema: JSONSchemaNumber = {
-                "type": "number",
-                "description": description,
-            }
-            if default is not None:
-                number_schema["default"] = float(default)
-            schema = cast("JSONSchemaType", number_schema)
-
-        elif json_type == "integer":
-            integer_schema: JSONSchemaInteger = {
-                "type": "integer",
-                "description": description,
-            }
-            if default is not None:
-                integer_schema["default"] = int(default)
-            schema = cast("JSONSchemaType", integer_schema)
-
-        elif json_type == "boolean":
-            boolean_schema: JSONSchemaBoolean = {
-                "type": "boolean",
-                "description": description,
-            }
-            if default is not None:
-                boolean_schema["default"] = bool(default)
-            schema = cast("JSONSchemaType", boolean_schema)
-
-        elif json_type == "array":
-            array_schema: JSONSchemaArray = {
-                "type": "array",
-                "description": description,
-            }
-
-            # Get item type for the array
-            item_type = getattr(param_type, "__args__", (Any,))[0]
-            array_schema["items"] = {"type": self._get_json_type(item_type)}
-
-            if default is not None:
-                array_schema["default"] = list(default)
-            schema = cast("JSONSchemaType", array_schema)
-
-        elif json_type == "object":
-            object_schema: JSONSchemaObject = {
-                "type": "object",
-                "description": description,
-                "properties": {},
-            }
-            if default is not None:
-                object_schema["default"] = dict(default)
-            schema = cast("JSONSchemaType", object_schema)
-
-        else:
-            # Default to string for unknown types
-            unknown_schema: JSONSchemaString = {
-                "type": "string",
-                "description": description,
-            }
-            if default is not None:
-                unknown_schema["default"] = str(default)
-            schema = cast("JSONSchemaType", unknown_schema)
-
-        # Handle Union types (Optional)
-        origin = getattr(param_type, "__origin__", None)
-        if origin is Union and getattr(param_type, "__args__", None):
-            args = param_type.__args__
-            if type(None) in args and "required" in schema:  # Optional type
-                # For Optional types, we'll mark it as not required
-                schema["required"] = False
-
-        # Handle the required flag if present in metadata
-        if metadata and "required" in metadata:
-            schema["required"] = metadata["required"]
-
-        return schema
-
-    def _get_json_type(self, python_type: Any) -> str:
-        """Convert Python type to JSON schema type.
-
-        Args:
-            python_type: Python type to convert
-
-        Returns:
-            String with JSON schema type
-        """
-        # Handle common Python types
-        origin = getattr(python_type, "__origin__", None)
-        if origin is list or origin is list:
-            return "array"
-        if origin is dict or origin is dict:
-            return "object"
-        if origin is Union:
-            # For Union types, check if it's Optional (Union with None)
-            args = python_type.__args__
-            if type(None) in args and len(args) == 2:
-                # Get the non-None type
-                non_none_type = next(arg for arg in args if arg is not type(None))
-                return self._get_json_type(non_none_type)
-            # For other Unions, default to string as it's most flexible
-            return "string"
-
-        # Map Python built-in types to JSON schema types
-        type_mapping = {
-            str: "string",
-            int: "integer",
-            float: "number",
-            bool: "boolean",
-            list: "array",
-            dict: "object",
-            # Add more types as needed
-        }
-
-        # Check for exact type match
-        for py_type, json_type in type_mapping.items():
-            if python_type is py_type:
-                return json_type
-
-        # Default to string for unknown types
-        return "string"
 
     def get_tool(self, name: str) -> Tool:
         """Get a registered tool by name.
 
         Args:
-            name: Name of the tool to retrieve
+            name: The name of the tool to retrieve.
 
         Returns:
-            The Tool object for the specified name
+            The Tool instance.
 
         Raises:
-            KeyError: If no tool exists with the specified name
+            KeyError: If no tool is registered with the given name.
         """
         if name not in self.tools:
             raise KeyError(f"No tool registered with name '{name}'")
@@ -352,10 +98,439 @@ class ToolManager:
         """Get all registered tools.
 
         Returns:
-            List of all registered Tool objects
+            A list of all registered Tool instances.
         """
         return list(self.tools.values())
 
     def clear(self) -> None:
-        """Clear all registered tools."""
+        """Clear all registered tools from the registry."""
         self.tools.clear()
+
+    def _parse_docstring(self, doc: str) -> dict[str, Any]:
+        """Parse docstring using multiple format parsers.
+
+        Args:
+            doc: The docstring to parse.
+
+        Returns:
+            Dictionary with 'description' and 'args' keys containing parsed content.
+        """
+        if not doc:
+            return {"description": "", "args": {}}
+
+        # Try different parsers in order of preference
+        parsers = [
+            self._parse_google_docstring,
+            self._parse_numpy_docstring,
+            self._parse_sphinx_docstring,
+        ]
+
+        for parser in parsers:
+            result = parser(doc)
+            if result["description"] or result["args"]:
+                return result
+
+        return {"description": doc.strip(), "args": {}}
+
+    def _parse_google_docstring(self, doc: str) -> dict[str, Any]:
+        """Parse Google-style docstring.
+
+        Args:
+            doc: The docstring to parse.
+
+        Returns:
+            Dictionary with parsed description and arguments.
+        """
+        lines = [line.strip() for line in doc.strip().splitlines()]
+        description_lines = []
+        args_lines = []
+        section = "desc"
+
+        for line in lines:
+            line_lower = line.lower()
+
+            # Check for the args section
+            if line_lower.startswith(("args:", "arguments:", "parameters:")):
+                section = "args"
+                continue
+
+            # Check for other sections that end args parsing
+            if line_lower.startswith(
+                (
+                    "returns:",
+                    "yields:",
+                    "raises:",
+                    "note:",
+                    "notes:",
+                    "example:",
+                    "examples:",
+                    "see also:",
+                    "attributes:",
+                )
+            ):
+                section = "other"
+                continue
+
+            if section == "desc":
+                description_lines.append(line)
+            elif section == "args":
+                args_lines.append(line)
+
+        description = " ".join(description_lines).strip()
+        args = self._parse_google_args_section(args_lines)
+
+        return {"description": description, "args": args}
+
+    def _parse_numpy_docstring(self, docstring: str) -> dict[str, Any]:
+        """Parse NumPy-style docstring.
+
+        Args:
+            docstring: The docstring to parse.
+
+        Returns:
+            Dictionary with parsed description and arguments.
+        """
+        if not docstring:
+            return {"description": "", "args": {}}
+
+        lines = docstring.split("\n")
+        description_lines = []
+        args_lines = []
+        section = "description"
+
+        for idx, line in enumerate(lines):
+            stripped = line.strip()
+
+            # Check for the Parameters section
+            if (
+                stripped in ("Parameters", "Arguments")
+                and idx + 1 < len(lines)
+                and set(lines[idx + 1].strip()) == {"-"}
+            ):
+                section = "args"
+                continue
+
+            # Check for other sections
+            if (
+                stripped in ("Returns", "Yields", "Raises", "Notes", "Examples", "See Also")
+                and idx + 1 < len(lines)
+                and set(lines[idx + 1].strip()) == {"-"}
+            ):
+                section = "other"
+                continue
+
+            if section == "description":
+                description_lines.append(line)
+            elif section == "args":
+                # Skip blank lines and underlines
+                if not stripped or set(stripped) == {"-"}:
+                    continue
+                args_lines.append(line)
+
+        description = " ".join(line.strip() for line in description_lines).strip()
+        args = self._parse_numpy_args_section(args_lines)
+
+        return {"description": description, "args": args}
+
+    @staticmethod
+    def _parse_sphinx_docstring(doc: str) -> dict[str, Any]:
+        """Parse Sphinx-style docstring.
+
+        Args:
+            doc: The docstring to parse.
+
+        Returns:
+            Dictionary with parsed description and arguments.
+        """
+        description_lines = []
+        args = {}
+
+        for line in doc.splitlines():
+            stripped_line = line.strip()
+
+            # Look for parameter definitions
+            param_match = re.match(r":(?:param|parameter)\s+(\w+):\s*(.*)", stripped_line)
+            if param_match:
+                args[param_match.group(1)] = param_match.group(2)
+            elif not stripped_line.startswith(":"):
+                description_lines.append(stripped_line)
+
+        description = " ".join(description_lines).strip()
+        return {"description": description, "args": args}
+
+    @staticmethod
+    def _parse_google_args_section(lines: list[str]) -> dict[str, str]:
+        """Parse Google-style arguments section.
+
+        Args:
+            lines: Lines from the arguments section of the docstring.
+
+        Returns:
+            Dictionary mapping parameter names to their descriptions.
+        """
+        args = {}
+        current_param = None
+        description_buffer = []
+
+        for line in lines:
+            if line == "":
+                continue
+
+            # Check for parameter definition line
+            param_match = re.match(r"^(\w+)(?:\s*\([^)]+\))?\s*:\s*(.*)$", line)
+            if param_match:
+                # Save previous parameter if exists
+                if current_param is not None:
+                    args[current_param] = " ".join(description_buffer).strip()
+
+                current_param = param_match.group(1)
+                description_buffer = [param_match.group(2)]
+            else:
+                # Continuation line
+                if current_param is not None:
+                    description_buffer.append(line.strip())
+
+        # Remember the last parameter
+        if current_param is not None:
+            args[current_param] = " ".join(description_buffer).strip()
+
+        return args
+
+    @staticmethod
+    def _parse_numpy_args_section(lines: list[str]) -> dict[str, str]:
+        """Parse NumPy-style arguments section.
+
+        Args:
+            lines: Lines from the parameters section of the docstring.
+
+        Returns:
+            Dictionary mapping parameter names to their descriptions.
+        """
+        args = {}
+        current_param = None
+        description_buffer = []
+
+        for line in lines:
+            stripped = line.strip()
+            if not stripped:
+                continue
+
+            # Check for parameter definition line
+            param_match = re.match(r"^(\w+)\s*(?::.*)?$", stripped)
+            if param_match:
+                # Save previous parameter if exists
+                if current_param is not None:
+                    args[current_param] = " ".join(description_buffer).strip()
+                    description_buffer = []
+
+                current_param = param_match.group(1)
+
+                # Extract description from the same line if present
+                desc_match = re.search(
+                    r"^[^:]+:(?:[^,]+(?:,\s*\w+)*)?(?:\s*,\s*optional)?\s*(.*)", stripped
+                )
+                if desc_match and desc_match.group(1):
+                    description_buffer = [desc_match.group(1).strip()]
+            else:
+                # Continuation line for current parameter
+                if current_param is not None:
+                    description_buffer.append(stripped)
+
+        # Remember the last parameter
+        if current_param is not None:
+            args[current_param] = " ".join(description_buffer).strip()
+
+        return args
+
+    def _extract_parameters(
+        self, func: Callable[..., Any], descriptions: dict[str, str]
+    ) -> tuple[dict[str, dict[str, Any]], list[str]]:
+        """Extract parameter schema from function signature and type hints.
+
+        Args:
+            func: The function to analyze.
+            descriptions: Parameter descriptions from docstring parsing.
+
+        Returns:
+            Tuple of (properties dict, required parameters list).
+        """
+        signature = inspect.signature(func)
+        type_hints = get_type_hints(func)
+        properties = {}
+        required = []
+
+        for param_name, param in signature.parameters.items():
+            if param_name == "self":
+                continue
+
+            param_type = type_hints.get(param_name, Any)
+            description = descriptions.get(param_name, f"Parameter: {param_name}")
+            has_default = param.default is not inspect.Parameter.empty
+
+            schema = self._create_parameter_schema(param_type, description)
+            properties[param_name] = schema
+
+            # Determine if a parameter is required
+            if self._is_parameter_required(param_type, has_default):
+                required.append(param_name)
+
+        return properties, required
+
+    @staticmethod
+    def _is_parameter_required(param_type: Any, has_default: bool) -> bool:
+        """Determine if a parameter is required based on type and default value.
+
+        Args:
+            param_type: The parameter's type annotation.
+            has_default: Whether the parameter has a default value.
+
+        Returns:
+            True if the parameter is required, False otherwise.
+        """
+        if has_default:
+            return False
+
+        # Check if type is Union/Optional and includes None
+        origin = get_origin(param_type)
+        if origin in (Union, UnionType):
+            args = get_args(param_type)
+            if type(None) in args:
+                return False
+
+        return True
+
+    def _create_parameter_schema(
+        self, param_type: Any, description: str
+    ) -> dict[str, Any]:
+        """Create JSON schema for a parameter.
+
+        Args:
+            param_type: The parameter's type annotation.
+            description: Parameter description.
+
+        Returns:
+            JSON schema dictionary for the parameter.
+        """
+        origin = get_origin(param_type)
+
+        # Handle Union types (including Optional)
+        if origin in (Union, UnionType):
+            args = get_args(param_type)
+            if type(None) in args:
+                # Optional type
+                non_none_types = [arg for arg in args if arg is not type(None)]
+                chosen_type = non_none_types[0] if non_none_types else Any
+                schema = self._create_schema_for_type(chosen_type, description, nullable=True)
+            else:
+                # Non-optional union - use first type
+                chosen_type = args[0] if args else Any
+                schema = self._create_schema_for_type(chosen_type, description, nullable=False)
+        else:
+            schema = self._create_schema_for_type(param_type, description)
+
+        # Remove 'required' key if present (handled at tool level)
+        schema.pop("required", None)
+        return schema
+
+    def _create_schema_for_type(
+        self, param_type: Any, description: str, nullable: bool = False
+    ) -> dict[str, Any]:
+        """Create JSON schema for a specific type.
+
+        Args:
+            param_type: The type to create schema for.
+            description: Description for the schema.
+            nullable: Whether the type can be null.
+
+        Returns:
+            JSON schema dictionary.
+        """
+        origin = get_origin(param_type)
+
+        schema: dict[str, Any]
+        # Handle generic types
+        if origin is list or param_type is list:
+            args = get_args(param_type)
+            item_schema = self._get_simple_type_schema(args[0] if args else Any)
+            schema = {"type": "array", "description": description, "items": item_schema}
+        elif origin is dict or param_type is dict:
+            schema = {
+                "type": "object",
+                "description": description,
+                "properties": {},
+                "additionalProperties": True,
+            }
+        else:
+            # Handle basic types
+            schema = self._get_basic_type_schema(param_type, description)
+
+        # Add null type if nullable
+        if nullable:
+            current_type = schema["type"]
+            if isinstance(current_type, str):
+                schema["type"] = [current_type, "null"]
+            elif isinstance(current_type, list) and "null" not in current_type:
+                schema["type"] = [*current_type, "null"]
+
+        return schema
+
+    @staticmethod
+    def _get_basic_type_schema(param_type: Any, description: str) -> dict[str, Any]:
+        """Get schema for basic Python types.
+
+        Args:
+            param_type: The type to get schema for.
+            description: Description for the schema.
+
+        Returns:
+            JSON schema dictionary.
+        """
+        # Primitives
+        if param_type in (str, type(str)):
+            return {"type": "string", "description": description}
+        if param_type in (int, type(int)):
+            return {"type": "integer", "description": description}
+        if param_type in (float, type(float)):
+            return {"type": "number", "description": description}
+        if param_type in (bool, type(bool)):
+            return {"type": "boolean", "description": description}
+
+        # Bare list => truly any item array
+        if param_type in (list, type(list)):
+            return {
+                "type": "array",
+                "description": description,
+                "items": {},  # allow any item type
+            }
+
+        # Bare dict => any values allowed
+        if param_type in (dict, type(dict)):
+            return {
+                "type": "object",
+                "description": description,
+                "properties": {},
+                "additionalProperties": True,
+            }
+
+        # Fallback to string
+        return {"type": "string", "description": description}
+
+    @staticmethod
+    def _get_simple_type_schema(param_type: Any) -> dict[str, Any]:
+        """Get a simple schema for array item types.
+
+        Args:
+            param_type: The type to get schema for.
+
+        Returns:
+            Simple JSON schema dictionary without description.
+        """
+        if param_type in (str, type(str)):
+            return {"type": "string"}
+        if param_type in (int, type(int)):
+            return {"type": "integer"}
+        if param_type in (float, type(float)):
+            return {"type": "number"}
+        if param_type in (bool, type(bool)):
+            return {"type": "boolean"}
+        return {"type": "string"}
