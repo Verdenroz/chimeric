@@ -5,6 +5,7 @@ import pytest
 from chimeric import ToolManager
 from chimeric.exceptions import ToolRegistrationError
 
+
 # noinspection PyUnusedLocal
 class TestToolManager:
     @pytest.fixture
@@ -134,11 +135,12 @@ class TestToolManager:
     def test_union_parameters(self, tool_manager):
         """Test handling of Union parameters."""
 
-        def func_with_union(param: str | int):
+        def func_with_union(param: str | int, param2: float = 0.0):
             """Function with union parameter.
 
             Args:
                 param: Can be string or int
+                param2: Optional float parameter
             """
             pass
 
@@ -147,6 +149,7 @@ class TestToolManager:
 
         # Should use first type in union
         assert tool.parameters.properties["param"]["type"] == "string"
+        assert tool.parameters.properties["param2"]["type"] == "number"
 
     def test_union_with_none_parameters(self, tool_manager):
         """Test handling of Union with None parameters."""
@@ -272,6 +275,7 @@ class TestToolManager:
         docstring = """Description here.
 
         Arguments:
+            This line should be ignored.
             arg1: Argument description
 
         Parameters:
@@ -283,18 +287,30 @@ class TestToolManager:
         assert "arg1" in result["args"]
 
     def test_parse_numpy_docstring_full(self, tool_manager):
-        """Test parsing complete NumPy-style docstring."""
+        """Test parsing complete NumPy-style docstring with full coverage of edge cases."""
 
-        def func(param1: str, param2: int = 42):
+        def func(
+            param1: str,
+            param2: int = 42,
+            param3: float = 3.14,
+            param4: bool = False,
+            param5: str = "test",
+            param6: str = "x",
+        ):
             """This is a function description.
 
             Parameters
             ----------
+            Continuation line before any parameter is defined
             param1 : str
                 First parameter description
             param2 : int, optional
                 Second parameter description
                 with multiple lines
+            param3 : ndarray shape (n,) The array parameter with shape info
+            param4 : bool
+            param5 : str, default "test" Fourth parameter with default and description
+            param6 : customtype
 
             Returns
             -------
@@ -308,10 +324,15 @@ class TestToolManager:
             pass
 
         result = tool_manager._parse_numpy_docstring(func.__doc__)
-        print(result)
+
         assert result["description"].startswith("This is a function description.")
         assert result["args"]["param1"] == "First parameter description"
         assert "Second parameter description with multiple lines" in result["args"]["param2"]
+        assert result["args"]["param3"] == "shape (n,) The array parameter with shape info"
+        assert result["args"]["param4"] == ""
+        assert result["args"]["param5"] == "Fourth parameter with default and description"
+        assert result["args"]["param6"] == ""
+        assert len(result["args"]) == 6
 
     def test_parse_numpy_docstring_alternative_sections(self, tool_manager):
         """Test NumPy docstring with Arguments instead of Parameters."""
@@ -359,6 +380,51 @@ class TestToolManager:
         result = tool_manager._parse_docstring(docstring)
         assert result["description"] == "Simple description"
 
+    def test_parse_docstring_fallback(self, tool_manager):
+        """Test that _parse_docstring returns the raw docstring when no parser succeeds."""
+        # A docstring with no recognizable format
+        docstring = "Just a plain description with no structured format."
+
+        # Create properly typed mock function
+        def mock_parser(doc: str) -> dict[str, Any]:
+            return {"description": None, "args": {}}
+
+        # Mock the parser methods to always return empty results
+        original_google_parser = tool_manager._parse_google_docstring
+        original_numpy_parser = tool_manager._parse_numpy_docstring
+        original_sphinx_parser = tool_manager._parse_sphinx_docstring
+
+        tool_manager._parse_google_docstring = mock_parser
+        tool_manager._parse_numpy_docstring = mock_parser
+        tool_manager._parse_sphinx_docstring = mock_parser
+
+        try:
+            result = tool_manager._parse_docstring(docstring)
+            # The function should use the plain docstring as fallback
+            assert result["description"] == docstring.strip()
+            assert result["args"] == {}
+        finally:
+            # Restore original parser methods
+            tool_manager._parse_google_docstring = original_google_parser
+            tool_manager._parse_numpy_docstring = original_numpy_parser
+            tool_manager._parse_sphinx_docstring = original_sphinx_parser
+
+    def test_numpy_docstring_same_line_description(self, tool_manager):
+        """Test NumPy docstring with description on the same line as parameter."""
+        docstring = """Description.
+
+        Parameters
+        ----------
+        param1 : str Same line description here
+        param2 : int, optional Another same line description
+        param3 : float, optional, default 1.0 Description with default value
+        """
+
+        result = tool_manager._parse_numpy_docstring(docstring)
+        assert result["args"]["param1"] == "Same line description here"
+        assert result["args"]["param2"] == "Another same line description"
+        assert result["args"]["param3"] == "Description with default value"
+
     def test_parse_numpy_args_section_complex(self, tool_manager):
         """Test parsing complex NumPy arguments section."""
         args_section = [
@@ -375,19 +441,6 @@ class TestToolManager:
         assert result["param1"] == "First parameter description"
         assert result["param2"] == "Second parameter description with continuation"
         assert result["param3"] == "Third parameter without type"
-
-    def test_create_parameter_schema_all_types(self, tool_manager):
-        """Test creating parameter schemas for all supported types."""
-        # Test basic types
-        assert tool_manager._create_parameter_schema(str, "test")["type"] == "string"
-        assert tool_manager._create_parameter_schema(int, "test")["type"] == "integer"
-        assert tool_manager._create_parameter_schema(float, "test")["type"] == "number"
-        assert tool_manager._create_parameter_schema(bool, "test")["type"] == "boolean"
-
-    def test_create_schema_for_type_nullable(self, tool_manager):
-        """Test creating schema with nullable option."""
-        schema = tool_manager._create_schema_for_type(str, "desc", nullable=True)
-        assert schema["type"] == ["string", "null"]
 
     def test_get_simple_type_schema_all_types(self, tool_manager):
         """Test getting simple type schemas for all supported types."""
@@ -571,6 +624,53 @@ class TestToolManager:
         result = tool_manager._parse_numpy_args_section(args_section)
         assert result["param1"] == "Description for param1"
         assert result["param2"] == "Description for param2"
+
+    def test_nullable_type_with_existing_list_type(self, tool_manager):
+        """Test nullable type handling when current type is already a list."""
+
+        original_method = tool_manager._get_basic_type_schema
+
+        def mock_basic_type_schema(param_type, description):
+            # Return a schema with type as a list (simulating some complex type handling)
+            return {"type": ["string", "integer"], "description": description}
+
+        # Temporarily replace the method
+        tool_manager._get_basic_type_schema = mock_basic_type_schema
+
+        try:
+            # Now call _create_schema_for_type with nullable=True
+            schema = tool_manager._create_schema_for_type(str, "test description", nullable=True)
+
+            # Should have added "null" to the existing list
+            assert schema["type"] == ["string", "integer", "null"]
+
+        finally:
+            # Restore the original method
+            tool_manager._get_basic_type_schema = original_method
+
+    def test_nullable_type_with_existing_list_type_containing_null(self, tool_manager):
+        """Test nullable type handling when current type is already a list containing null."""
+
+        original_method = tool_manager._get_basic_type_schema
+
+        def mock_basic_type_schema(param_type, description):
+            # Return a schema with type as a list that already contains "null"
+            return {"type": ["string", "null"], "description": description}
+
+        # Temporarily replace the method
+        tool_manager._get_basic_type_schema = mock_basic_type_schema
+
+        try:
+            # Now call _create_schema_for_type with nullable=True
+            schema = tool_manager._create_schema_for_type(str, "test description", nullable=True)
+
+            # Should NOT add another "null" to the existing list since it already contains one
+            assert schema["type"] == ["string", "null"]
+            assert schema["type"].count("null") == 1  # Ensure only one "null" exists
+
+        finally:
+            # Restore the original method
+            tool_manager._get_basic_type_schema = original_method
 
     def test_comprehensive_integration(self, tool_manager):
         """Test comprehensive integration with complex function."""
