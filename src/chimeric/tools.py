@@ -190,9 +190,6 @@ class ToolManager:
         Returns:
             Dictionary with parsed description and arguments.
         """
-        if not docstring:
-            return {"description": "", "args": {}}
-
         lines = docstring.split("\n")
         description_lines = []
         args_lines = []
@@ -326,11 +323,29 @@ class ToolManager:
                 current_param = param_match.group(1)
 
                 # Extract description from the same line if present
-                desc_match = re.search(
-                    r"^[^:]+:(?:[^,]+(?:,\s*\w+)*)?(?:\s*,\s*optional)?\s*(.*)", stripped
-                )
-                if desc_match and desc_match.group(1):
-                    description_buffer = [desc_match.group(1).strip()]
+                desc_match = re.search(r"^[^:]+:\s*(.*)$", stripped)
+                if desc_match:
+                    type_and_desc = desc_match.group(1).strip()
+
+                    # If it's only type tokens (with optional/default), skip inline description
+                    if re.fullmatch(
+                        r"\w+(?:\s*,\s*\w+)*(?:\s*,\s*optional)?(?:\s*,\s*default\s+\S+)?",
+                        type_and_desc,
+                    ):
+                        continue
+
+                    # Extract description after default value if present
+                    default_match = re.search(r"\bdefault\s+\S+\s+(.*)", type_and_desc)
+                    if default_match:
+                        description_buffer = [default_match.group(1).strip()]
+                    else:
+                        # Extract description after optional if present
+                        optional_match = re.search(r"\boptional\s+(.*)", type_and_desc)
+                        if optional_match:
+                            description_buffer = [optional_match.group(1).strip()]
+                        # Otherwise, split on the first space to separate type info from description
+                        else:
+                            description_buffer = [type_and_desc.split(" ", 1)[1].strip()]
             else:
                 # Continuation line for current parameter
                 if current_param is not None:
@@ -360,9 +375,6 @@ class ToolManager:
         required = []
 
         for param_name, param in signature.parameters.items():
-            if param_name == "self":
-                continue
-
             param_type = type_hints.get(param_name, Any)
             description = descriptions.get(param_name, f"Parameter: {param_name}")
             has_default = param.default is not inspect.Parameter.empty
@@ -399,9 +411,7 @@ class ToolManager:
 
         return True
 
-    def _create_parameter_schema(
-        self, param_type: Any, description: str
-    ) -> dict[str, Any]:
+    def _create_parameter_schema(self, param_type: Any, description: str) -> dict[str, Any]:
         """Create JSON schema for a parameter.
 
         Args:
@@ -494,23 +504,6 @@ class ToolManager:
             return {"type": "number", "description": description}
         if param_type in (bool, type(bool)):
             return {"type": "boolean", "description": description}
-
-        # Bare list => truly any item array
-        if param_type in (list, type(list)):
-            return {
-                "type": "array",
-                "description": description,
-                "items": {},  # allow any item type
-            }
-
-        # Bare dict => any values allowed
-        if param_type in (dict, type(dict)):
-            return {
-                "type": "object",
-                "description": description,
-                "properties": {},
-                "additionalProperties": True,
-            }
 
         # Fallback to string
         return {"type": "string", "description": description}
