@@ -23,6 +23,7 @@ from .types import (
     Provider,
     StreamChunk,
     Tool,
+    Tools,
 )
 
 __all__ = [
@@ -120,6 +121,9 @@ class Chimeric:
         self.providers: dict[Provider, BaseClient[Any, Any, Any, Any, Any]] = {}
         self.primary_provider: Provider | None = None
 
+        # Initialize the tool management system.
+        self._tool_manager = ToolManager()
+
         # Cache for model-to-provider mapping to avoid repeated API calls
         self._model_provider_cache: dict[str, Provider] = {}
 
@@ -138,9 +142,6 @@ class Chimeric:
 
         # Auto-detect providers from environment variables.
         self._detect_providers_from_environment(kwargs)
-
-        # Initialize the tool management system.
-        self._tool_manager = ToolManager()
 
     def _initialize_providers_from_config(
         self,
@@ -215,7 +216,9 @@ class Chimeric:
                     clean_kwargs = kwargs.copy()
                     clean_kwargs.pop("api_key", None)
 
-                    self._add_provider(provider, api_key=env_value, **clean_kwargs)
+                    self._add_provider(
+                        provider, api_key=env_value, tool_manager=self._tool_manager, **clean_kwargs
+                    )
                     break
 
     def _add_provider(self, provider: Provider, **kwargs: Any) -> None:
@@ -265,7 +268,7 @@ class Chimeric:
         self,
         model: str,
         messages: Input,
-        tools: list[Tool] | None = None,
+        tools: Tools = None,
         auto_tool: bool = True,
         native: bool = False,
         provider: str | None = None,
@@ -276,7 +279,7 @@ class Chimeric:
         Args:
             model: Model name to use (determines provider automatically unless provider is specified).
             messages: List of messages in provider-compatible format.
-            tools: Optional list of tools to use in the chat completion.
+            tools: List of tools to use for function calling (if supported).
             auto_tool: If True, automatically uses registered tools if none are provided.
             native: If True, uses the provider's native chat completion method.
             provider: Optional provider name to force using a specific provider.
@@ -296,8 +299,9 @@ class Chimeric:
         chimeric_completion = client.chat_completion(
             model=model,
             messages=messages,
-            tools=tools or self._tool_manager.get_all_tools() if auto_tool else None,
             native=native,
+            tools=tools,
+            auto_tool=auto_tool,
             **kwargs,
         )
         if isinstance(chimeric_completion, Generator):
@@ -310,7 +314,7 @@ class Chimeric:
         self,
         model: str,
         messages: Input,
-        tools: list[Tool] | None = None,
+        tools: Tools = None,
         auto_tool: bool = True,
         native: bool = False,
         provider: str | None = None,
@@ -321,7 +325,7 @@ class Chimeric:
         Args:
             model: Model name to use (determines provider automatically unless provider is specified).
             messages: List of messages in provider-compatible format.
-            tools: Optional list of tools to use in the chat completion.
+            tools: List of tools to use for function calling (if supported).
             auto_tool: If True, automatically uses registered tools if none are provided.
             native: If True, uses the provider's native chat completion method.
             provider: Optional provider name to force using a specific provider.
@@ -341,8 +345,9 @@ class Chimeric:
         chimeric_completion = await client.achat_completion(
             model=model,
             messages=messages,
-            tools=tools or self._tool_manager.get_all_tools() if auto_tool else None,
             native=native,
+            tools=tools,
+            auto_tool=auto_tool,
             **kwargs,
         )
         if isinstance(chimeric_completion, AsyncGenerator):

@@ -7,8 +7,10 @@ import time
 from typing import Any, Generic, TypeVar
 
 from .exceptions import (
+    ChimericError,
     ProviderError,
 )
+from .tools import ToolManager
 from .types import (
     Capability,
     ChimericCompletionResponse,
@@ -18,6 +20,7 @@ from .types import (
     ModelInfo,
     ModelSummary,
     Tool,
+    Tools,
 )
 
 __all__ = [
@@ -70,6 +73,7 @@ class BaseClient(
     def __init__(
         self,
         api_key: str,
+        tool_manager: ToolManager,
         **kwargs: Any,
     ) -> None:
         """Initializes the base client with common settings.
@@ -80,11 +84,13 @@ class BaseClient(
         Args:
             api_key: Optional API key for authentication. Some providers may
                 not require this if using other auth methods.
+            tool_manager: ToolManager instance for managing tools available
             **kwargs: Additional provider-specific options. Invalid options
                 for the specific provider will be automatically filtered out
                 based on the client's __init__ signature.
         """
         self.api_key = api_key
+        self.tool_manager = tool_manager
         self.created_at = datetime.now()
         self._request_count = 0
         self._last_request_time: float | None = None
@@ -250,11 +256,31 @@ class BaseClient(
     # Chat completion methods
     # ====================================================================
 
+    def _encode_tools(self, tools: Tools = None) -> Tools:
+        """Encodes tools into a format suitable for the provider's API."""
+        if not tools:
+            return None
+
+        return [tool.model_dump() if isinstance(tool, Tool) else tool for tool in tools]
+
+    def _process_tools(self, auto_tool: bool, tools: Tools = None) -> Tools:
+        """Processes tools for chat completion requests."""
+        if tools and not self.supports_tools():
+            raise ChimericError("This provider does not support tool calling")
+
+        final_tools = tools
+        if not final_tools and auto_tool:
+            # Automatically include all tools bound to the client if no tools specified
+            final_tools = self.tool_manager.get_all_tools()
+
+        return self._encode_tools(final_tools)
+
     def chat_completion(
         self,
         messages: Input,
         model: str,
-        tools: list[Tool] | None = None,
+        tools: Tools = None,
+        auto_tool: bool = True,
         **kwargs: Any,
     ) -> (
         ChimericCompletionResponse[CompletionResponseType]
@@ -269,7 +295,8 @@ class BaseClient(
             messages: Input for the completion. Can be a string prompt,
                 list of messages, or dictionary of provider-specific parameters.
             model: Model identifier to use for the completion.
-            tools: Optional list of tools/functions available to the model.
+            tools: Optional list of tools to make available to the model.
+            auto_tool: If True, automatically includes all tools bound to the client
             **kwargs: Provider-specific parameters passed directly to the
                 underlying SDK after filtering.
 
@@ -285,8 +312,9 @@ class BaseClient(
         try:
             self._request_count += 1
             self._last_request_time = time.time()
-            filtered_kwargs = self._filter_kwargs(self._chat_completion_impl, kwargs)
-            return self._chat_completion_impl(messages, model, tools, **filtered_kwargs)
+            encoded_tools = self._process_tools(auto_tool, tools)
+
+            return self._chat_completion_impl(messages, model, encoded_tools, **kwargs)
         except Exception:
             self._error_count += 1
             raise
@@ -295,7 +323,8 @@ class BaseClient(
         self,
         messages: Input,
         model: str,
-        tools: list[Tool] | None = None,
+        tools: Tools = None,
+        auto_tool: bool = True,
         **kwargs: Any,
     ) -> (
         ChimericCompletionResponse[CompletionResponseType]
@@ -310,7 +339,8 @@ class BaseClient(
             messages: Input for the completion. Can be a string prompt,
                 list of messages, or dictionary of provider-specific parameters.
             model: Model identifier to use for the completion.
-            tools: Optional list of tools/functions available to the model.
+            tools: Optional list of tools to make available to the model.
+            auto_tool: If True, automatically includes all tools bound to the client
             **kwargs: Provider-specific parameters passed directly to the
                 underlying SDK after filtering.
 
@@ -327,8 +357,8 @@ class BaseClient(
         try:
             self._request_count += 1
             self._last_request_time = time.time()
-            filtered_kwargs = self._filter_kwargs(self._achat_completion_impl, kwargs)
-            return await self._achat_completion_impl(messages, model, tools, **filtered_kwargs)
+            encoded_tools = self._process_tools(auto_tool, tools)
+            return await self._achat_completion_impl(messages, model, encoded_tools, **kwargs)
         except Exception:
             self._error_count += 1
             raise
@@ -338,7 +368,7 @@ class BaseClient(
         self,
         messages: Input,
         model: str,
-        tools: list[Tool] | None = None,
+        tools: Tools = None,
         **kwargs: Any,
     ) -> (
         ChimericCompletionResponse[CompletionResponseType]
@@ -368,7 +398,7 @@ class BaseClient(
         self,
         messages: Input,
         model: str,
-        tools: list[Tool] | None = None,
+        tools: Tools = None,
         **kwargs: Any,
     ) -> (
         ChimericCompletionResponse[CompletionResponseType]
