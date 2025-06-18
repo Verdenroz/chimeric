@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from typing import Any, cast
 from unittest.mock import AsyncMock, Mock
 
+from openai import NOT_GIVEN
 import pytest
 
 from chimeric import Chimeric
@@ -19,7 +20,7 @@ from chimeric.types import (
     ModelSummary,
     StreamChunk,
     Tool,
-    ToolType,
+    ToolParameters,
 )
 
 
@@ -474,6 +475,59 @@ class TestOpenAIClient:
         assert "- Requests:" in s
         assert "- Errors:" in s
 
+    def test_encode_tools(self, chimeric_openai_client):
+        """Test that _encode_tools correctly formats tools for the OpenAI API."""
+        client = chimeric_openai_client
+
+        # Test with None tools
+        assert client._encode_tools(None) is None
+
+        # Create a tool with parameters
+        tool_params = ToolParameters(
+            properties={"location": {"type": "string", "description": "City name"}},
+            required=["location"],
+        )
+        tool_with_params = Tool(
+            name="get_weather",
+            description="Get weather information for a location",
+            parameters=tool_params,
+        )
+
+        # Create a tool without parameters
+        tool_without_params = Tool(name="get_time", description="Get current server time")
+
+        # Test with a list of Tool instances
+        encoded_tools = client._encode_tools([tool_with_params, tool_without_params])
+        assert isinstance(encoded_tools, list)
+        assert len(encoded_tools) == 2
+
+        # Verify first tool (with parameters)
+        assert encoded_tools[0]["type"] == "function"
+        assert encoded_tools[0]["name"] == "get_weather"
+        assert encoded_tools[0]["description"] == "Get weather information for a location"
+        assert encoded_tools[0]["parameters"] == tool_params.model_dump()
+
+        # Verify the second tool (without parameters)
+        assert encoded_tools[1]["type"] == "function"
+        assert encoded_tools[1]["name"] == "get_time"
+        assert encoded_tools[1]["description"] == "Get current server time"
+        assert encoded_tools[1]["parameters"] is None
+
+        # Test with pre-formatted tool dictionary
+        pre_formatted_tool = {
+            "type": "function",
+            "name": "custom_tool",
+            "description": "A pre-formatted tool",
+            "parameters": {"type": "object"},
+        }
+
+        # Test with mix of Tool instances and pre-formatted tools
+        mixed_tools = client._encode_tools([tool_with_params, pre_formatted_tool])
+        assert isinstance(mixed_tools, list)
+        assert len(mixed_tools) == 2
+        assert mixed_tools[0]["name"] == "get_weather"
+        assert mixed_tools[1] == pre_formatted_tool  # Should be passed through unchanged
+
     def test_chat_completion_impl_non_streaming(self, chimeric_openai_client, monkeypatch):
         """Test _chat_completion_impl with non-streaming response."""
         client = chimeric_openai_client
@@ -517,6 +571,7 @@ class TestOpenAIClient:
         mock_create.assert_called_once_with(
             model="gpt-4",
             input=[{"role": "user", "content": "Hello"}],
+            tools=NOT_GIVEN,
             temperature=0.7,
             max_tokens=100,
         )
@@ -560,7 +615,10 @@ class TestOpenAIClient:
 
         # Verify the client was called correctly
         mock_create.assert_called_once_with(
-            model="gpt-4", input=[{"role": "user", "content": "Hello"}], stream=True
+            model="gpt-4",
+            input=[{"role": "user", "content": "Hello"}],
+            tools=NOT_GIVEN,
+            stream=True,
         )
 
     def test_chat_completion_impl_with_tools(self, chimeric_openai_client, monkeypatch):
@@ -577,20 +635,23 @@ class TestOpenAIClient:
         mock_create = Mock(return_value=mock_response)
         client._client.responses = SimpleNamespace(create=mock_create)
 
+        messages = [{"role": "user", "content": "What's the weather?"}]
+        model = "gpt-4"
         # Test with tools
-        tools = [Tool(type=ToolType.FUNCTION, name="get_weather", description="Get weather info")]
+        tools = [Tool(name="get_weather", description="Get weather info")]
 
         client._chat_completion_impl(
-            messages=[{"role": "user", "content": "What's the weather?"}],
-            model="gpt-4",
+            messages=messages,
+            model=model,
             tools=tools,
         )
 
         # Verify tools parameter is handled (note: tools might be transformed or ignored)
-        mock_create.assert_called_once()
-        call_args = mock_create.call_args
-        assert call_args[1]["model"] == "gpt-4"
-        assert call_args[1]["input"] == [{"role": "user", "content": "What's the weather?"}]
+        mock_create.assert_called_once_with(
+            model=model,
+            input=messages,
+            tools=tools,
+        )
 
     async def test_achat_completion_impl_non_streaming(self, chimeric_openai_client, monkeypatch):
         """Test _achat_completion_impl with non-streaming response."""
@@ -624,6 +685,7 @@ class TestOpenAIClient:
         mock_create.assert_called_once_with(
             model="gpt-3.5-turbo",
             input=[{"role": "user", "content": "Async hello"}],
+            tools=NOT_GIVEN,
             temperature=0.5,
         )
 
@@ -668,7 +730,10 @@ class TestOpenAIClient:
 
         # Verify the async client was called correctly
         mock_create.assert_called_once_with(
-            model="gpt-4", input=[{"role": "user", "content": "Stream test"}], stream=True
+            model="gpt-4",
+            input=[{"role": "user", "content": "Stream test"}],
+            tools=NOT_GIVEN,
+            stream=True,
         )
 
     def test_chat_completion_impl_kwargs_filtering(self, chimeric_openai_client, monkeypatch):
@@ -705,6 +770,7 @@ class TestOpenAIClient:
         mock_create.assert_called_once_with(
             model="gpt-4",
             input=[{"role": "user", "content": "Test"}],
+            tools=NOT_GIVEN,
             temperature=0.8,
             max_tokens=50,
         )
@@ -745,6 +811,7 @@ class TestOpenAIClient:
         mock_create.assert_called_once_with(
             model="gpt-4",
             input=[{"role": "user", "content": "Async test"}],
+            tools=NOT_GIVEN,
             temperature=0.9,
             top_p=0.95,
         )
@@ -766,7 +833,7 @@ class TestOpenAIClient:
         result = client._chat_completion_impl(messages=[], model="gpt-4")
 
         # Verify the call was made with empty input
-        mock_create.assert_called_once_with(model="gpt-4", input=[])
+        mock_create.assert_called_once_with(model="gpt-4", input=[], tools=NOT_GIVEN)
         assert isinstance(result, ChimericCompletionResponse)
 
     async def test_achat_completion_impl_with_complex_messages(
@@ -797,6 +864,8 @@ class TestOpenAIClient:
         )
 
         # Verify the complex messages were passed correctly
-        mock_create.assert_called_once_with(model="gpt-4", input=complex_messages, temperature=0.7)
+        mock_create.assert_called_once_with(
+            model="gpt-4", input=complex_messages, tools=NOT_GIVEN, temperature=0.7
+        )
         assert isinstance(result, ChimericCompletionResponse)
         assert result.common.content == "Complex response"
