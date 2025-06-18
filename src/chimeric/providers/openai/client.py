@@ -1,7 +1,7 @@
 from collections.abc import AsyncGenerator, Generator
 from typing import Any
 
-from openai import AsyncOpenAI, AsyncStream, OpenAI, Stream
+from openai import NOT_GIVEN, AsyncOpenAI, AsyncStream, OpenAI, Stream
 from openai.types import FileObject
 from openai.types.responses import Response, ResponseStreamEvent
 
@@ -17,6 +17,7 @@ from chimeric.types import (
     ModelSummary,
     StreamChunk,
     Tool,
+    Tools,
     Usage,
 )
 
@@ -202,11 +203,27 @@ class OpenAIClient(BaseClient[OpenAI, AsyncOpenAI, Response, ResponseStreamEvent
             ),
         )
 
+    def _encode_tools(self, tools: Tools = None) -> Tools:
+        """Encode tools into the format expected by OpenAI Responses API."""
+        if not tools:
+            return None
+        return [
+            {
+                "type": "function",
+                "name": tool.name,
+                "description": tool.description,
+                "parameters": tool.parameters.model_dump() if tool.parameters else None,
+            }
+            if isinstance(tool, Tool)
+            else tool
+            for tool in tools
+        ]
+
     def _chat_completion_impl(
         self,
         messages: Input,
         model: str,
-        tools: list[Tool] | None = None,
+        tools: Tools = None,
         **kwargs: Any,
     ) -> (
         ChimericCompletionResponse[Response]
@@ -214,7 +231,10 @@ class OpenAIClient(BaseClient[OpenAI, AsyncOpenAI, Response, ResponseStreamEvent
     ):
         """Implement synchronous chat completion using OpenAI Responses API."""
         filtered_kwargs = self._filter_kwargs(self._client.responses.create, kwargs)
-        response = self._client.responses.create(model=model, input=messages, **filtered_kwargs)
+        tools_param = NOT_GIVEN if tools is None else tools
+        response = self._client.responses.create(
+            model=model, input=messages, tools=tools_param, **filtered_kwargs
+        )
 
         return self._format_response(response)
 
@@ -222,7 +242,7 @@ class OpenAIClient(BaseClient[OpenAI, AsyncOpenAI, Response, ResponseStreamEvent
         self,
         messages: Input,
         model: str,
-        tools: list[Tool] | None = None,
+        tools: Tools = None,
         **kwargs: Any,
     ) -> (
         ChimericCompletionResponse[Response]
@@ -230,8 +250,9 @@ class OpenAIClient(BaseClient[OpenAI, AsyncOpenAI, Response, ResponseStreamEvent
     ):
         """Implement asynchronous chat completion using OpenAI Responses API."""
         filtered_kwargs = self._filter_kwargs(self._async_client.responses.create, kwargs)
+        tools_param = NOT_GIVEN if tools is None else tools
         response = await self._async_client.responses.create(
-            model=model, input=messages, **filtered_kwargs
+            model=model, input=messages, tools=tools_param, **filtered_kwargs
         )
 
         return await self._aformat_response(response)
