@@ -218,48 +218,6 @@ class OpenAIClient(BaseClient[OpenAI, AsyncOpenAI, Response, ResponseStreamEvent
             ),
         )
 
-    def _format_response(
-        self, response: Response | Stream[ResponseStreamEvent], tool_calls: list[dict[str, Any]]
-    ) -> (
-        ChimericCompletionResponse[Response]
-        | Generator[ChimericStreamChunk[ResponseStreamEvent], None, None]
-    ):
-        """Formats a synchronous OpenAI response into a standardized `chimeric` type.
-
-        Args:
-            response: The OpenAI response object or stream.
-            tool_calls: A list of tool calls made during the request.
-
-        Returns:
-            A ChimericCompletionResponse for a single response, or a generator
-            of ChimericStreamChunk for a streaming response.
-        """
-        if isinstance(response, Stream):
-            return self._stream(response)
-        return self._create_chimeric_response(response, tool_calls)
-
-    async def _aformat_response(
-        self,
-        response: Response | AsyncStream[ResponseStreamEvent],
-        tool_calls: list[dict[str, Any]],
-    ) -> (
-        ChimericCompletionResponse[Response]
-        | AsyncGenerator[ChimericStreamChunk[ResponseStreamEvent], None]
-    ):
-        """Formats an asynchronous OpenAI response into a standardized `chimeric` type.
-
-        Args:
-            response: The OpenAI response object or async stream.
-            tool_calls: A list of tool calls made during the request.
-
-        Returns:
-            A ChimericCompletionResponse for a single response, or an async
-            generator of ChimericStreamChunk for a streaming response.
-        """
-        if isinstance(response, AsyncStream):
-            return self._astream(response)
-        return self._create_chimeric_response(response, tool_calls)
-
     def _encode_tools(self, tools: Tools = None) -> Tools:
         """Encodes a list of Tool objects into the format expected by the OpenAI API.
 
@@ -307,11 +265,8 @@ class OpenAIClient(BaseClient[OpenAI, AsyncOpenAI, Response, ResponseStreamEvent
         }
 
         tool = self.tool_manager.get_tool(tool_name)
-        if not tool or not tool.function:
-            raise ToolRegistrationError(
-                tool_name=tool_name,
-                reason=f"Tool '{tool_name}' is not registered or has no callable function.",
-            )
+        if not callable(tool.function):
+            raise ToolRegistrationError(f"Tool '{tool_name}' is not callable.")
 
         args = json.loads(call.arguments)
         result = tool.function(**args)
@@ -342,9 +297,7 @@ class OpenAIClient(BaseClient[OpenAI, AsyncOpenAI, Response, ResponseStreamEvent
             return [], messages
 
         # Ensure messages is a mutable list of dictionaries for appending
-        messages_list: list[Any] = (
-            list(messages) if isinstance(messages, list) else [messages]
-        )
+        messages_list: list[Any] = list(messages) if isinstance(messages, list) else [messages]
         tool_calls_metadata = []
 
         for call in calls:
@@ -375,6 +328,7 @@ class OpenAIClient(BaseClient[OpenAI, AsyncOpenAI, Response, ResponseStreamEvent
         self,
         messages: Input,
         model: str,
+        stream: bool = False,
         tools: Tools = None,
         **kwargs: Any,
     ) -> (
@@ -390,6 +344,7 @@ class OpenAIClient(BaseClient[OpenAI, AsyncOpenAI, Response, ResponseStreamEvent
         Args:
             messages: The input messages for the chat completion.
             model: The model to use for the completion.
+            stream: Whether to return a streaming response.
             tools: A list of tools (already encoded for the API).
             **kwargs: Additional arguments for the `client.responses.create` method.
 
@@ -402,8 +357,12 @@ class OpenAIClient(BaseClient[OpenAI, AsyncOpenAI, Response, ResponseStreamEvent
 
         # Send the initial user request.
         response = self._client.responses.create(
-            model=model, input=messages, tools=tools_param, **filtered_kwargs
+            model=model, stream=stream, input=messages, tools=tools_param, **filtered_kwargs
         )
+
+        if isinstance(response, Stream):
+            # If streaming is requested, return a generator that processes the stream.
+            return self._stream(response)
 
         # Check for and handle any tool calls requested by the model.
         tool_calls_metadata, updated_messages = self._handle_function_tool_calls(response, messages)
@@ -414,12 +373,13 @@ class OpenAIClient(BaseClient[OpenAI, AsyncOpenAI, Response, ResponseStreamEvent
                 model=model, input=updated_messages, tools=tools_param, **filtered_kwargs
             )
 
-        return self._format_response(response, tool_calls_metadata)
+        return self._create_chimeric_response(response, tool_calls_metadata)
 
     async def _achat_completion_impl(
         self,
         messages: Input,
         model: str,
+        stream: bool = False,
         tools: Tools = None,
         **kwargs: Any,
     ) -> (
@@ -435,6 +395,7 @@ class OpenAIClient(BaseClient[OpenAI, AsyncOpenAI, Response, ResponseStreamEvent
         Args:
             messages: The input messages for the chat completion.
             model: The model to use for the completion.
+            stream: Whether to return a streaming response.
             tools: A list of tools (already encoded for the API).
             **kwargs: Additional arguments for the `async_client.responses.create` method.
 
@@ -447,8 +408,12 @@ class OpenAIClient(BaseClient[OpenAI, AsyncOpenAI, Response, ResponseStreamEvent
 
         # Send the initial user request.
         response = await self._async_client.responses.create(
-            model=model, input=messages, tools=tools_param, **filtered_kwargs
+            model=model, input=messages, stream=stream, tools=tools_param, **filtered_kwargs
         )
+
+        if isinstance(response, AsyncStream):
+            # If streaming is requested, return an async generator that processes the stream.
+            return self._astream(response)
 
         # Check for and handle any tool calls requested by the model.
         tool_calls_metadata, updated_messages = self._handle_function_tool_calls(response, messages)
@@ -459,7 +424,7 @@ class OpenAIClient(BaseClient[OpenAI, AsyncOpenAI, Response, ResponseStreamEvent
                 model=model, input=updated_messages, tools=tools_param, **filtered_kwargs
             )
 
-        return await self._aformat_response(response, tool_calls_metadata)
+        return self._create_chimeric_response(response, tool_calls_metadata)
 
     def _upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[FileObject]:
         """Uploads a file to OpenAI.
