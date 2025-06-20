@@ -88,10 +88,11 @@ class ToolManager:
             The Tool instance.
 
         Raises:
-            KeyError: If no tool is registered with the given name.
+            ToolRegistrationError: If no tool is registered with the given name.
         """
+        # Check if the tool exists
         if name not in self.tools:
-            raise KeyError(f"No tool registered with name '{name}'")
+            raise ToolRegistrationError(f"No tool registered with name '{name}'")
         return self.tools[name]
 
     def get_all_tools(self) -> list[Tool]:

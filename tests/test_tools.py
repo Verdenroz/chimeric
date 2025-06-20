@@ -467,7 +467,7 @@ class TestToolManager:
 
     def test_get_tool_nonexistent(self, tool_manager):
         """Test getting non-existent tool raises KeyError."""
-        with pytest.raises(KeyError) as exc_info:
+        with pytest.raises(ToolRegistrationError) as exc_info:
             tool_manager.get_tool("nonexistent")
         assert "No tool registered with name 'nonexistent'" in str(exc_info.value)
 
