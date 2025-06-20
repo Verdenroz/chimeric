@@ -279,6 +279,7 @@ class BaseClient(
         self,
         messages: Input,
         model: str,
+        stream: bool = False,
         tools: Tools = None,
         auto_tool: bool = True,
         **kwargs: Any,
@@ -296,6 +297,7 @@ class BaseClient(
                 list of messages, or dictionary of provider-specific parameters.
             model: Model identifier to use for the completion.
             tools: Optional list of tools to make available to the model.
+            stream: Whether to return a streaming response.
             auto_tool: If True, automatically includes all tools bound to the client
             **kwargs: Provider-specific parameters passed directly to the
                 underlying SDK after filtering.
@@ -309,12 +311,14 @@ class BaseClient(
             ProviderError: If the provider's API returns an error.
             ValueError: If required parameters are missing or invalid.
         """
+        if stream and not self.supports_streaming():
+            raise ChimericError("This provider does not support streaming responses")
         try:
             self._request_count += 1
             self._last_request_time = time.time()
             encoded_tools = self._process_tools(auto_tool, tools)
 
-            return self._chat_completion_impl(messages, model, encoded_tools, **kwargs)
+            return self._chat_completion_impl(messages, model, stream, encoded_tools, **kwargs)
         except Exception:
             self._error_count += 1
             raise
@@ -323,6 +327,7 @@ class BaseClient(
         self,
         messages: Input,
         model: str,
+        stream: bool = False,
         tools: Tools = None,
         auto_tool: bool = True,
         **kwargs: Any,
@@ -340,6 +345,7 @@ class BaseClient(
                 list of messages, or dictionary of provider-specific parameters.
             model: Model identifier to use for the completion.
             tools: Optional list of tools to make available to the model.
+            stream: Whether to return a streaming response.
             auto_tool: If True, automatically includes all tools bound to the client
             **kwargs: Provider-specific parameters passed directly to the
                 underlying SDK after filtering.
@@ -354,11 +360,15 @@ class BaseClient(
             ValueError: If required parameters are missing or invalid.
             NotImplementedError: If the provider doesn't support async operations.
         """
+        if stream and not self.supports_streaming():
+            raise ChimericError("This provider does not support streaming responses")
         try:
             self._request_count += 1
             self._last_request_time = time.time()
             encoded_tools = self._process_tools(auto_tool, tools)
-            return await self._achat_completion_impl(messages, model, encoded_tools, **kwargs)
+            return await self._achat_completion_impl(
+                messages, model, stream, encoded_tools, **kwargs
+            )
         except Exception:
             self._error_count += 1
             raise
@@ -368,6 +378,7 @@ class BaseClient(
         self,
         messages: Input,
         model: str,
+        stream: bool = False,
         tools: Tools = None,
         **kwargs: Any,
     ) -> (
@@ -383,6 +394,7 @@ class BaseClient(
         Args:
             messages: Input for the completion.
             model: Model identifier to use.
+            stream: Whether to return a streaming response.
             tools: Optional list of tools to make available to the model.
             **kwargs: Provider-specific parameters that have been filtered
                 for this method's signature.
@@ -398,6 +410,7 @@ class BaseClient(
         self,
         messages: Input,
         model: str,
+        stream: bool = False,
         tools: Tools = None,
         **kwargs: Any,
     ) -> (
@@ -413,6 +426,7 @@ class BaseClient(
             messages: Input for the completion.
             model: Model identifier to use.
             tools: Optional list of tools to make available to the model.
+            stream: Whether to return a streaming response.
             **kwargs: Provider-specific parameters that have been filtered
                 for this method's signature.
 
@@ -475,6 +489,7 @@ class BaseClient(
                 endpoint="file_upload",
             ) from e
 
+    @abstractmethod
     def _upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[FileUploadResponseType]:
         """Provider-specific implementation of file upload.
 

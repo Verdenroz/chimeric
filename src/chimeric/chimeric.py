@@ -183,7 +183,7 @@ class Chimeric:
         # Initialize providers that have API keys provided.
         for provider, api_key in provider_configs:
             if api_key is not None:
-                self._add_provider(provider, api_key=api_key)
+                self._add_provider(provider, api_key=api_key, tool_manager=self._tool_manager)
 
     def _detect_providers_from_environment(self, kwargs: dict[str, Any]) -> None:
         """Auto-detects available providers from environment variables.
@@ -268,6 +268,7 @@ class Chimeric:
         self,
         model: str,
         messages: Input,
+        stream: bool = False,
         tools: Tools = None,
         auto_tool: bool = True,
         native: bool = False,
@@ -279,6 +280,7 @@ class Chimeric:
         Args:
             model: Model name to use (determines provider automatically unless provider is specified).
             messages: List of messages in provider-compatible format.
+            stream: If True, enables streaming response.
             tools: List of tools to use for function calling (if supported).
             auto_tool: If True, automatically uses registered tools if none are provided.
             native: If True, uses the provider's native chat completion method.
@@ -290,16 +292,15 @@ class Chimeric:
             if streaming is enabled.
 
         Raises:
-            ChimericError: If no suitable provider is found for the model.
-            ProviderNotFoundError: If the specified provider is not configured.
+            ProviderNotFoundError: If no suitable provider is found or the specified provider is not configured.
         """
         target_provider = self._select_provider(model, provider)
         client = self.providers[target_provider]
 
         chimeric_completion = client.chat_completion(
-            model=model,
             messages=messages,
-            native=native,
+            model=model,
+            stream=stream,
             tools=tools,
             auto_tool=auto_tool,
             **kwargs,
@@ -314,6 +315,7 @@ class Chimeric:
         self,
         model: str,
         messages: Input,
+        stream: bool = False,
         tools: Tools = None,
         auto_tool: bool = True,
         native: bool = False,
@@ -325,6 +327,7 @@ class Chimeric:
         Args:
             model: Model name to use (determines provider automatically unless provider is specified).
             messages: List of messages in provider-compatible format.
+            stream: If True, enables streaming response.
             tools: List of tools to use for function calling (if supported).
             auto_tool: If True, automatically uses registered tools if none are provided.
             native: If True, uses the provider's native chat completion method.
@@ -336,8 +339,7 @@ class Chimeric:
             objects if streaming is enabled.
 
         Raises:
-            ChimericError: If no suitable provider is found for the model.
-            ProviderNotFoundError: If the specified provider is not configured.
+            ProviderNotFoundError: If no suitable provider is found or the specified provider is not configured.
         """
         target_provider = self._select_provider(model, provider)
         client = self.providers[target_provider]
@@ -345,7 +347,7 @@ class Chimeric:
         chimeric_completion = await client.achat_completion(
             model=model,
             messages=messages,
-            native=native,
+            stream=stream,
             tools=tools,
             auto_tool=auto_tool,
             **kwargs,
@@ -565,7 +567,10 @@ class Chimeric:
         self._model_provider_cache.clear()
 
     def tool(
-        self, name: str | None = None, description: str | None = None
+        self,
+        name: str | None = None,
+        description: str | None = None,
+        strict: bool = True,
     ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
         """Decorator to register a function as a Chimeric tool.
 
@@ -576,6 +581,7 @@ class Chimeric:
         Args:
             name: Optional name for the tool. Default to function name.
             description: Optional description. Default to function's docstring.
+            strict: If True, enforce strict type checking for function parameters
 
         Returns:
             A decorator function that registers the decorated function as a tool.
@@ -588,11 +594,14 @@ class Chimeric:
         """
 
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
-            return self._tool_manager.register(func=func, name=name, description=description)
+            return self._tool_manager.register(
+                func=func, name=name, description=description, strict=strict
+            )
 
         return decorator
 
-    def get_tools(self) -> list[Tool]:
+    @property
+    def tools(self) -> list[Tool]:
         """Gets the list of all registered tools.
 
         Returns:
