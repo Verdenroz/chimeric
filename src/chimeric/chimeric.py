@@ -403,26 +403,25 @@ class Chimeric:
         Raises:
             ProviderNotFoundError: If no provider supports the requested model.
         """
-        # Check cache first
-        if model in self._model_provider_cache:
-            cached_provider = self._model_provider_cache[model]
-            # Verify the cached provider is still available
-            if cached_provider in self.providers:
-                return cached_provider
-            # Remove stale cache entry
-            del self._model_provider_cache[model]
+        canon_model = "".join(ch for ch in model.lower() if ch.isalnum())
 
-        # Query each provider to find the model
+        # Check cache first (stored under canonical form)
+        cached = self._model_provider_cache.get(canon_model)
+        if cached and cached in self.providers:
+            return cached
+
+        # If not cached, check each provider for model availability
         for provider, client in self.providers.items():
             try:
                 models = client.list_models()
-                model_ids = {m.id for m in models}
-                model_names = {m.name for m in models if m.name}
 
-                # Check if the requested model matches by ID or name
-                if model in model_ids or model in model_names:
-                    # Cache the result for future use
-                    self._model_provider_cache[model] = provider
+                # Build canonical sets for IDs and display names
+                canon_ids = {"".join(ch for ch in m.id.lower() if ch.isalnum()) for m in models}
+                canon_names = {"".join(ch for ch in m.name.lower() if ch.isalnum()) for m in models}
+
+                if canon_model in canon_ids or canon_model in canon_names:
+                    # Cache under canonical key for quick future lookup
+                    self._model_provider_cache[canon_model] = provider
                     return provider
 
             except (
@@ -456,8 +455,7 @@ class Chimeric:
 
         raise ProviderNotFoundError(
             f"No provider found for model '{model}'. "
-            f"Available models: {', '.join(available_models[:10])}"
-            f"{'...' if len(available_models) > 10 else ''}"
+            f"Available models: {', '.join(available_models)}"
         )
 
     def list_models(self, provider: str | None = None) -> list[ModelSummary]:

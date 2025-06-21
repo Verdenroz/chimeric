@@ -165,7 +165,7 @@ class Usage(BaseModel):
         total_tokens: Total tokens processed, typically the sum of `prompt_tokens` and `completion_tokens`.
     """
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(extra="allow")
 
     prompt_tokens: int = 0
     completion_tokens: int = 0
@@ -236,7 +236,7 @@ class FileUploadResponse(BaseModel):
     file_id: str
     filename: str
     bytes: int
-    purpose: str
+    purpose: str | None = None
     created_at: int | None = None
     status: str | None = None
     metadata: dict[str, Any] | None = None
