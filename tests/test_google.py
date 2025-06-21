@@ -27,7 +27,7 @@ from chimeric.types import (
 def chimeric_google(google_env):
     """Create a Chimeric instance configured for Google."""
     return Chimeric(
-        api_key=os.environ.get("GOOGLE_API_KEY", "test_key"),
+        google_api_key=os.environ.get("GOOGLE_API_KEY", "test_key"),
     )
 
 

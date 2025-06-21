@@ -107,6 +107,7 @@ class Capability(BaseModel):
     agents: bool = False
     files: bool = False
 
+
 class ModelSummary(BaseModel):
     """Concise summary of a model's attributes, often from a model listing operation.
 

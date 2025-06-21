@@ -17,7 +17,6 @@ from chimeric.types import (
     ChimericStreamChunk,
     CompletionResponse,
     FileUploadResponse,
-    ModelInfo,
     ModelSummary,
     StreamChunk,
     Tool,
@@ -29,7 +28,7 @@ from chimeric.types import (
 def chimeric_openai():
     """Create a Chimeric instance configured for OpenAI."""
     return Chimeric(
-        api_key=os.environ["OPENAI_API_KEY"],
+        openai_api_key=os.getenv("OPENAI_API_KEY", "test_key"),
         base_url="https://test.openai.com/v1",
         timeout=120,
         max_retries=2,
@@ -326,7 +325,7 @@ class TestOpenAIClient:
 
         # Test finding existing model
         info = client.get_model_info("MID")
-        assert isinstance(info, ModelInfo)
+        assert isinstance(info, ModelSummary)
 
         # Test error when model not found
         with pytest.raises(ValueError):
