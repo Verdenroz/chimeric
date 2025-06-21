@@ -1,14 +1,14 @@
-import os
 from datetime import datetime
+import os
 from typing import Any, cast
-from unittest.mock import AsyncMock, Mock, ANY
+from unittest.mock import ANY, AsyncMock, Mock
 
-import pytest
 from google.genai.types import GenerateContentResponse, GenerateContentResponseUsageMetadata
+import pytest
 
-import chimeric.providers.google.client as client_module
 from chimeric import Chimeric
 from chimeric.exceptions import ProviderError
+import chimeric.providers.google.client as client_module
 from chimeric.providers.google.client import GoogleClient
 from chimeric.types import (
     ChimericCompletionResponse,
@@ -39,20 +39,21 @@ def chimeric_google_client(chimeric_google) -> GoogleClient:
 
 @pytest.fixture(autouse=True)
 def patch_google_imports(monkeypatch: pytest.MonkeyPatch):
-    """Replace ``google.genai`` symbols with light‑weight stubs.
+    """Replace ``google.genai`` symbols with light-weight stubs.
 
     The real SDK classes are heavy and make network calls.  A minimal stub is
-    more than enough for unit‑testing the *client* integration logic.
+    more than enough for unit-testing the *client* integration logic.
     """
 
     class _StubModels:
-        """Holds "models" RPC methods that we monkey‑patch per‑test."""
+        """Holds "models" RPC methods that we monkey-patch per-test."""
 
-        def list(self):  # pragma: no cover – replaced on demand
+        def list(self):  # pragma: no cover - replaced on demand
             raise NotImplementedError
 
     class _StubFiles:
-        """Holds the ``files.upload`` RPC that we monkey‑patch per‑test."""
+        """Holds the ``files.upload`` RPC that we monkey-patch per-test."""
+
         pass
 
     class _ClientStub:
@@ -66,7 +67,8 @@ def patch_google_imports(monkeypatch: pytest.MonkeyPatch):
             self.aio = Mock(models=_StubModels())
 
     class _AsyncClientStub(_ClientStub):
-        """Placeholder for *type* checks – never directly instantiated."""
+        """Placeholder for *type* checks - never directly instantiated."""
+
         pass
 
     # Patch the names used inside :pymod:`client_module`.
@@ -104,6 +106,7 @@ class MockGoogleFile:
     @staticmethod
     def model_dump() -> dict[str, Any]:
         return {"file_metadata": True}
+
 
 # noinspection PyUnusedLocal
 class TestGoogleClient:
@@ -232,7 +235,7 @@ class TestGoogleClient:
         monkeypatch.setattr(GoogleClient, "_process_stream_event", staticmethod(mock_process))
 
         # Process events through _stream
-        chunks = list(client._stream([event1, event2, event3])) # type: ignore
+        chunks = list(client._stream([event1, event2, event3]))
 
         # Verify correct processing sequence
         assert len(chunks) == 3
@@ -430,6 +433,7 @@ class TestGoogleClient:
         client._client.models.generate_content_stream = mock_stream_generate
 
         stream_input = None
+
         def mock_stream_method(stream_obj):
             nonlocal stream_input
             stream_input = stream_obj
@@ -458,8 +462,8 @@ class TestGoogleClient:
         chunks = list(result)
         assert len(chunks) == 2
         assert all(isinstance(chunk, ChimericStreamChunk) for chunk in chunks)
-        assert chunks[0].common.content == "Streaming" # type: ignore
-        assert chunks[1].common.content == "Streaming response" # type: ignore
+        assert chunks[0].common.content == "Streaming"
+        assert chunks[1].common.content == "Streaming response"
 
         # Verify the client was called correctly
         mock_stream_generate.assert_called_once_with(
@@ -652,7 +656,11 @@ class TestGoogleClient:
 
         # Create a tool
         tool = Tool(name="async_tool", description="Tool for testing")
-        tool2 = {"name": "dict_tool", "function": lambda x: x}  # Non-Tool object
+
+        def mock_tool_function() -> str:
+            return "Tool function called"
+
+        tool2 = {"name": "dict_tool", "function": mock_tool_function}  # Non-Tool object
 
         # Test with tools
         result = await client._achat_completion_impl(
@@ -696,10 +704,7 @@ class TestGoogleClient:
         client._client.files.upload = mock_upload
 
         # Test the upload
-        result = client._upload_file(
-            path="/path/to/file.txt",
-            mime_type="text/plain"
-        )
+        result = client._upload_file(path="/path/to/file.txt", mime_type="text/plain")
 
         # Verify the result
         assert isinstance(result, ChimericFileUploadResponse)
@@ -712,10 +717,7 @@ class TestGoogleClient:
         assert result.common.metadata == {"file_metadata": True}
 
         # Verify file upload was called with filtered kwargs
-        mock_upload.assert_called_once_with(
-            path="/path/to/file.txt",
-            mime_type="text/plain"
-        )
+        mock_upload.assert_called_once_with(path="/path/to/file.txt", mime_type="text/plain")
 
     def test_upload_file_with_missing_fields(self, chimeric_google_client, monkeypatch):
         """Test file upload with missing metadata fields."""
@@ -788,7 +790,6 @@ class TestGoogleClient:
         # Verify counts
         assert client.request_count == before_req + 2
         assert client.error_count == before_err + 1
-
 
     async def test_achat_completion_counts_errors(self, chimeric_google_client, monkeypatch):
         """Test that achat_completion properly tracks request and error counts."""
