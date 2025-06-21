@@ -22,7 +22,6 @@ __all__ = [
     "JSONSchemaType",
     "Metadata",
     "ModelCapabilities",
-    "ModelInfo",
     "ModelSummary",
     "NativeCompletionType",
     "NativeFileUploadType",
@@ -107,23 +106,6 @@ class Capability(BaseModel):
     tools: bool = False
     agents: bool = False
     files: bool = False
-
-
-class ModelInfo(BaseModel):
-    """Detailed metadata for a specific model.
-
-    Attributes:
-        id: Unique identifier for the model (e.g., "gpt-4", "claude-3-opus").
-        max_tokens: Optional integer representing the maximum context window size (input + output tokens).
-        capabilities: Optional `ModelCapabilities` object detailing features like streaming, vision, etc.
-    """
-
-    model_config = ConfigDict(frozen=True)
-
-    id: str
-    max_tokens: int | None = None
-    capabilities: ModelCapabilities | None = None
-
 
 class ModelSummary(BaseModel):
     """Concise summary of a model's attributes, often from a model listing operation.

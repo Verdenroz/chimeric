@@ -17,7 +17,6 @@ from .types import (
     ChimericFileUploadResponse,
     ChimericStreamChunk,
     Input,
-    ModelInfo,
     ModelSummary,
     Tool,
     Tools,
@@ -440,14 +439,14 @@ class BaseClient(
     # Model information methods
     # ====================================================================
 
-    def get_model_info(self, model_id: str) -> ModelInfo:
+    def get_model_info(self, model_id: str) -> ModelSummary:
         """Gets detailed information about a specific model.
 
         Args:
             model_id: ID or name of the model to get information for.
 
         Returns:
-            A ModelInfo object containing detailed information about the model.
+            A ModelSummary object containing detailed information about the model.
 
         Raises:
             ValueError: If the model is not found or not available from this provider.
@@ -455,7 +454,7 @@ class BaseClient(
         models = self.list_models()
         for model in models:
             if model.id == model_id or model.name == model_id:
-                return ModelInfo(id=model.id)
+                return model
         raise ValueError(f"Model {model_id} not found")
 
     def upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[FileUploadResponseType]:
