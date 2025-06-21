@@ -30,25 +30,11 @@ from chimeric.types import (
 class GoogleClient(
     BaseClient[Client, AsyncClient, GenerateContentResponse, GenerateContentResponse, File]
 ):
-    """Google Gemini API client with sync/async support.
+    """Google Client for interacting with the Google Gemini API.
 
-    This client provides a unified interface for interacting with Google's Gemini
-    models through the genai SDK. It supports:
-    - Text generation with streaming
-    - Multimodal inputs (text, images, etc.)
-    - Function calling with automatic tool handling
-    - File uploads and management
-    - Usage tracking and metadata
-
-    Example:
-        ```python
-        client = GoogleClient(api_key="your-api-key")
-        response = client.chat_completion(
-            messages="Hello, world!",
-            model="gemini-pro"
-        )
-        print(response.common.content)
-        ```
+    This client provides a unified interface for synchronous and asynchronous
+    interactions with Google's API via the `google-genai` library. It returns `chimeric`
+    response objects that wrap the native Google responses.
     """
 
     def __init__(self, **kwargs: Any) -> None:
@@ -121,9 +107,6 @@ class GoogleClient(
         Returns:
             List of ModelSummary objects containing model metadata.
             Each summary includes id, name, and description.
-
-        Raises:
-            google.genai.errors.GoogleGenAIError: If API request fails.
         """
         models = []
         for model in self.client.models.list():
@@ -288,7 +271,7 @@ class GoogleClient(
             messages: Input messages (text, images, etc.).
             model: Model identifier (e.g., "gemini-pro").
             stream: Whether to return streaming response.
-            tools: Optional list of Tool objects for function calling.
+            tools: Optional list of already-encoded tools for function calling.
             **kwargs: Additional parameters forwarded to the SDK.
 
         Returns:
@@ -297,12 +280,11 @@ class GoogleClient(
 
         Raises:
             TypeError: If tools is not a list when provided.
-            google.genai.errors.GoogleGenAIError: If API request fails.
         """
-        # Prepare configuration, ensuring tools are properly set
+        # Prepare configuration
         config: GenerateContentConfig = kwargs.pop("config", None) or GenerateContentConfig()
 
-        # Adds tools to the config if provided (already encoded in BaseClient)
+        # Add tools to the config if provided (tools should already be encoded by BaseClient)
         if tools:
             if not isinstance(tools, list):
                 raise TypeError("Google expects tools to be a list")
@@ -351,7 +333,7 @@ class GoogleClient(
             messages: Input messages for the async call.
             model: Model identifier (e.g., "gemini-pro").
             stream: Whether to return streaming async generator.
-            tools: Optional list of Tool objects for function calling.
+            tools: Optional list of already-encoded tools for function calling.
             **kwargs: Additional parameters forwarded to the SDK.
 
         Returns:
@@ -360,12 +342,11 @@ class GoogleClient(
 
         Raises:
             TypeError: If tools is not a list when provided.
-            google.genai.errors.GoogleGenAIError: If API request fails.
         """
-        # Prepare configuration, ensuring tools are properly set
+        # Prepare configuration
         config: GenerateContentConfig = kwargs.pop("config", None) or GenerateContentConfig()
 
-        # Adds tools to the config if provided (already encoded in BaseClient)
+        # Add tools to the config if provided (tools should already be encoded by BaseClient)
         if tools:
             if not isinstance(tools, list):
                 raise TypeError("Google expects tools to be a list")
@@ -409,9 +390,6 @@ class GoogleClient(
 
         Returns:
             ChimericFileUploadResponse containing file metadata and upload details.
-
-        Raises:
-            google.genai.errors.GoogleGenAIError: If file upload fails.
         """
         filtered_kwargs = self._filter_kwargs(self.client.files.upload, kwargs)
         file_obj = self.client.files.upload(**filtered_kwargs)
