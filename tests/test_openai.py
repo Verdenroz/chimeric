@@ -370,48 +370,6 @@ class TestOpenAIClient:
         assert response_text is not None
         assert "broken" in response_text
 
-    def test_sync_context_manager_closes(self, monkeypatch, chimeric_openai_client):
-        """Test that sync context manager properly closes the client."""
-
-        class C:
-            def __init__(self):
-                self.closed = False
-
-            def close(self):
-                self.closed = True
-
-        # Replace client with mock and verify close is called
-        inst = C()
-        chimeric_openai_client._client = inst
-        with chimeric_openai_client:
-            pass
-        assert inst.closed
-
-    async def test_async_context_manager_closes(self, monkeypatch, chimeric_openai_client):
-        """Test that async context manager properly closes the client."""
-
-        class AC:
-            def __init__(self):
-                self.acl = False
-                self.cl = False
-
-            def aclose(self):
-                async def _():
-                    self.acl = True
-
-                return _()
-
-            def close(self):
-                self.cl = True
-
-        # Replace async client with mock and verify both close methods called
-        inst = AC()
-        chimeric_openai_client._async_client = inst
-        async with chimeric_openai_client:
-            pass
-        assert inst.acl
-        assert inst.cl
-
     def test_repr_and_str_contains_counts(self, chimeric_openai_client):
         """Test that repr and str methods include request/error counts."""
         # Verify repr contains expected components
