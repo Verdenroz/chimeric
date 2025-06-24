@@ -751,7 +751,7 @@ class TestGoogleClient:
 
         # Mock upload to raise an error
         def mock_upload_error(**kwargs):
-            raise ValueError("File upload failed")
+            raise ProviderError(client._provider_name)
 
         client._client.files.upload = mock_upload_error
 

@@ -471,6 +471,7 @@ class BaseClient(
         Raises:
             NotImplementedError: If the provider does not support file uploads.
             ProviderError: If there is an error uploading the file.
+            ValueError: If required parameters are missing or invalid.
         """
         if not self.supports_files():
             raise NotImplementedError("Provider does not support file uploads")
@@ -479,6 +480,14 @@ class BaseClient(
             self._request_count += 1
             self._last_request_time = time.time()
             return self._upload_file(**kwargs)
+        except ProviderError:
+            # Re-raise ProviderError as-is to preserve status_code and other details
+            self._error_count += 1
+            raise
+        except ValueError:
+            # Re-raise ValueError as-is for invalid parameters
+            self._error_count += 1
+            raise
         except Exception as e:
             self._error_count += 1
             provider_name = getattr(self, "_provider_name", self.__class__.__name__)
@@ -486,6 +495,7 @@ class BaseClient(
                 provider=provider_name,
                 response_text=f"Failed to upload file: {e!s}",
                 endpoint="file_upload",
+                status_code=e.status_code if hasattr(e, "status_code") else None,
             ) from e
 
     @abstractmethod
