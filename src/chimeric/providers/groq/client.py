@@ -102,7 +102,7 @@ class GroqClient(BaseClient[Groq, AsyncGroq, ChatCompletion, ChatCompletionChunk
             ModelSummary(
                 id=model.id, name=model.id, owned_by=model.owned_by, created_at=model.created
             )
-            for model in self.client.models.list()
+            for model in self.client.models.list().data
         ]
 
     @staticmethod
@@ -506,63 +506,55 @@ class GroqClient(BaseClient[Groq, AsyncGroq, ChatCompletion, ChatCompletionChunk
         headers = {"Authorization": f"Bearer {self.api_key}"}
         data = {"purpose": purpose}
 
-        try:
-            with httpx.Client() as client:
-                if file_path:
-                    if not filename:
-                        filename = os.path.basename(file_path)
-                    with open(file_path, "rb") as f:
-                        file_content = f.read()
+        with httpx.Client() as client:
+            if file_path:
+                if not filename:
+                    filename = os.path.basename(file_path)
+                with open(file_path, "rb") as f:
+                    file_content = f.read()
+            else:
+                if not filename:
+                    filename = getattr(file_object, "name", "uploaded_file")
+
+                # Get content from the file-like object
+                if hasattr(file_object, "read"):
+                    content = file_object.read()
+                    # Reset the cursor if possible
+                    if hasattr(file_object, "seek"):
+                        file_object.seek(0)
+                    # Ensure content is bytes
+                    file_content = (
+                        content if isinstance(content, bytes) else content.encode("utf-8")
+                    )
                 else:
-                    if not filename:
-                        filename = getattr(file_object, "name", "uploaded_file")
-
-                    # Get content from the file-like object
-                    if hasattr(file_object, "read"):
-                        content = file_object.read()
-                        # Reset the cursor if possible
-                        if hasattr(file_object, "seek"):
-                            file_object.seek(0)
-                        # Ensure content is bytes
-                        file_content = (
-                            content if isinstance(content, bytes) else content.encode("utf-8")
-                        )
-                    else:
-                        # file_object is the content itself
-                        file_content = (
-                            file_object
-                            if isinstance(file_object, bytes)
-                            else str(file_object).encode("utf-8")
-                        )
-
-                files = {"file": (filename, file_content, "application/octet-stream")}
-                response = client.post(url, headers=headers, files=files, data=data)
-
-                # Check response status
-                if not response.is_success:
-                    raise ProviderError(
-                        provider=self._provider_name,
-                        response_text=response.text,
-                        endpoint="file_upload",
-                        status_code=response.status_code,
+                    # file_object is the content itself
+                    file_content = (
+                        file_object
+                        if isinstance(file_object, bytes)
+                        else str(file_object).encode("utf-8")
                     )
 
-                native_response = response.json()
-                common_response = FileUploadResponse(
-                    file_id=native_response.get("id", ""),
-                    filename=native_response.get("filename", filename),
-                    bytes=native_response.get("bytes", 0),
-                    purpose=native_response.get("purpose", purpose),
-                    status=native_response.get("status", "uploaded"),
-                    created_at=native_response.get("created_at", 0),
-                    metadata=native_response,
+            files = {"file": (filename, file_content, "application/octet-stream")}
+            response = client.post(url, headers=headers, files=files, data=data)
+
+            # Check response status
+            if not response.is_success:
+                raise ProviderError(
+                    provider=self._provider_name,
+                    response_text=response.text,
+                    endpoint="file_upload",
+                    status_code=response.status_code,
                 )
 
-                return ChimericFileUploadResponse(native=native_response, common=common_response)
+            native_response = response.json()
+            common_response = FileUploadResponse(
+                file_id=native_response.get("id", ""),
+                filename=native_response.get("filename", filename),
+                bytes=native_response.get("bytes", 0),
+                purpose=native_response.get("purpose", purpose),
+                status=native_response.get("status", "uploaded"),
+                created_at=native_response.get("created_at", 0),
+                metadata=native_response,
+            )
 
-        except httpx.RequestError as e:
-            raise ProviderError(
-                provider=self._provider_name,
-                response_text=f"Request failed: {e!s}",
-                endpoint="file_upload",
-            ) from e
+            return ChimericFileUploadResponse(native=native_response, common=common_response)
