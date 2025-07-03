@@ -1,5 +1,6 @@
 from collections.abc import AsyncGenerator, Generator
 import os
+from datetime import datetime
 from types import SimpleNamespace
 from typing import Any, cast
 from unittest.mock import Mock
@@ -145,19 +146,23 @@ class TestAnthropicClient:
         def mock_list():
             return SimpleNamespace(
                 data=[
-                    MockModel("claude-3-opus", "Claude 3 Opus", 1234567890),
-                    MockModel("claude-3-sonnet", created_at=1234567891),
+                    MockModel("claude-3-opus", "Claude 3 Opus", created_at=datetime(2023, 9, 1)),
+                    MockModel("claude-3-sonnet",  "Claude 3 Sonnet", created_at=datetime(2023, 10, 1)),
                 ]
             )
 
+        def mock_get_model_aliases():
+            return []
+
         monkeypatch.setattr(client.client.models, "list", mock_list)
+        monkeypatch.setattr(client, "_get_model_aliases", mock_get_model_aliases)
         models = client.list_models()
 
         assert len(models) == 2
         assert isinstance(models[0], ModelSummary)
         assert models[0].id == "claude-3-opus"
         assert models[0].name == "Claude 3 Opus"
-        assert models[1].name == "claude-3-sonnet"  # Falls back to id
+        assert models[1].name == "Claude 3 Sonnet"
 
     @pytest.mark.parametrize(
         ("event_type", "delta_text", "expected_content", "expected_finish"),
