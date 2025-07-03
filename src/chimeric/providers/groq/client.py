@@ -92,11 +92,11 @@ class GroqClient(BaseClient[Groq, AsyncGroq, ChatCompletion, ChatCompletionChunk
         """
         return Capability(multimodal=True, streaming=True, tools=True, agents=False, files=True)
 
-    def list_models(self) -> list[ModelSummary]:
-        """Lists available models from Groq.
+    def _list_models_impl(self) -> list[ModelSummary]:
+        """Lists available models from the Groq API.
 
         Returns:
-            A list of ModelSummary objects for all available models.
+            A list of ModelSummary objects for all available models from the API.
         """
         return [
             ModelSummary(

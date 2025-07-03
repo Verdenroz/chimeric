@@ -86,18 +86,40 @@ class AnthropicClient(
         """
         return Capability(multimodal=True, streaming=True, tools=True, agents=False, files=True)
 
-    def list_models(self) -> list[ModelSummary]:
-        """Lists available models from Anthropic.
+    def _get_model_aliases(self) -> list[str]:
+        """Returns Anthropic model aliases.
+        
+        Returns:
+            A list of alias model names.
+        """
+        return [
+            # Claude 4 Models
+            "claude-opus-4-0",
+            "claude-sonnet-4-0",
+            
+            # Claude 3.7 Models
+            "claude-3-7-sonnet-latest",
+            
+            # Claude 3.5 Models
+            "claude-3-5-haiku-latest",
+            "claude-3-5-sonnet-latest",
+            
+            # Claude 3 Models
+            "claude-3-opus-latest",
+        ]
+
+    def _list_models_impl(self) -> list[ModelSummary]:
+        """Lists available models from Anthropic API.
 
         Returns:
-            A list of ModelSummary objects for all available models.
+            A list of ModelSummary objects for all available models from the API.
         """
         models_response = self.client.models.list()
         return [
             ModelSummary(
                 id=model.id,
-                name=model.display_name or model.id,
-                created_at=getattr(model, "created_at", None),
+                name=model.display_name,
+                created_at=int(model.created_at.timestamp()),
                 metadata=model.model_dump() if hasattr(model, "model_dump") else {},
             )
             for model in models_response.data

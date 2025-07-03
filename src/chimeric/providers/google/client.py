@@ -101,11 +101,11 @@ class GoogleClient(
             files=True,
         )
 
-    def list_models(self) -> list[ModelSummary]:
-        """List available Gemini models.
+    def _list_models_impl(self) -> list[ModelSummary]:
+        """Lists available models from the Google API.
 
         Returns:
-            List of ModelSummary objects containing model metadata.
+            List of ModelSummary objects containing model metadata from the API.
             Each summary includes id, name, and description.
         """
         models = []

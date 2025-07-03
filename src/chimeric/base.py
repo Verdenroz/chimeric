@@ -239,17 +239,53 @@ class BaseClient(
             )
         """
 
+    def _get_model_aliases(self) -> list[str]:
+        """Returns a list of model alias names to include in model listings.
+        
+        Providers can override this method to provide additional model aliases
+        that will be included in the list_models() output.
+        
+        Returns:
+            A list of alias model names. By default, returns an empty list (no aliases).
+        """
+        return []
+
     @abstractmethod
-    def list_models(self) -> list[ModelSummary]:
-        """Lists available models from this provider.
+    def _list_models_impl(self) -> list[ModelSummary]:
+        """Provider-specific implementation of model listing from API.
 
         Returns:
             A list of ModelSummary objects containing basic information
-            about each available model.
+            about each available model from the provider's API.
 
         Raises:
             ProviderError: If the provider's API returns an error.
         """
+
+    def list_models(self) -> list[ModelSummary]:
+        """Lists available models from this provider, including aliases.
+
+        Returns:
+            A list of ModelSummary objects containing basic information
+            about each available model, including any aliases defined by _get_model_aliases().
+
+        Raises:
+            ProviderError: If the provider's API returns an error.
+        """
+        # Get models from provider API
+        api_models = self._list_models_impl()
+        
+        # Get aliases and add them as simple ModelSummary objects
+        aliases = self._get_model_aliases()
+        alias_models = [
+            ModelSummary(
+                id=alias,
+                name=alias,
+            )
+            for alias in aliases
+        ]
+        
+        return api_models + alias_models
 
     # ====================================================================
     # Chat completion methods
@@ -447,6 +483,7 @@ class BaseClient(
 
         Returns:
             A ModelSummary object containing detailed information about the model.
+            If the model_id is an alias, returns the alias model info.
 
         Raises:
             ValueError: If the model is not found or not available from this provider.

@@ -85,11 +85,11 @@ class OpenAIClient(BaseClient[OpenAI, AsyncOpenAI, Response, ResponseStreamEvent
         """
         return Capability(multimodal=True, streaming=True, tools=True, agents=True, files=True)
 
-    def list_models(self) -> list[ModelSummary]:
-        """Lists available models from OpenAI.
+    def _list_models_impl(self) -> list[ModelSummary]:
+        """Lists available models from the OpenAI API.
 
         Returns:
-            A list of ModelSummary objects for all available models.
+            A list of ModelSummary objects for all available models from the API.
         """
         return [
             ModelSummary(
