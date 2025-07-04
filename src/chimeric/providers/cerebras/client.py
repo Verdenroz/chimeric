@@ -14,6 +14,7 @@ from chimeric.exceptions import ToolRegistrationError
 from chimeric.types import (
     Capability,
     ChimericCompletionResponse,
+    ChimericFileUploadResponse,
     ChimericStreamChunk,
     CompletionResponse,
     Input,
@@ -131,9 +132,10 @@ class CerebrasClient(
             common=CompletionResponse(
                 content=content or "",
                 usage=Usage(
-                    prompt_tokens=response.usage.prompt_tokens if response.usage else 0,
-                    completion_tokens=response.usage.completion_tokens if response.usage else 0,
-                    total_tokens=response.usage.total_tokens if response.usage else 0,
+                    prompt_tokens=(response.usage.prompt_tokens if response.usage else 0) or 0,
+                    completion_tokens=(response.usage.completion_tokens if response.usage else 0)
+                    or 0,
+                    total_tokens=(response.usage.total_tokens if response.usage else 0) or 0,
                 ),
                 model=response.model,
                 metadata=metadata,
@@ -155,11 +157,11 @@ class CerebrasClient(
         encoded_tools = []
         for tool in tools:
             if isinstance(tool, Tool):
-                # Get parameters and remove 'strict' from the parameters schema since 
+                # Get parameters and remove 'strict' from the parameters schema since
                 # Cerebras expects it only in the function object
                 parameters = tool.parameters.model_dump() if tool.parameters else {}
-                parameters.pop('strict', None)  # Remove strict from parameters
-                
+                parameters.pop("strict", None)  # Remove strict from parameters
+
                 encoded_tools.append(
                     {
                         "type": "function",
@@ -343,28 +345,28 @@ class CerebrasClient(
         # Send the initial request
         response = self._client.chat.completions.create(
             model=model,
-            messages=messages,
+            messages=messages,  # type: ignore[arg-type]
             stream=stream,
             tools=tools,
             **filtered_kwargs,
         )
 
         if stream:
-            return self._stream(response)
+            return self._stream(response)  # type: ignore[arg-type]
 
         # Check for and handle any tool calls requested by the model
-        tool_calls_metadata, updated_messages = self._handle_function_tool_calls(response, messages)
+        tool_calls_metadata, updated_messages = self._handle_function_tool_calls(response, messages)  # type: ignore[arg-type]
 
         # If tool calls were made, send their results back to the model
         if tool_calls_metadata:
             response = self._client.chat.completions.create(
                 model=model,
-                messages=updated_messages,
+                messages=updated_messages,  # type: ignore[arg-type]
                 tools=tools,
                 **filtered_kwargs,
             )
 
-        return self._create_chimeric_response(response, tool_calls_metadata)
+        return self._create_chimeric_response(response, tool_calls_metadata)  # type: ignore[arg-type]
 
     async def _achat_completion_impl(
         self,
@@ -399,30 +401,30 @@ class CerebrasClient(
         # Send the initial request
         response = await self._async_client.chat.completions.create(
             model=model,
-            messages=messages,
+            messages=messages,  # type: ignore[arg-type]
             stream=stream,
             tools=tools,
             **filtered_kwargs,
         )
 
         if stream:
-            return self._astream(response)
+            return self._astream(response)  # type: ignore[arg-type]
 
         # Check for and handle any tool calls requested by the model
-        tool_calls_metadata, updated_messages = self._handle_function_tool_calls(response, messages)
+        tool_calls_metadata, updated_messages = self._handle_function_tool_calls(response, messages)  # type: ignore[arg-type]
 
         # If tool calls were made, send their results back to the model
         if tool_calls_metadata:
             response = await self._async_client.chat.completions.create(
                 model=model,
-                messages=updated_messages,
+                messages=updated_messages,  # type: ignore[arg-type]
                 tools=tools,
                 **filtered_kwargs,
             )
 
-        return self._create_chimeric_response(response, tool_calls_metadata)
+        return self._create_chimeric_response(response, tool_calls_metadata)  # type: ignore[arg-type]
 
-    def _upload_file(self, **kwargs: Any) -> None:
+    def _upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[None]:
         """Cerebras does not support file uploads.
 
         Args:
