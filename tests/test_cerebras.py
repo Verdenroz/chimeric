@@ -58,7 +58,7 @@ def patch_cerebras_imports(monkeypatch):
 
 
 def create_mock_chat_completion_response(
-        content: str = "hello", model: str = "llama-3.1-8b", tool_calls: Any = None
+    content: str = "hello", model: str = "llama-3.1-8b", tool_calls: Any = None
 ) -> Mock:
     """Create a properly mocked ChatCompletionResponse."""
     # Create mock choice message
@@ -93,7 +93,7 @@ def create_mock_chat_completion_response(
 
 
 def create_mock_chat_chunk_response(
-        content: str = "hello", finish_reason: str | None = None, choices: list[Any] | None = None
+    content: str = "hello", finish_reason: str | None = None, choices: list[Any] | None = None
 ) -> Mock:
     """Create a properly mocked ChatChunkResponse."""
     if choices is not None:
@@ -125,7 +125,7 @@ def create_mock_chat_chunk_response(
 
 
 def create_mock_tool_call(
-        tool_id: str = "call_123", name: str = "test_tool", arguments: str = '{"param1": "value1"}'
+    tool_id: str = "call_123", name: str = "test_tool", arguments: str = '{"param1": "value1"}'
 ) -> Mock:
     """Create a properly mocked ChatCompletionResponseChoiceMessageToolCall."""
     # Create mock function
@@ -314,7 +314,7 @@ class TestCerebrasClient:
         assert chunks[2].common.finish_reason == "stop"
 
     async def test_chat_completion_streaming_async(
-            self, chimeric_cerebras_client: CerebrasClient
+        self, chimeric_cerebras_client: CerebrasClient
     ) -> None:
         """Test async streaming chat completion."""
         # Mock the async streaming response
@@ -370,7 +370,7 @@ class TestCerebrasClient:
         assert updated_messages == messages
 
     def test_parallel_tool_calls_for_scout_models(
-            self, chimeric_cerebras_client: CerebrasClient
+        self, chimeric_cerebras_client: CerebrasClient
     ) -> None:
         """Test that scout models automatically get parallel_tool_calls=False."""
         # Mock the chat.completions.create call
@@ -396,7 +396,7 @@ class TestCerebrasClient:
         assert call_args[1]["parallel_tool_calls"] is False
 
     def test_create_chimeric_response_with_tool_calls(
-            self, chimeric_cerebras_client: CerebrasClient
+        self, chimeric_cerebras_client: CerebrasClient
     ) -> None:
         """Test creating response with tool calls metadata."""
         mock_response = create_mock_chat_completion_response("Hello!")
@@ -412,7 +412,7 @@ class TestCerebrasClient:
         assert chimeric_response.common.metadata["tool_calls"] == tool_calls
 
     def test_create_chimeric_response_with_empty_choices(
-            self, chimeric_cerebras_client: CerebrasClient
+        self, chimeric_cerebras_client: CerebrasClient
     ) -> None:
         """Test creating response with no choices."""
         mock_response = create_mock_chat_completion_response("Hello!")
@@ -422,7 +422,7 @@ class TestCerebrasClient:
         assert chimeric_response.common.content == ""
 
     def test_create_chimeric_response_with_no_usage(
-            self, chimeric_cerebras_client: CerebrasClient
+        self, chimeric_cerebras_client: CerebrasClient
     ) -> None:
         """Test creating response with no usage data."""
         mock_response = create_mock_chat_completion_response("Hello!")
@@ -461,7 +461,7 @@ class TestCerebrasClient:
         assert result["result"] == "Result: value1"
 
     def test_process_function_call_not_callable(
-            self, chimeric_cerebras_client: CerebrasClient
+        self, chimeric_cerebras_client: CerebrasClient
     ) -> None:
         """Test processing a function call with non-callable tool."""
         # Register a non-callable tool
@@ -475,7 +475,7 @@ class TestCerebrasClient:
             chimeric_cerebras_client._process_function_call(mock_call)
 
     def test_handle_function_tool_calls_with_calls(
-            self, chimeric_cerebras_client: CerebrasClient
+        self, chimeric_cerebras_client: CerebrasClient
     ) -> None:
         """Test handling function tool calls with actual tool calls."""
 
@@ -501,7 +501,7 @@ class TestCerebrasClient:
         assert len(updated_messages) == 3  # Original + assistant + tool result
 
     def test_handle_function_tool_calls_with_empty_choices(
-            self, chimeric_cerebras_client: CerebrasClient
+        self, chimeric_cerebras_client: CerebrasClient
     ) -> None:
         """Test handling function tool calls with empty choices."""
         mock_response = create_mock_chat_completion_response("Hello!")
@@ -534,7 +534,7 @@ class TestCerebrasClient:
         assert chunks[0].common.content == "Hello"
 
     async def test_astream_with_empty_content(
-            self, chimeric_cerebras_client: CerebrasClient
+        self, chimeric_cerebras_client: CerebrasClient
     ) -> None:
         """Test async streaming with chunks that have no content."""
         mock_chunks = [
@@ -557,7 +557,7 @@ class TestCerebrasClient:
         assert chunks[0].common.content == "Hello"
 
     def test_chat_completion_with_tool_calls_and_retry(
-            self, chimeric_cerebras_client: CerebrasClient
+        self, chimeric_cerebras_client: CerebrasClient
     ) -> None:
         """Test chat completion with tool calls that triggers a retry."""
 
@@ -602,7 +602,7 @@ class TestCerebrasClient:
         assert call_count == 2  # Should make two calls
 
     async def test_achat_completion_with_tool_calls_and_retry(
-            self, chimeric_cerebras_client: CerebrasClient
+        self, chimeric_cerebras_client: CerebrasClient
     ) -> None:
         """Test async chat completion with tool calls that triggers a retry."""
 
@@ -647,7 +647,7 @@ class TestCerebrasClient:
         assert call_count == 2  # Should make two calls
 
     async def test_achat_completion_with_scout_model_and_tools(
-            self, chimeric_cerebras_client: CerebrasClient
+        self, chimeric_cerebras_client: CerebrasClient
     ) -> None:
         """Test async chat completion with scout model and tools."""
         mock_response = create_mock_chat_completion_response("Hello!")
@@ -693,7 +693,7 @@ class TestCerebrasClient:
         assert len(chunks) == 0
 
     async def test_astream_with_empty_choices(
-            self, chimeric_cerebras_client: CerebrasClient
+        self, chimeric_cerebras_client: CerebrasClient
     ) -> None:
         """Test async streaming with chunks that have no choices."""
         mock_chunks = [
@@ -740,7 +740,7 @@ class TestCerebrasClient:
         assert chunks[0].common.content == "Hello"
 
     async def test_astream_with_no_delta_content(
-            self, chimeric_cerebras_client: CerebrasClient
+        self, chimeric_cerebras_client: CerebrasClient
     ) -> None:
         """Test async streaming with chunks that have no delta content."""
         mock_chunks = [
@@ -771,7 +771,7 @@ class TestCerebrasClient:
         assert chunks[0].common.content == "Hello"
 
     def test_handle_function_tool_calls_with_non_list_messages(
-            self, chimeric_cerebras_client: CerebrasClient
+        self, chimeric_cerebras_client: CerebrasClient
     ) -> None:
         """Test handling function tool calls with non-list messages."""
 

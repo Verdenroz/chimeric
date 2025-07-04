@@ -241,10 +241,10 @@ class BaseClient(
 
     def _get_model_aliases(self) -> list[str]:
         """Returns a list of model alias names to include in model listings.
-        
+
         Providers can override this method to provide additional model aliases
         that will be included in the list_models() output.
-        
+
         Returns:
             A list of alias model names. By default, returns an empty list (no aliases).
         """
@@ -274,7 +274,7 @@ class BaseClient(
         """
         # Get models from provider API
         api_models = self._list_models_impl()
-        
+
         # Get aliases and add them as simple ModelSummary objects
         aliases = self._get_model_aliases()
         alias_models = [
@@ -284,7 +284,7 @@ class BaseClient(
             )
             for alias in aliases
         ]
-        
+
         return api_models + alias_models
 
     # ====================================================================

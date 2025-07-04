@@ -1,6 +1,6 @@
 from collections.abc import AsyncGenerator, Generator
-import os
 from datetime import datetime
+import os
 from types import SimpleNamespace
 from typing import Any, cast
 from unittest.mock import Mock
@@ -147,7 +147,9 @@ class TestAnthropicClient:
             return SimpleNamespace(
                 data=[
                     MockModel("claude-3-opus", "Claude 3 Opus", created_at=datetime(2023, 9, 1)),
-                    MockModel("claude-3-sonnet",  "Claude 3 Sonnet", created_at=datetime(2023, 10, 1)),
+                    MockModel(
+                        "claude-3-sonnet", "Claude 3 Sonnet", created_at=datetime(2023, 10, 1)
+                    ),
                 ]
             )
 
@@ -163,6 +165,61 @@ class TestAnthropicClient:
         assert models[0].id == "claude-3-opus"
         assert models[0].name == "Claude 3 Opus"
         assert models[1].name == "Claude 3 Sonnet"
+
+    def test_list_models_with_aliases(self, client, monkeypatch):
+        """Test that list_models includes model aliases from _get_model_aliases."""
+
+        class MockModel:
+            def __init__(self, id, display_name=None, created_at=None):
+                self.id = id
+                self.display_name = display_name
+                self.created_at = created_at
+
+            def model_dump(self):
+                return {"id": self.id, "display_name": self.display_name}
+
+        def mock_list():
+            return SimpleNamespace(
+                data=[
+                    MockModel(
+                        "claude-3-opus-20240229", "Claude 3 Opus", created_at=datetime(2023, 9, 1)
+                    ),
+                ]
+            )
+
+        monkeypatch.setattr(client.client.models, "list", mock_list)
+        # Don't mock _get_model_aliases so we test the real implementation
+        models = client.list_models()
+
+        # Should have 1 API model + 6 aliases
+        assert len(models) == 7
+
+        # First model should be from API
+        assert models[0].id == "claude-3-opus-20240229"
+        assert models[0].name == "Claude 3 Opus"
+
+        # Remaining models should be aliases
+        expected_aliases = [
+            "claude-opus-4-0",
+            "claude-sonnet-4-0",
+            "claude-3-7-sonnet-latest",
+            "claude-3-5-haiku-latest",
+            "claude-3-5-sonnet-latest",
+            "claude-3-opus-latest",
+        ]
+
+        alias_models = models[1:]  # Skip the first API model
+        alias_ids = [model.id for model in alias_models]
+
+        for expected_alias in expected_aliases:
+            assert expected_alias in alias_ids
+
+        # Check that alias models have proper structure
+        for alias_model in alias_models:
+            assert isinstance(alias_model, ModelSummary)
+            assert alias_model.id == alias_model.name  # For aliases, id and name should be the same
+            assert alias_model.id in expected_aliases
+
 
     @pytest.mark.parametrize(
         ("event_type", "delta_text", "expected_content", "expected_finish"),

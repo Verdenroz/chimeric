@@ -88,7 +88,7 @@ class AnthropicClient(
 
     def _get_model_aliases(self) -> list[str]:
         """Returns Anthropic model aliases.
-        
+
         Returns:
             A list of alias model names.
         """
@@ -96,14 +96,11 @@ class AnthropicClient(
             # Claude 4 Models
             "claude-opus-4-0",
             "claude-sonnet-4-0",
-            
             # Claude 3.7 Models
             "claude-3-7-sonnet-latest",
-            
             # Claude 3.5 Models
             "claude-3-5-haiku-latest",
             "claude-3-5-sonnet-latest",
-            
             # Claude 3 Models
             "claude-3-opus-latest",
         ]
