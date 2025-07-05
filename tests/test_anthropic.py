@@ -220,7 +220,6 @@ class TestAnthropicClient:
             assert alias_model.id == alias_model.name  # For aliases, id and name should be the same
             assert alias_model.id in expected_aliases
 
-
     @pytest.mark.parametrize(
         ("event_type", "delta_text", "expected_content", "expected_finish"),
         [
