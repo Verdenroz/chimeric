@@ -10,9 +10,7 @@ from .providers.cohere.client import CohereClient
 from .providers.google.client import GoogleClient
 from .providers.grok.client import GrokClient
 from .providers.groq.client import GroqClient
-from .providers.huggingface.client import HuggingFaceClient
 from .providers.openai.client import OpenAIClient
-from .providers.replicate.client import ReplicateClient
 from .tools import ToolManager
 from .types import (
     Capability,
@@ -40,8 +38,6 @@ PROVIDER_CLIENTS: dict[Provider, type[BaseClient[Any, Any, Any, Any, Any]]] = {
     Provider.COHERE: CohereClient,
     Provider.GROK: GrokClient,
     Provider.GROQ: GroqClient,
-    Provider.HUGGINGFACE: HuggingFaceClient,
-    Provider.REPLICATE: ReplicateClient,
 }
 
 
@@ -64,8 +60,6 @@ class Chimeric:
             cohere_api_key="...",
             grok_api_key="...",
             groq_api_key="...",
-            huggingface_api_key="...",
-            replicate_api_token="...",
             aws_access_key_id="...",
             aws_secret_access_key="...",
             aws_region="us-east-1"
@@ -100,8 +94,6 @@ class Chimeric:
         cohere_api_key: str | None = None,
         grok_api_key: str | None = None,
         groq_api_key: str | None = None,
-        huggingface_token: str | None = None,
-        replicate_api_token: str | None = None,
         **kwargs: Any,
     ) -> None:
         """Initializes the Chimeric client.
@@ -114,8 +106,6 @@ class Chimeric:
             cohere_api_key: Cohere API key for authentication.
             grok_api_key: Grok API key for authentication.
             groq_api_key: Groq API key for authentication.
-            huggingface_token: HuggingFace token for authentication.
-            replicate_api_token: Replicate API token for authentication.
             **kwargs: Additional provider-specific configuration options.
         """
         self.providers: dict[Provider, BaseClient[Any, Any, Any, Any, Any]] = {}
@@ -136,8 +126,6 @@ class Chimeric:
             cohere_api_key,
             grok_api_key,
             groq_api_key,
-            huggingface_token,
-            replicate_api_token,
         )
 
         # Auto-detect providers from environment variables.
@@ -152,8 +140,6 @@ class Chimeric:
         cohere_api_key: str | None = None,
         grok_api_key: str | None = None,
         groq_api_key: str | None = None,
-        huggingface_token: str | None = None,
-        replicate_api_token: str | None = None,
     ) -> None:
         """Initializes providers from explicitly provided API keys.
 
@@ -165,8 +151,6 @@ class Chimeric:
             cohere_api_key: Cohere API key.
             grok_api_key: Grok API key.
             groq_api_key: Groq API key.
-            huggingface_token: HuggingFace token.
-            replicate_api_token: Replicate API token.
         """
         provider_configs: list[tuple[Provider, str | None]] = [
             (Provider.OPENAI, openai_api_key),
@@ -176,8 +160,6 @@ class Chimeric:
             (Provider.COHERE, cohere_api_key),
             (Provider.GROK, grok_api_key),
             (Provider.GROQ, groq_api_key),
-            (Provider.HUGGINGFACE, huggingface_token),
-            (Provider.REPLICATE, replicate_api_token),
         ]
 
         # Initialize providers that have API keys provided.
@@ -200,8 +182,6 @@ class Chimeric:
             Provider.COHERE: ["COHERE_API_KEY", "CO_API_KEY"],
             Provider.GROK: ["GROK_API_KEY", "XAI_API_KEY"],
             Provider.GROQ: ["GROQ_API_KEY"],
-            Provider.HUGGINGFACE: ["HUGGINGFACE_API_KEY", "HF_TOKEN"],
-            Provider.REPLICATE: ["REPLICATE_API_TOKEN"],
         }
 
         # Check environment variables for each provider.

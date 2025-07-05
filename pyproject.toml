@@ -72,13 +72,6 @@ google = [
 cohere = [
     "cohere>=5.15.0",
 ]
-huggingface = [
-    "huggingface-hub>=0.32.4",
-    "transformers>=4.36.0",
-]
-replicate = [
-    "replicate>=1.0.7",
-]
 groq = [
     "groq>=0.4.0",
 ]
