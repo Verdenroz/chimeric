@@ -126,7 +126,7 @@ class ModelSummary(BaseModel):
     description: str | None = None
     owned_by: str | None = None
     created_at: int | None = None
-    metadata: dict[str, Any] | None = None
+    metadata: Metadata | None = None
     provider: str | None = None
 
     def __str__(self) -> str:
@@ -415,6 +415,8 @@ class ChimericCompletionResponse(BaseModel, Generic[NativeCompletionType]):
         common: The common CompletionResponse in Chimeric's format.
     """
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     native: NativeCompletionType
     common: CompletionResponse
 
@@ -430,6 +432,8 @@ class ChimericStreamChunk(BaseModel, Generic[NativeStreamType]):
         common: The common StreamChunk in Chimeric's format.
     """
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     native: NativeStreamType
     common: StreamChunk
 
@@ -444,6 +448,8 @@ class ChimericFileUploadResponse(BaseModel, Generic[NativeFileUploadType]):
         native: The provider's native file upload response object.
         common: The common FileUploadResponse in Chimeric's format.
     """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     native: NativeFileUploadType
     common: FileUploadResponse
