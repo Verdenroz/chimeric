@@ -198,7 +198,7 @@ class Chimeric:
             Provider.GOOGLE: ["GOOGLE_API_KEY", "GEMINI_API_KEY"],
             Provider.CEREBRAS: ["CEREBRAS_API_KEY"],
             Provider.COHERE: ["COHERE_API_KEY", "CO_API_KEY"],
-            Provider.GROK: ["GROK_API_KEY", "GROK_API_TOKEN"],
+            Provider.GROK: ["GROK_API_KEY", "XAI_API_KEY"],
             Provider.GROQ: ["GROQ_API_KEY"],
             Provider.HUGGINGFACE: ["HUGGINGFACE_API_KEY", "HF_TOKEN"],
             Provider.REPLICATE: ["REPLICATE_API_TOKEN"],
