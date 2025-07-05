@@ -44,7 +44,6 @@ dev = [
     "pytest-mock>=3.12.0",
     "pytest-sugar>=1.0.0",
     "pytest-xdist>=3.5.0", # Parallel test execution
-
     # Code quality
     "ruff>=0.11.9",
     "basedpyright>=1.29.1",
@@ -61,7 +60,6 @@ dev = [
 ]
 
 [project.optional-dependencies]
-# Major Commercial Providers
 openai = [
     "openai>=1.84.0",
 ]
@@ -74,8 +72,6 @@ google = [
 cohere = [
     "cohere>=5.15.0",
 ]
-
-# Open Source Hosting
 huggingface = [
     "huggingface-hub>=0.32.4",
     "transformers>=4.36.0",
@@ -88,6 +84,9 @@ groq = [
 ]
 cerebras = [
     "cerebras-cloud-sdk>=1.35.0",
+]
+grok = [
+    "xai-sdk>=1.0.0",
 ]
 
 
