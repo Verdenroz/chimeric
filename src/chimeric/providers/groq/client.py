@@ -25,6 +25,8 @@ from chimeric.types import (
     ModelSummary,
     StreamChunk,
     Tool,
+    ToolCall,
+    ToolCallChunk,
     Tools,
     Usage,
 )
@@ -109,38 +111,99 @@ class GroqClient(BaseClient[Groq, AsyncGroq, ChatCompletion, ChatCompletionChunk
     def _process_stream_chunk(
         chunk: ChatCompletionChunk,
         accumulated: str,
-    ) -> tuple[str, ChimericStreamChunk[ChatCompletionChunk] | None]:
+        tool_calls: dict[str, ToolCallChunk] | None = None,
+    ) -> tuple[str, dict[str, ToolCallChunk], ChimericStreamChunk[ChatCompletionChunk] | None]:
         """Processes a single chunk from a Groq response stream.
 
         Args:
             chunk: The chat completion chunk from the Groq API.
             accumulated: The accumulated content from previous chunks.
+            tool_calls: Dictionary of accumulated tool calls indexed by ID.
 
         Returns:
-            A tuple containing the updated accumulated content and an optional
-            ChimericStreamChunk to be yielded.
+            A tuple containing the updated accumulated content, updated tool calls,
+            and an optional ChimericStreamChunk to be yielded.
         """
+        if tool_calls is None:
+            tool_calls = {}
+
         if not chunk.choices:
-            return accumulated, None
+            return accumulated, tool_calls, None
 
         choice = chunk.choices[0]
         delta = choice.delta
         content = getattr(delta, "content", "") or ""
         finish_reason = choice.finish_reason
 
+        # Handle tool calls in delta
+        if hasattr(delta, "tool_calls") and delta.tool_calls:
+            for tool_call_delta in delta.tool_calls:
+                tool_call_id = tool_call_delta.id
+                if tool_call_id:
+                    # Initialize new tool call
+                    if tool_call_id not in tool_calls:
+                        tool_calls[tool_call_id] = ToolCallChunk(
+                            id=tool_call_id,
+                            call_id=tool_call_id,
+                            name=tool_call_delta.function.name
+                            if tool_call_delta.function and tool_call_delta.function.name
+                            else "",
+                            arguments="",
+                            status="started",
+                        )
+                    # Update tool call with new data
+                    if tool_call_delta.function:
+                        if tool_call_delta.function.name:
+                            tool_calls[tool_call_id].name = tool_call_delta.function.name
+                        if tool_call_delta.function.arguments:
+                            tool_calls[tool_call_id].arguments += tool_call_delta.function.arguments
+                            tool_calls[
+                                tool_call_id
+                            ].arguments_delta = tool_call_delta.function.arguments
+                            tool_calls[tool_call_id].status = "arguments_streaming"
+                else:
+                    # Handle tool call without ID - use index
+                    tool_call_index = getattr(tool_call_delta, "index", 0)
+                    temp_id = f"tool_call_{tool_call_index}"
+                    if temp_id not in tool_calls:
+                        tool_calls[temp_id] = ToolCallChunk(
+                            id=temp_id,
+                            call_id=temp_id,
+                            name=tool_call_delta.function.name
+                            if tool_call_delta.function and tool_call_delta.function.name
+                            else "",
+                            arguments="",
+                            status="started",
+                        )
+                    if tool_call_delta.function and tool_call_delta.function.arguments:
+                        tool_calls[temp_id].arguments += tool_call_delta.function.arguments
+                        tool_calls[temp_id].arguments_delta = tool_call_delta.function.arguments
+                        tool_calls[temp_id].status = "arguments_streaming"
+
+        # Mark tool calls as completed when we reach finish_reason
+        if finish_reason and tool_calls:
+            for tool_call in tool_calls.values():
+                if tool_call.status == "arguments_streaming":
+                    tool_call.status = "completed"
+                    tool_call.arguments_delta = None
+
         if content:
             accumulated += content
 
         if not content and not finish_reason:
-            return accumulated, None
+            return accumulated, tool_calls, None
 
-        return accumulated, ChimericStreamChunk(
-            native=chunk,
-            common=StreamChunk(
-                content=accumulated,
-                delta=content,
-                finish_reason=finish_reason,
-                metadata=chunk.model_dump(),
+        return (
+            accumulated,
+            tool_calls,
+            ChimericStreamChunk(
+                native=chunk,
+                common=StreamChunk(
+                    content=accumulated,
+                    delta=content,
+                    finish_reason=finish_reason,
+                    metadata=chunk.model_dump(),
+                ),
             ),
         )
 
@@ -157,8 +220,11 @@ class GroqClient(BaseClient[Groq, AsyncGroq, ChatCompletion, ChatCompletionChunk
             ChimericStreamChunk containing the processed chunk data.
         """
         accumulated = ""
+        tool_calls = {}
         for chunk in stream:
-            accumulated, processed_chunk = self._process_stream_chunk(chunk, accumulated)
+            accumulated, tool_calls, processed_chunk = self._process_stream_chunk(
+                chunk, accumulated, tool_calls
+            )
             if processed_chunk:
                 yield processed_chunk
 
@@ -175,8 +241,11 @@ class GroqClient(BaseClient[Groq, AsyncGroq, ChatCompletion, ChatCompletionChunk
             ChimericStreamChunk containing the processed chunk data.
         """
         accumulated = ""
+        tool_calls = {}
         async for chunk in stream:
-            accumulated, processed_chunk = self._process_stream_chunk(chunk, accumulated)
+            accumulated, tool_calls, processed_chunk = self._process_stream_chunk(
+                chunk, accumulated, tool_calls
+            )
             if processed_chunk:
                 yield processed_chunk
 
@@ -337,6 +406,258 @@ class GroqClient(BaseClient[Groq, AsyncGroq, ChatCompletion, ChatCompletionChunk
 
         return tool_calls_metadata, messages_list
 
+    def _execute_tool_call(self, call: ToolCall) -> dict[str, Any]:
+        """Executes a single tool call and returns metadata.
+
+        Args:
+            call: The ToolCall object containing call information.
+
+        Returns:
+            A dictionary containing the tool call ID, name, arguments, and result.
+
+        Raises:
+            ToolRegistrationError: If the requested tool is not registered or not callable.
+        """
+        tool_name = call.name
+        tool_call_info = {
+            "call_id": call.call_id,
+            "name": tool_name,
+            "arguments": call.arguments,
+        }
+        tool = self.tool_manager.get_tool(tool_name)
+        if not callable(tool.function):
+            raise ToolRegistrationError(f"Tool '{tool_name}' is not callable.")
+
+        try:
+            args = json.loads(call.arguments)
+            result = tool.function(**args)
+            tool_call_info["result"] = str(result)
+        except Exception as e:
+            tool_call_info["error"] = str(e)
+
+        return tool_call_info
+
+    def _execute_accumulated_tool_calls(
+        self, tool_calls: dict[str, ToolCallChunk]
+    ) -> list[dict[str, Any]]:
+        """Executes all accumulated tool calls and returns their results.
+
+        Args:
+            tool_calls: Dictionary of accumulated tool calls.
+
+        Returns:
+            List of tool call results with metadata.
+        """
+        results = []
+        for tool_call in tool_calls.values():
+            if tool_call.status == "completed":
+                tool_call_obj = ToolCall(
+                    call_id=tool_call.call_id or tool_call.id,
+                    name=tool_call.name,
+                    arguments=tool_call.arguments,
+                )
+                result = self._execute_tool_call(tool_call_obj)
+                results.append(result)
+        return results
+
+    @staticmethod
+    def _update_messages_with_tool_results(
+        messages: Input, tool_results: list[dict[str, Any]]
+    ) -> list[Any]:
+        """Updates message history with tool call results.
+
+        Args:
+            messages: Original message history.
+            tool_results: List of tool call results.
+
+        Returns:
+            Updated messages with tool calls and results.
+        """
+        messages_list: list[Any] = list(messages) if isinstance(messages, list) else [messages]
+
+        if tool_results:
+            # Add the assistant message with tool calls
+            messages_list.append(
+                {
+                    "role": "assistant",
+                    "tool_calls": [
+                        {
+                            "id": tool_result["call_id"],
+                            "type": "function",
+                            "function": {
+                                "name": tool_result["name"],
+                                "arguments": tool_result["arguments"],
+                            },
+                        }
+                        for tool_result in tool_results
+                    ],
+                }
+            )
+
+            # Add tool result messages
+            for tool_result in tool_results:
+                messages_list.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tool_result["call_id"],
+                        "content": tool_result.get("result", tool_result.get("error", "")),
+                    }
+                )
+
+        return messages_list
+
+    def _process_stream_with_tools_sync(
+        self,
+        stream: Stream[ChatCompletionChunk],
+        original_messages: Input,
+        original_model: str,
+        original_tools: Tools | None = None,
+        **original_kwargs: Any,
+    ) -> Generator[ChimericStreamChunk[ChatCompletionChunk], None, None]:
+        """Process a synchronous stream with automatic tool execution.
+
+        Args:
+            stream: The synchronous stream object.
+            original_messages: Original messages for tool call continuation.
+            original_model: Original model for tool call continuation.
+            original_tools: Original tools for tool call continuation.
+            **original_kwargs: Original kwargs for tool call continuation.
+
+        Yields:
+            ChimericStreamChunk containing the processed chunk data.
+        """
+        accumulated = ""
+        tool_calls = {}
+
+        for chunk in stream:
+            accumulated, tool_calls, processed_chunk = self._process_stream_chunk(
+                chunk, accumulated, tool_calls
+            )
+            if processed_chunk:
+                # Check if we need to execute tools and continue
+                if (
+                    processed_chunk.common.finish_reason
+                    and tool_calls
+                    and original_messages
+                    and original_model
+                ):
+                    yield from self._handle_tool_execution_and_continue_sync(
+                        tool_calls,
+                        original_messages,
+                        original_model,
+                        original_tools,
+                        **original_kwargs,
+                    )
+                    return
+                yield processed_chunk
+
+    async def _process_stream_with_tools_async(
+        self,
+        stream: AsyncStream[ChatCompletionChunk],
+        original_messages: Input,
+        original_model: str,
+        original_tools: Tools | None = None,
+        **original_kwargs: Any,
+    ) -> AsyncGenerator[ChimericStreamChunk[ChatCompletionChunk], None]:
+        """Process an asynchronous stream with automatic tool execution.
+
+        Args:
+            stream: The asynchronous stream object.
+            original_messages: Original messages for tool call continuation.
+            original_model: Original model for tool call continuation.
+            original_tools: Original tools for tool call continuation.
+            **original_kwargs: Original kwargs for tool call continuation.
+
+        Yields:
+            ChimericStreamChunk containing the processed chunk data.
+        """
+        accumulated = ""
+        tool_calls = {}
+
+        async for chunk in stream:
+            accumulated, tool_calls, processed_chunk = self._process_stream_chunk(
+                chunk, accumulated, tool_calls
+            )
+            if processed_chunk:
+                # Check if we need to execute tools and continue
+                if (
+                    processed_chunk.common.finish_reason
+                    and tool_calls
+                    and original_messages
+                    and original_model
+                ):
+                    async for tool_chunk in self._handle_tool_execution_and_continue_async(
+                        tool_calls,
+                        original_messages,
+                        original_model,
+                        original_tools,
+                        **original_kwargs,
+                    ):
+                        yield tool_chunk
+                    return
+                yield processed_chunk
+
+    def _handle_tool_execution_and_continue_sync(
+        self,
+        tool_calls: dict[str, ToolCallChunk],
+        messages: Input,
+        model: str,
+        tools: Tools | None,
+        **kwargs: Any,
+    ) -> Generator[ChimericStreamChunk[ChatCompletionChunk], None, None]:
+        """Execute tools and continue streaming synchronously."""
+        completed_tool_calls = self._execute_accumulated_tool_calls(tool_calls)
+        if completed_tool_calls:
+            updated_messages = self._update_messages_with_tool_results(
+                messages, completed_tool_calls
+            )
+            tools_param = NOT_GIVEN if tools is None else tools
+            continuation_stream = self._client.chat.completions.create(
+                model=model,
+                messages=updated_messages,
+                tools=tools_param,
+                stream=True,
+                **kwargs,
+            )
+            yield from self._process_stream_with_tools_sync(
+                continuation_stream,
+                original_messages=messages,
+                original_model=model,
+                original_tools=tools,
+                **kwargs,
+            )
+
+    async def _handle_tool_execution_and_continue_async(
+        self,
+        tool_calls: dict[str, ToolCallChunk],
+        messages: Input,
+        model: str,
+        tools: Tools | None,
+        **kwargs: Any,
+    ) -> AsyncGenerator[ChimericStreamChunk[ChatCompletionChunk], None]:
+        """Execute tools and continue streaming asynchronously."""
+        completed_tool_calls = self._execute_accumulated_tool_calls(tool_calls)
+        if completed_tool_calls:
+            updated_messages = self._update_messages_with_tool_results(
+                messages, completed_tool_calls
+            )
+            tools_param = NOT_GIVEN if tools is None else tools
+            continuation_stream = await self._async_client.chat.completions.create(
+                model=model,
+                messages=updated_messages,
+                tools=tools_param,
+                stream=True,
+                **kwargs,
+            )
+            async for chunk in self._process_stream_with_tools_async(
+                continuation_stream,
+                original_messages=messages,
+                original_model=model,
+                original_tools=tools,
+                **kwargs,
+            ):
+                yield chunk
+
     @staticmethod
     def _normalize_messages(messages: Input) -> list[ChatCompletionMessageParam]:
         """Normalizes the input messages to the format expected by the Groq API.
@@ -398,7 +719,15 @@ class GroqClient(BaseClient[Groq, AsyncGroq, ChatCompletion, ChatCompletionChunk
         )
 
         if isinstance(response, Stream):
-            # If streaming is requested, return a generator that processes the stream
+            # If streaming is requested, handle tool calls in streaming mode
+            if tools:
+                return self._process_stream_with_tools_sync(
+                    response,
+                    original_messages=normalized_messages,
+                    original_model=model,
+                    original_tools=tools,
+                    **filtered_kwargs,
+                )
             return self._stream(response)
 
         # Check for and handle any tool calls requested by the model
@@ -458,7 +787,15 @@ class GroqClient(BaseClient[Groq, AsyncGroq, ChatCompletion, ChatCompletionChunk
         )
 
         if isinstance(response, AsyncStream):
-            # If streaming is requested, return an async generator that processes the stream
+            # If streaming is requested, handle tool calls in streaming mode
+            if tools:
+                return self._process_stream_with_tools_async(
+                    response,
+                    original_messages=normalized_messages,
+                    original_model=model,
+                    original_tools=tools,
+                    **filtered_kwargs,
+                )
             return self._astream(response)
 
         # Check for and handle any tool calls requested by the model
