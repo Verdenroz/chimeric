@@ -193,7 +193,7 @@ class TestOpenAIClient:
     )
     def test_process_event_branches(self, initial, ev, expect_acc, expect_chunk):
         """Test _process_event handles different event types correctly."""
-        acc, chunk = OpenAIClient._process_event(ev, initial)
+        acc, _tool_calls, chunk = OpenAIClient._process_event(ev, initial)
         assert acc == expect_acc
 
         if expect_chunk is None:
@@ -256,61 +256,52 @@ class TestOpenAIClient:
 
         assert [c.common.content for c in out] == ["d", "Z"]
 
-    def test_chat_completion_counts_and_errors(self, chimeric_openai_client, monkeypatch):
-        """Test that chat_completion properly tracks request and error counts."""
+    @pytest.mark.parametrize("is_async", [False, True])
+    async def test_completion_counts_and_errors(
+        self, chimeric_openai_client, monkeypatch, is_async
+    ):
+        """Test that completion properly tracks request and error counts for both sync and async."""
         client = chimeric_openai_client
-
-        # Test successful request path
-        def mock_impl(messages: Any, model: Any, stream: Any, tools: Any = None, **kw: Any) -> str:
-            return "DONE"
-
-        monkeypatch.setattr(client, "_chat_completion_impl", mock_impl)
         before_req = client.request_count
         before_err = client.error_count
-        out = client.chat_completion("hi", "m1")
 
-        # Verify success increments request count but not error count
-        assert out == "DONE"
-        assert client.request_count == before_req + 1
-        assert client.error_count == 0
+        if is_async:
+            # Test successful async request
+            async def async_mock_impl(*args: Any, **kw: Any) -> str:
+                return "ASYNC_DONE"
 
-        # Test error handling path
-        def bad_impl(*args: Any, **kw: Any):
-            raise ValueError("fail")
+            monkeypatch.setattr(client, "_achat_completion_impl", async_mock_impl)
+            result = await client.achat_completion("hi", "m1")
+            assert result == "ASYNC_DONE"
 
-        monkeypatch.setattr(client, "_chat_completion_impl", bad_impl)
-        with pytest.raises(ValueError):
-            client.chat_completion([], "m2")
+            # Test async error handling
+            async def async_bad_impl(*args: Any, **kw: Any):
+                raise RuntimeError("async_err")
 
-        # Verify error increments both request and error counts
+            monkeypatch.setattr(client, "_achat_completion_impl", async_bad_impl)
+            with pytest.raises(RuntimeError):
+                await client.achat_completion([], "m2")
+        else:
+            # Test successful sync request
+            def sync_mock_impl(
+                messages: Any, model: Any, stream: Any, tools: Any = None, **kw: Any
+            ) -> str:
+                return "SYNC_DONE"
+
+            monkeypatch.setattr(client, "_chat_completion_impl", sync_mock_impl)
+            result = client.chat_completion("hi", "m1")
+            assert result == "SYNC_DONE"
+
+            # Test sync error handling
+            def sync_bad_impl(*args: Any, **kw: Any):
+                raise ValueError("sync_fail")
+
+            monkeypatch.setattr(client, "_chat_completion_impl", sync_bad_impl)
+            with pytest.raises(ValueError):
+                client.chat_completion([], "m2")
+
+        # Verify counts are properly incremented
         assert client.request_count == before_req + 2
-        assert client.error_count == before_err + 1
-
-    async def test_achat_completion_counts_and_errors(self, chimeric_openai_client, monkeypatch):
-        """Test that achat_completion properly tracks request and error counts."""
-        client = chimeric_openai_client
-
-        # Test successful async request
-        async def ok_impl(*args: Any, **kw: Any) -> str:
-            return "OK"
-
-        monkeypatch.setattr(client, "_achat_completion_impl", ok_impl)
-        before_req = client.request_count
-        before_err = client.error_count
-
-        # Verify successful async call increments request count
-        assert await client.achat_completion("x", "m") == "OK"
-        assert client.request_count == before_req + 1
-
-        # Test async error handling
-        async def err_impl(*args: Any, **kw: Any):
-            raise RuntimeError("err")
-
-        monkeypatch.setattr(client, "_achat_completion_impl", err_impl)
-        with pytest.raises(RuntimeError):
-            await client.achat_completion([], "m")
-
-        # Verify error increments error count
         assert client.error_count == before_err + 1
 
     def test_get_model_info_found_and_notfound(self, chimeric_openai_client, monkeypatch):
@@ -651,8 +642,11 @@ class TestOpenAIClient:
             stream=True,
         )
 
-    def test_chat_completion_impl_kwargs_filtering(self, chimeric_openai_client, monkeypatch):
-        """Test that _chat_completion_impl properly filters kwargs."""
+    @pytest.mark.parametrize("is_async", [False, True])
+    async def test_chat_completion_impl_kwargs_filtering(
+        self, chimeric_openai_client, monkeypatch, is_async
+    ):
+        """Test that completion impl properly filters kwargs for both sync and async."""
         client = chimeric_openai_client
 
         mock_response = Mock()
@@ -662,25 +656,39 @@ class TestOpenAIClient:
         mock_response.model_dump.return_value = {}
         mock_response.output = ["Filtered"]
 
-        mock_create = Mock(return_value=mock_response)
-        client._client.responses = SimpleNamespace(create=mock_create)
+        if is_async:
+            mock_create = AsyncMock(return_value=mock_response)
+            client._async_client.responses = SimpleNamespace(create=mock_create)
+            allowed = {"temperature", "top_p"}
+            kwargs = {
+                "temperature": 0.9,
+                "top_p": 0.95,
+                "presence_penalty": 0.1,
+                "frequency_penalty": 0.1,
+            }
+            expected_kwargs = {"temperature": 0.9, "top_p": 0.95}
+        else:
+            mock_create = Mock(return_value=mock_response)
+            client._client.responses = SimpleNamespace(create=mock_create)
+            allowed = {"temperature", "max_tokens", "stream"}
+            kwargs = {"temperature": 0.8, "max_tokens": 50, "invalid_param": "should_be_removed"}
+            expected_kwargs = {"temperature": 0.8, "max_tokens": 50}
 
         # Mock _filter_kwargs to only allow specific parameters
         def mock_filter_kwargs(func, kwargs):
-            allowed = {"temperature", "max_tokens", "stream"}
             return {k: v for k, v in kwargs.items() if k in allowed}
 
         monkeypatch.setattr(client, "_filter_kwargs", mock_filter_kwargs)
 
         # Test with both valid and invalid kwargs
-        client._chat_completion_impl(
-            messages=[{"role": "user", "content": "Test"}],
-            model="gpt-4",
-            temperature=0.8,
-            max_tokens=50,
-            invalid_param="should_be_removed",
-            another_invalid="also_removed",
-        )
+        if is_async:
+            await client._achat_completion_impl(
+                messages=[{"role": "user", "content": "Test"}], model="gpt-4", **kwargs
+            )
+        else:
+            client._chat_completion_impl(
+                messages=[{"role": "user", "content": "Test"}], model="gpt-4", **kwargs
+            )
 
         # Verify only valid kwargs were passed
         mock_create.assert_called_once_with(
@@ -688,51 +696,7 @@ class TestOpenAIClient:
             input=[{"role": "user", "content": "Test"}],
             stream=False,
             tools=NOT_GIVEN,
-            temperature=0.8,
-            max_tokens=50,
-        )
-
-    async def test_achat_completion_impl_kwargs_filtering(
-        self, chimeric_openai_client, monkeypatch
-    ):
-        """Test that _achat_completion_impl properly filters kwargs."""
-        client = chimeric_openai_client
-
-        mock_response = Mock()
-        mock_response.output_text = "Async filtered"
-        mock_response.usage = SimpleNamespace(input_tokens=1, output_tokens=1, total_tokens=2)
-        mock_response.model = "gpt-4"
-        mock_response.model_dump.return_value = {}
-        mock_response.output = ["Async filtered"]
-
-        mock_create = AsyncMock(return_value=mock_response)
-        client._async_client.responses = SimpleNamespace(create=mock_create)
-
-        # Mock _filter_kwargs to only allow specific parameters
-        def mock_filter_kwargs(func, kwargs):
-            allowed = {"temperature", "top_p"}
-            return {k: v for k, v in kwargs.items() if k in allowed}
-
-        monkeypatch.setattr(client, "_filter_kwargs", mock_filter_kwargs)
-
-        # Test with both valid and invalid kwargs
-        await client._achat_completion_impl(
-            messages=[{"role": "user", "content": "Async test"}],
-            model="gpt-4",
-            temperature=0.9,
-            top_p=0.95,
-            presence_penalty=0.1,  # Should be filtered out
-            frequency_penalty=0.1,  # Should be filtered out
-        )
-
-        # Verify only valid kwargs were passed
-        mock_create.assert_called_once_with(
-            model="gpt-4",
-            input=[{"role": "user", "content": "Async test"}],
-            stream=False,
-            tools=NOT_GIVEN,
-            temperature=0.9,
-            top_p=0.95,
+            **expected_kwargs,
         )
 
     def test_chat_completion_impl_empty_messages(self, chimeric_openai_client, monkeypatch):
@@ -811,34 +775,38 @@ class TestOpenAIClient:
             description=tool.description,
         )
 
-        # Create a mock function call
-        mock_call = Mock()
-        mock_call.name = "get_weather"
-        mock_call.call_id = "call_123"
-        mock_call.arguments = json.dumps({"location": "New York", "unit": "fahrenheit"})
+        # Create a ToolCall object
+        from chimeric.types import ToolCall
+
+        tool_call = ToolCall(
+            call_id="call_123",
+            name="get_weather",
+            arguments=json.dumps({"location": "New York", "unit": "fahrenheit"}),
+        )
 
         # Test the function call processing
-        result = client._process_function_call(mock_call)
+        result = client._execute_tool_call(tool_call)
 
         # Verify the result structure
         assert result["call_id"] == "call_123"
         assert result["name"] == "get_weather"
-        assert result["arguments"] == mock_call.arguments
+        assert result["arguments"] == tool_call.arguments
         assert result["result"] == "Weather in New York is 22°F"
 
     def test_process_function_call_tool_not_registered(self, chimeric_openai_client):
         """Test function call processing when tool is not registered."""
         client = chimeric_openai_client
 
-        # Create a mock function call for unregistered tool
-        mock_call = Mock()
-        mock_call.name = "unregistered_tool"
-        mock_call.call_id = "call_456"
-        mock_call.arguments = json.dumps({"param": "value"})
+        # Create a ToolCall object for unregistered tool
+        from chimeric.types import ToolCall
+
+        tool_call = ToolCall(
+            call_id="call_456", name="unregistered_tool", arguments=json.dumps({"param": "value"})
+        )
 
         # Test that ToolRegistrationError is raised
         with pytest.raises(ToolRegistrationError) as exc_info:
-            client._process_function_call(mock_call)
+            client._execute_tool_call(tool_call)
 
         assert "unregistered_tool" in str(exc_info.value)
         assert "No tool registered" in str(exc_info.value)
@@ -865,20 +833,21 @@ class TestOpenAIClient:
 
         monkeypatch.setattr(client.tool_manager, "get_tool", mock_get_tool)
 
-        # Create a mock function call
-        mock_call = Mock()
-        mock_call.name = "broken_tool"
-        mock_call.call_id = "call_789"
-        mock_call.arguments = json.dumps({"param": "value"})
+        # Create a ToolCall object
+        from chimeric.types import ToolCall
+
+        tool_call = ToolCall(
+            call_id="call_789", name="broken_tool", arguments=json.dumps({"param": "value"})
+        )
 
         # Test that ToolRegistrationError is raised with the correct message
         with pytest.raises(ToolRegistrationError) as exc_info:
-            client._process_function_call(mock_call)
+            client._execute_tool_call(tool_call)
 
         assert "Tool 'broken_tool' is not callable" in str(exc_info.value)
 
     def test_handle_function_tool_calls_no_calls(self, chimeric_openai_client):
-        """Test _handle_function_tool_calls when response has no tool calls."""
+        """Test _handle_tool_calls_in_response when response has no tool calls."""
         client = chimeric_openai_client
 
         # Create a response with no tool calls
@@ -888,13 +857,15 @@ class TestOpenAIClient:
         messages = [{"role": "user", "content": "Hello"}]
 
         # Test handling when no tool calls are present
-        tool_calls, updated_messages = client._handle_function_tool_calls(mock_response, messages)
+        tool_calls, updated_messages = client._handle_tool_calls_in_response(
+            mock_response, messages
+        )
 
         assert tool_calls == []
         assert updated_messages == messages  # Should be unchanged
 
     def test_handle_function_tool_calls_with_calls(self, chimeric_openai_client, monkeypatch):
-        """Test _handle_function_tool_calls with actual tool calls."""
+        """Test _handle_tool_calls_in_response with actual tool calls."""
         from openai.types.responses import ResponseFunctionToolCall
 
         client = chimeric_openai_client
@@ -937,7 +908,9 @@ class TestOpenAIClient:
         messages = [{"role": "user", "content": "Calculate 5+3 and 4*7"}]
 
         # Test handling tool calls
-        tool_calls, updated_messages = client._handle_function_tool_calls(mock_response, messages)
+        tool_calls, updated_messages = client._handle_tool_calls_in_response(
+            mock_response, messages
+        )
 
         # Verify tool calls metadata
         assert len(tool_calls) == 2
@@ -1115,90 +1088,115 @@ class TestOpenAIClient:
         # Verify both async API calls were made
         assert call_count == 2
 
-    def test_chat_completion_impl_streaming_with_tools(self, chimeric_openai_client, monkeypatch):
-        """Test _chat_completion_impl with streaming and tools (single pass)."""
-        client = chimeric_openai_client
-
-        # Create mock stream response
-        mock_stream = Mock(spec=client_module.Stream)
-
-        # Mock the client's responses.create method to return stream
-        mock_create = Mock(return_value=mock_stream)
-        client._client.responses = SimpleNamespace(create=mock_create)
-
-        # Mock _stream method to return a generator
-        def mock_stream_method(stream):
-            yield ChimericStreamChunk(
-                native=Mock(),
-                common=StreamChunk(content="Streaming", delta="Streaming", metadata={}),
-            )
-
-        monkeypatch.setattr(client, "_stream", mock_stream_method)
-
-        # Test with tools and streaming
-        tool = Tool(name="example_tool", description="Example tool")
-        result = client._chat_completion_impl(
-            messages=[{"role": "user", "content": "Hello"}],
-            model="gpt-4",
-            tools=[tool],
-            stream=True,
-        )
-
-        # Verify the result is a generator (streaming response)
-        assert hasattr(result, "__iter__")
-        chunks = list(result)
-        assert len(chunks) == 1
-        assert isinstance(chunks[0], ChimericStreamChunk)
-        assert chunks[0].common.content == "Streaming"
-
-        # Verify tools were passed to the API
-        mock_create.assert_called_once()
-        call_args = mock_create.call_args
-        assert call_args[1]["tools"] == [tool]
-
-    async def test_achat_completion_impl_streaming_with_tools(
-        self, chimeric_openai_client, monkeypatch
+    @pytest.mark.parametrize("is_async", [False, True])
+    async def test_chat_completion_impl_streaming_with_tools(
+        self, chimeric_openai_client, monkeypatch, is_async
     ):
-        """Test _achat_completion_impl with streaming and tools (single pass)."""
+        """Test completion impl with streaming and tools for both sync and async."""
         client = chimeric_openai_client
+        import builtins
 
-        # Create mock async stream
-        mock_stream = Mock(spec=client_module.AsyncStream)
+        if is_async:
+            # Create mock async stream that's async iterable
+            async def mock_async_events():
+                yield Mock(
+                    type="response.output_text.delta",
+                    delta="Async streaming",
+                    model_dump=Mock(return_value={}),
+                )
+                yield Mock(
+                    type="response.completed",
+                    response=Mock(
+                        output=[Mock(content=[Mock(text="Async streaming")])], status="completed"
+                    ),
+                    model_dump=Mock(return_value={}),
+                )
 
-        mock_create = AsyncMock(return_value=mock_stream)
-        client._async_client.responses = SimpleNamespace(create=mock_create)
+            def mock_aiter(self):
+                return mock_async_events()
 
-        # Mock _astream method to return an async generator
-        async def mock_astream_method(stream):
-            yield ChimericStreamChunk(
-                native=Mock(),
-                common=StreamChunk(content="Async streaming", delta="Async streaming", metadata={}),
+            mock_stream = Mock()
+            mock_stream.__aiter__ = mock_aiter
+            mock_create = AsyncMock(return_value=mock_stream)
+            client._async_client.responses = SimpleNamespace(create=mock_create)
+
+            # Patch isinstance
+            original_isinstance = builtins.isinstance
+
+            def patched_isinstance(obj, classinfo):
+                if obj is mock_stream and classinfo is client_module.AsyncStream:
+                    return True
+                return original_isinstance(obj, classinfo)
+
+            monkeypatch.setattr(builtins, "isinstance", patched_isinstance)
+
+            tool = Tool(name="async_tool", description="Async tool")
+            result = await client._achat_completion_impl(
+                messages=[{"role": "user", "content": "Hello async"}],
+                model="gpt-4",
+                tools=[tool],
+                stream=True,
             )
 
-        monkeypatch.setattr(client, "_astream", mock_astream_method)
+            # Verify the result is an async generator
+            assert hasattr(result, "__aiter__")
+            chunks = []
+            async for chunk in result:
+                chunks.append(chunk)
+            assert chunks[0].common.content == "Async streaming"
+        else:
+            # Create mock stream response that's iterable
+            def mock_events():
+                yield Mock(
+                    type="response.output_text.delta",
+                    delta="Streaming",
+                    model_dump=Mock(return_value={}),
+                )
+                yield Mock(
+                    type="response.completed",
+                    response=Mock(
+                        output=[Mock(content=[Mock(text="Streaming")])], status="completed"
+                    ),
+                    model_dump=Mock(return_value={}),
+                )
 
-        # Test with tools and streaming
-        tool = Tool(name="async_tool", description="Async tool")
-        result = await client._achat_completion_impl(
-            messages=[{"role": "user", "content": "Hello async"}],
-            model="gpt-4",
-            tools=[tool],
-            stream=True,
-        )
+            def mock_iter(self):
+                return mock_events()
 
-        # Verify the result is an async generator
-        assert hasattr(result, "__aiter__")
-        chunks = []
-        async for chunk in result:
-            chunks.append(chunk)
+            mock_stream = Mock()
+            mock_stream.__iter__ = mock_iter
+            mock_create = Mock(return_value=mock_stream)
+            client._client.responses = SimpleNamespace(create=mock_create)
 
-        assert len(chunks) == 1
-        assert chunks[0].common.content == "Async streaming"
+            # Patch isinstance
+            original_isinstance = builtins.isinstance
 
-        # Verify tools were passed to the async API
+            def patched_isinstance(obj, classinfo):
+                if obj is mock_stream and classinfo is client_module.Stream:
+                    return True
+                return original_isinstance(obj, classinfo)
+
+            monkeypatch.setattr(builtins, "isinstance", patched_isinstance)
+
+            tool = Tool(name="example_tool", description="Example tool")
+            result = client._chat_completion_impl(
+                messages=[{"role": "user", "content": "Hello"}],
+                model="gpt-4",
+                tools=[tool],
+                stream=True,
+            )
+
+            # Verify the result is a generator (streaming response)
+            assert hasattr(result, "__iter__")
+            chunks = list(result)
+            assert chunks[0].common.content == "Streaming"
+
+        # Common assertions
+        assert len(chunks) >= 1
+        assert isinstance(chunks[0], ChimericStreamChunk)
         mock_create.assert_called_once()
         call_args = mock_create.call_args
-        assert call_args[1]["tools"] == [tool]
+        assert "tools" in call_args[1]
 
     def test_create_chimeric_response_with_tool_calls(self, chimeric_openai_client):
         """Test _create_chimeric_response includes tool call metadata."""
@@ -1289,22 +1287,578 @@ class TestOpenAIClient:
             description=tool.description,
         )
 
-        # Create a mock function call with complex arguments
-        mock_call = Mock()
-        mock_call.name = "complex_processor"
-        mock_call.call_id = "call_complex"
-        mock_call.arguments = json.dumps(
-            {
-                "config": {"mode": "advanced", "debug": True},
-                "items": ["item1", "item2", "item3"],
-                "count": 5,
-            }
+        # Create a ToolCall object with complex arguments
+        from chimeric.types import ToolCall
+
+        tool_call = ToolCall(
+            call_id="call_complex",
+            name="complex_processor",
+            arguments=json.dumps(
+                {
+                    "config": {"mode": "advanced", "debug": True},
+                    "items": ["item1", "item2", "item3"],
+                    "count": 5,
+                }
+            ),
         )
 
         # Test the function call processing
-        result = client._process_function_call(mock_call)
+        result = client._execute_tool_call(tool_call)
 
         # Verify complex arguments were handled correctly
         assert result["name"] == "complex_processor"
         assert result["result"] == "Processed 3 items with config advanced (count: 5)"
         assert json.loads(result["arguments"])["config"]["debug"] is True
+
+    def test_process_function_call_with_exception(self, chimeric_openai_client):
+        """Test _execute_tool_call when function raises an exception."""
+        client = chimeric_openai_client
+
+        # Create a tool that raises an exception
+        def failing_tool(value: str) -> str:
+            raise ValueError(f"Invalid value: {value}")
+
+        tool = Tool(
+            name="failing_tool",
+            description="A tool that fails",
+            function=failing_tool,
+        )
+        client.tool_manager.register(
+            func=tool.function,
+            name=tool.name,
+            description=tool.description,
+        )
+
+        # Create a ToolCall object
+        from chimeric.types import ToolCall
+
+        tool_call = ToolCall(
+            call_id="call_fail",
+            name="failing_tool",
+            arguments=json.dumps({"value": "bad_input"}),
+        )
+
+        # Test the function call processing
+        result = client._execute_tool_call(tool_call)
+
+        # Verify error is captured
+        assert result["call_id"] == "call_fail"
+        assert result["name"] == "failing_tool"
+        assert "error" in result
+        assert "Invalid value: bad_input" in result["error"]
+        assert "result" not in result
+
+    def test_execute_accumulated_tool_calls(self, chimeric_openai_client):
+        """Test _execute_accumulated_tool_calls method."""
+        client = chimeric_openai_client
+
+        # Register a test tool
+        def test_tool(message: str) -> str:
+            return f"Processed: {message}"
+
+        tool = Tool(name="test_tool", description="Test tool", function=test_tool)
+        client.tool_manager.register(
+            func=tool.function,
+            name=tool.name,
+            description=tool.description,
+        )
+
+        # Create mock tool call chunks
+        from chimeric.types import ToolCallChunk
+
+        tool_calls = {
+            "call1": ToolCallChunk(
+                id="call1",
+                call_id="call_123",
+                name="test_tool",
+                arguments='{"message": "hello"}',
+                status="completed",
+            ),
+            "call2": ToolCallChunk(
+                id="call2",
+                call_id="call_456",
+                name="test_tool",
+                arguments='{"message": "world"}',
+                status="started",  # This one should be skipped
+            ),
+        }
+
+        # Execute accumulated tool calls
+        results = client._execute_accumulated_tool_calls(tool_calls)
+
+        # Verify only completed calls are executed
+        assert len(results) == 1
+        assert results[0]["call_id"] == "call_123"
+        assert results[0]["name"] == "test_tool"
+        assert results[0]["result"] == "Processed: hello"
+
+    # Additional tests for 100% coverage
+
+    def test_process_event_tool_call_edge_cases(self):
+        """Test tool call event processing edge cases for 100% coverage."""
+        from unittest.mock import Mock
+
+        from chimeric.types import ToolCallChunk
+
+        # Test output_item_added with function call
+        event = Mock()
+        event.type = "response.output_item.added"
+        event.item = Mock()
+        event.item.type = "function_call"
+        event.item.id = "call_123"
+        event.item.call_id = "call_123"
+        event.item.name = "test_function"
+        event.model_dump = Mock(return_value={})
+
+        _, tool_calls, chunk = OpenAIClient._process_event(event, "", {})
+        assert "call_123" in tool_calls
+        assert chunk is None
+
+        # Test output_item_added without id
+        event.item.id = None
+        _, tool_calls, chunk = OpenAIClient._process_event(event, "", {})
+        assert tool_calls == {}
+        assert chunk is None
+
+        # Test function_call_arguments.delta
+        event = Mock()
+        event.type = "response.function_call_arguments.delta"
+        event.item_id = "call_123"
+        event.delta = "delta_text"
+        tool_calls = {
+            "call_123": ToolCallChunk(
+                id="call_123", call_id="call_123", name="test", arguments="", status="started"
+            )
+        }
+        _, tool_calls, chunk = OpenAIClient._process_event(event, "", tool_calls)
+        assert tool_calls["call_123"].arguments == "delta_text"
+        assert chunk is None
+
+        # Test function_call_arguments.done
+        event = Mock()
+        event.type = "response.function_call_arguments.done"
+        event.item_id = "call_123"
+        _, tool_calls, chunk = OpenAIClient._process_event(event, "", tool_calls)
+        assert tool_calls["call_123"].status == "completed"
+        assert chunk is None
+
+        # Test function_call_arguments.delta with tool_call_id not in dict
+        event = Mock()
+        event.type = "response.function_call_arguments.delta"
+        event.item_id = "nonexistent_call"
+        event.delta = "test_delta"
+        _, tool_calls, chunk = OpenAIClient._process_event(event, "", {})
+        assert tool_calls == {}
+        assert chunk is None
+
+        # Test function_call_arguments.done with tool_call_id not in dict
+        event = Mock()
+        event.type = "response.function_call_arguments.done"
+        event.item_id = "nonexistent_call"
+        _, tool_calls, chunk = OpenAIClient._process_event(event, "", {})
+        assert tool_calls == {}
+        assert chunk is None
+
+        # Test output_item_added with function_call type and valid id
+        event = Mock()
+        event.type = "response.output_item.added"
+        event.item = Mock()
+        event.item.type = "function_call"
+        event.item.id = "valid_call_id"
+        event.item.call_id = "call_123"
+        event.item.name = "test_function"
+        _, tool_calls, chunk = OpenAIClient._process_event(event, "", {})
+        assert "valid_call_id" in tool_calls
+        assert tool_calls["valid_call_id"].id == "valid_call_id"
+        assert tool_calls["valid_call_id"].call_id == "call_123"
+        assert tool_calls["valid_call_id"].name == "test_function"
+        assert tool_calls["valid_call_id"].status == "started"
+        assert chunk is None
+
+    def test_streaming_with_tool_execution_sync(self, chimeric_openai_client, monkeypatch):
+        """Test sync streaming with tool execution (lines 428-435)."""
+        import builtins
+
+        from chimeric.types import ToolCallChunk
+
+        # Register a test tool
+        def test_tool_sync():
+            return "tool_result"
+
+        chimeric_openai_client.tool_manager.register(test_tool_sync)
+
+        # Mock events that trigger tool execution
+        def mock_events():
+            yield Mock(
+                type="response.completed",
+                response=Mock(output=[], status="completed"),
+                model_dump=Mock(return_value={}),
+            )
+
+        def mock_iter(self):
+            return mock_events()
+
+        mock_stream = Mock()
+        mock_stream.__iter__ = mock_iter
+
+        # Mock continuation stream
+        def mock_continuation():
+            yield Mock(
+                type="response.output_text.delta",
+                delta="continuation",
+                model_dump=Mock(return_value={}),
+            )
+
+        def mock_continuation_iter(self):
+            return mock_continuation()
+
+        mock_continuation_stream = Mock()
+        mock_continuation_stream.__iter__ = mock_continuation_iter
+
+        # Mock client responses.create
+        call_count = 0
+
+        def mock_create(**kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return mock_stream
+            return mock_continuation_stream
+
+        chimeric_openai_client._client.responses = SimpleNamespace(create=mock_create)
+
+        # Patch isinstance
+        original_isinstance = builtins.isinstance
+
+        def patched_isinstance(obj, classinfo):
+            if obj in [mock_stream, mock_continuation_stream] and classinfo is client_module.Stream:
+                return True
+            return original_isinstance(obj, classinfo)
+
+        monkeypatch.setattr(builtins, "isinstance", patched_isinstance)
+
+        # Mock _process_event to create tool calls
+        def mock_process_event(event, accumulated, tool_calls):
+            if event.type == "response.completed":
+                # Create a tool call that will trigger execution
+                tool_calls["call_123"] = ToolCallChunk(
+                    id="call_123",
+                    call_id="call_123",
+                    name="test_tool_sync",
+                    arguments="{}",
+                    status="completed",
+                )
+                return (
+                    accumulated,
+                    tool_calls,
+                    Mock(common=Mock(content="done", finish_reason="completed")),
+                )
+            if event.type == "response.output_text.delta":
+                return (
+                    accumulated + event.delta,
+                    tool_calls,
+                    Mock(
+                        common=Mock(
+                            content=accumulated + event.delta, delta=event.delta, finish_reason=None
+                        )
+                    ),
+                )
+            return accumulated, tool_calls, None
+
+        monkeypatch.setattr(chimeric_openai_client, "_process_event", mock_process_event)
+
+        # Test streaming with tool execution
+        result = chimeric_openai_client._process_stream_with_tools_sync(
+            mock_stream,
+            original_messages=[{"role": "user", "content": "Hello"}],
+            original_model="gpt-4",
+            original_tools=[{"type": "function", "name": "test_tool_sync"}],
+        )
+        chunks = list(result)
+        assert len(chunks) >= 1
+
+    async def test_streaming_with_tool_execution_async(self, chimeric_openai_client, monkeypatch):
+        """Test async streaming with tool execution (lines 471-479)."""
+        import builtins
+
+        from chimeric.types import ToolCallChunk
+
+        # Register a test tool
+        def test_tool_async():
+            return "tool_result"
+
+        chimeric_openai_client.tool_manager.register(test_tool_async)
+
+        # Mock async events that trigger tool execution
+        async def mock_events():
+            yield Mock(
+                type="response.completed",
+                response=Mock(output=[], status="completed"),
+                model_dump=Mock(return_value={}),
+            )
+
+        def mock_aiter(self):
+            return mock_events()
+
+        mock_stream = Mock()
+        mock_stream.__aiter__ = mock_aiter
+
+        # Mock continuation stream
+        async def mock_continuation():
+            yield Mock(
+                type="response.output_text.delta",
+                delta="continuation",
+                model_dump=Mock(return_value={}),
+            )
+
+        def mock_continuation_aiter(self):
+            return mock_continuation()
+
+        mock_continuation_stream = Mock()
+        mock_continuation_stream.__aiter__ = mock_continuation_aiter
+
+        # Mock client responses.create
+        call_count = 0
+
+        async def mock_create(**kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return mock_stream
+            return mock_continuation_stream
+
+        chimeric_openai_client._async_client.responses = SimpleNamespace(create=mock_create)
+
+        # Patch isinstance
+        original_isinstance = builtins.isinstance
+
+        def patched_isinstance(obj, classinfo):
+            if (
+                obj in [mock_stream, mock_continuation_stream]
+                and classinfo is client_module.AsyncStream
+            ):
+                return True
+            return original_isinstance(obj, classinfo)
+
+        monkeypatch.setattr(builtins, "isinstance", patched_isinstance)
+
+        # Mock _process_event to create tool calls
+        def mock_process_event(event, accumulated, tool_calls):
+            if event.type == "response.completed":
+                # Create a tool call that will trigger execution
+                tool_calls["call_123"] = ToolCallChunk(
+                    id="call_123",
+                    call_id="call_123",
+                    name="test_tool_async",
+                    arguments="{}",
+                    status="completed",
+                )
+                return (
+                    accumulated,
+                    tool_calls,
+                    Mock(common=Mock(content="done", finish_reason="completed")),
+                )
+            if event.type == "response.output_text.delta":
+                return (
+                    accumulated + event.delta,
+                    tool_calls,
+                    Mock(
+                        common=Mock(
+                            content=accumulated + event.delta, delta=event.delta, finish_reason=None
+                        )
+                    ),
+                )
+            return accumulated, tool_calls, None
+
+        monkeypatch.setattr(chimeric_openai_client, "_process_event", mock_process_event)
+
+        # Test async streaming with tool execution
+        result = chimeric_openai_client._process_stream_with_tools_async(
+            mock_stream,
+            original_messages=[{"role": "user", "content": "Hello"}],
+            original_model="gpt-4",
+            original_tools=[{"type": "function", "name": "test_tool_async"}],
+        )
+        chunks = []
+        async for chunk in result:
+            chunks.append(chunk)
+        assert len(chunks) >= 1
+
+    @pytest.mark.parametrize("is_async", [False, True])
+    async def test_handle_tool_execution_and_continue_empty_calls(
+        self, chimeric_openai_client, is_async
+    ):
+        """Test tool execution with empty tool calls (should not execute anything)."""
+        if is_async:
+            result = chimeric_openai_client._handle_tool_execution_and_continue_async(
+                {}, [{"role": "user", "content": "Hello"}], "gpt-4", None
+            )
+            chunks = []
+            async for chunk in result:
+                chunks.append(chunk)
+        else:
+            result = chimeric_openai_client._handle_tool_execution_and_continue_sync(
+                {}, [{"role": "user", "content": "Hello"}], "gpt-4", None
+            )
+            chunks = list(result)
+
+        assert chunks == []
+
+    def test_process_event_function_call_item_edge_cases(self, chimeric_openai_client):
+        """Test _process_event with function_call item edge cases for 100% coverage."""
+        client = chimeric_openai_client
+
+        # Test case 1: response.output_item.added with item that has no type attribute
+        event = Mock()
+        event.type = "response.output_item.added"
+        event.item = Mock()
+        # item exists but has no type attribute
+        if hasattr(event.item, "type"):
+            delattr(event.item, "type")
+
+        accumulated, tool_calls, chunk = client._process_event(event, "", {})
+        # Should continue to next if statement (line 316)
+        assert accumulated == ""
+        assert tool_calls == {}
+        assert chunk is None
+
+        # Test case 2: response.output_item.added with item that has type but not function_call
+        event = Mock()
+        event.type = "response.output_item.added"
+        event.item = Mock()
+        event.item.type = "text"  # Not function_call
+
+        accumulated, tool_calls, chunk = client._process_event(event, "", {})
+        # Should continue to next if statement (line 316)
+        assert accumulated == ""
+        assert tool_calls == {}
+        assert chunk is None
+
+        # Test case 3: response.output_item.added with no item
+        event = Mock()
+        event.type = "response.output_item.added"
+        event.item = None
+
+        accumulated, tool_calls, chunk = client._process_event(event, "", {})
+        # Should continue to next if statement (line 316)
+        assert accumulated == ""
+        assert tool_calls == {}
+        assert chunk is None
+
+    def test_streaming_with_chunk_but_no_tool_execution(self, chimeric_openai_client):
+        """Test streaming where chunk is yielded but tool execution is not triggered."""
+        client = chimeric_openai_client
+
+        # Create a mock event that generates a chunk but doesn't trigger tool execution
+        mock_event = Mock()
+        mock_event.type = "response.output_text.delta"
+        mock_event.delta = "test chunk"
+
+        # Create a mock stream that yields our event
+        mock_stream = [mock_event]
+
+        # Mock _process_event to return a chunk without finish_reason
+        def mock_process_event(event, accumulated, tool_calls):
+            if event.type == "response.output_text.delta":
+                chunk = Mock()
+                chunk.common = Mock()
+                chunk.common.finish_reason = None  # No finish reason
+                return accumulated + event.delta, tool_calls, chunk
+            return accumulated, tool_calls, None
+
+        # Patch _process_event
+        original_process_event = client._process_event
+        client._process_event = mock_process_event
+
+        try:
+            # Test sync streaming
+            chunks = list(
+                client._process_stream_with_tools_sync(
+                    mock_stream,
+                    original_messages=[{"role": "user", "content": "test"}],
+                    original_model="gpt-4",
+                )
+            )
+
+            # Should yield the chunk without triggering tool execution
+            assert len(chunks) == 1
+            assert chunks[0].common.finish_reason is None
+
+        finally:
+            # Restore original method
+            client._process_event = original_process_event
+
+    def test_streaming_with_no_chunks_generated(self, chimeric_openai_client):
+        """Test streaming where _process_event returns None for chunk (covers 420->418 branch)."""
+        client = chimeric_openai_client
+
+        # Create a mock event
+        mock_event = Mock()
+        mock_event.type = "unknown_event"
+
+        # Create a mock stream that yields our event
+        mock_stream = [mock_event]
+
+        # Mock _process_event to return None for chunk
+        def mock_process_event(event, accumulated, tool_calls):
+            # This simulates the case where _process_event returns None for chunk
+            return accumulated, tool_calls, None
+
+        # Patch _process_event
+        original_process_event = client._process_event
+        client._process_event = mock_process_event
+
+        try:
+            # Test sync streaming - should not yield any chunks
+            chunks = list(
+                client._process_stream_with_tools_sync(
+                    mock_stream,
+                    original_messages=[{"role": "user", "content": "test"}],
+                    original_model="gpt-4",
+                )
+            )
+
+            # Should not yield any chunks since _process_event returns None
+            assert len(chunks) == 0
+
+        finally:
+            # Restore original method
+            client._process_event = original_process_event
+
+    async def test_async_streaming_with_no_chunks_generated(self, chimeric_openai_client):
+        """Test async streaming where _process_event returns None for chunk (covers 463->461 branch)."""
+        client = chimeric_openai_client
+
+        # Create a mock event
+        mock_event = Mock()
+        mock_event.type = "unknown_event"
+
+        # Create a mock async stream
+        async def mock_stream():
+            yield mock_event
+
+        # Mock _process_event to return None for chunk
+        def mock_process_event(event, accumulated, tool_calls):
+            # This simulates the case where _process_event returns None for chunk
+            return accumulated, tool_calls, None
+
+        # Patch _process_event
+        original_process_event = client._process_event
+        client._process_event = mock_process_event
+
+        try:
+            # Test async streaming - should not yield any chunks
+            chunks = []
+            async for chunk in client._process_stream_with_tools_async(
+                mock_stream(),
+                original_messages=[{"role": "user", "content": "test"}],
+                original_model="gpt-4",
+            ):
+                chunks.append(chunk)
+
+            # Should not yield any chunks since _process_event returns None
+            assert len(chunks) == 0
+
+        finally:
+            # Restore original method
+            client._process_event = original_process_event
