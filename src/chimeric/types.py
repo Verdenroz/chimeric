@@ -29,6 +29,8 @@ __all__ = [
     "Provider",
     "StreamChunk",
     "Tool",
+    "ToolCall",
+    "ToolCallChunk",
     "ToolParameters",
     "Tools",
     "Usage",
@@ -175,6 +177,40 @@ class CompletionResponse(BaseModel):
             if isinstance(self.content, str)
             else " ".join(str(c) for c in self.content if c)
         )
+
+
+class ToolCall(BaseModel):
+    """Represents a tool call with its essential information.
+
+    Attributes:
+        call_id: Provider-specific call identifier.
+        name: Name of the tool being called.
+        arguments: Arguments JSON string for the tool call.
+    """
+
+    call_id: str
+    name: str
+    arguments: str
+
+
+class ToolCallChunk(BaseModel):
+    """Information about a tool call in a streaming response.
+
+    Attributes:
+        id: Unique identifier for the tool call.
+        call_id: Provider-specific call identifier.
+        name: Name of the tool being called.
+        arguments: Accumulated arguments JSON string.
+        arguments_delta: Incremental change to arguments in this chunk.
+        status: Current status of the tool call (e.g., 'started', 'arguments_streaming', 'completed').
+    """
+
+    id: str
+    call_id: str | None = None
+    name: str
+    arguments: str = ""
+    arguments_delta: str | None = None
+    status: str | None = None
 
 
 class StreamChunk(BaseModel):

@@ -19,6 +19,7 @@ from .types import (
     Input,
     ModelSummary,
     Tool,
+    ToolCallChunk,
     Tools,
 )
 
@@ -297,6 +298,60 @@ class BaseClient(
             return None
 
         return [tool.model_dump() if isinstance(tool, Tool) else tool for tool in tools]
+
+    def _accumulate_tool_call_arguments(
+        self, tool_calls: dict[str, ToolCallChunk], tool_call_id: str, arguments_delta: str
+    ) -> None:
+        """Accumulates arguments for a streaming tool call.
+
+        Args:
+            tool_calls: Dictionary mapping tool call IDs to ToolCallChunk objects.
+            tool_call_id: The ID of the tool call to update.
+            arguments_delta: The new arguments fragment to append.
+        """
+        if tool_call_id in tool_calls:
+            tool_calls[tool_call_id].arguments += arguments_delta
+            tool_calls[tool_call_id].arguments_delta = arguments_delta
+
+    def _execute_accumulated_tool_calls(
+        self, tool_calls: dict[str, ToolCallChunk]
+    ) -> list[dict[str, Any]]:
+        """Executes all accumulated tool calls and returns their results.
+
+        Args:
+            tool_calls: Dictionary of accumulated tool calls.
+
+        Returns:
+            List of tool call results with metadata.
+        """
+        results = []
+        for tool_call in tool_calls.values():
+            if tool_call.status == "completed":
+                try:
+                    tool = self.tool_manager.get_tool(tool_call.name)
+                    if tool and tool.function:
+                        import json
+
+                        args = json.loads(tool_call.arguments)
+                        result = tool.function(**args)
+                        results.append(
+                            {
+                                "call_id": tool_call.call_id or tool_call.id,
+                                "name": tool_call.name,
+                                "arguments": tool_call.arguments,
+                                "result": str(result),
+                            }
+                        )
+                except Exception as e:
+                    results.append(
+                        {
+                            "call_id": tool_call.call_id or tool_call.id,
+                            "name": tool_call.name,
+                            "arguments": tool_call.arguments,
+                            "error": str(e),
+                        }
+                    )
+        return results
 
     def _process_tools(self, auto_tool: bool, tools: Tools = None) -> Tools:
         """Processes tools for chat completion requests."""
