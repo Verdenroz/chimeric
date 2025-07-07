@@ -1392,10 +1392,8 @@ class TestOpenAIClient:
         assert results[0]["name"] == "test_tool"
         assert results[0]["result"] == "Processed: hello"
 
-    # Additional tests for 100% coverage
-
     def test_process_event_tool_call_edge_cases(self):
-        """Test tool call event processing edge cases for 100% coverage."""
+        """Test tool call event processing for various event types and edge cases."""
         from unittest.mock import Mock
 
         from chimeric.types import ToolCallChunk
@@ -1476,7 +1474,7 @@ class TestOpenAIClient:
         assert chunk is None
 
     def test_streaming_with_tool_execution_sync(self, chimeric_openai_client, monkeypatch):
-        """Test sync streaming with tool execution (lines 428-435)."""
+        """Test synchronous streaming with tool execution and continuation."""
         import builtins
 
         from chimeric.types import ToolCallChunk
@@ -1578,7 +1576,7 @@ class TestOpenAIClient:
         assert len(chunks) >= 1
 
     async def test_streaming_with_tool_execution_async(self, chimeric_openai_client, monkeypatch):
-        """Test async streaming with tool execution (lines 471-479)."""
+        """Test asynchronous streaming with tool execution and continuation."""
         import builtins
 
         from chimeric.types import ToolCallChunk
@@ -1688,7 +1686,7 @@ class TestOpenAIClient:
     async def test_handle_tool_execution_and_continue_empty_calls(
         self, chimeric_openai_client, is_async
     ):
-        """Test tool execution with empty tool calls (should not execute anything)."""
+        """Test tool execution behavior when no tool calls are provided."""
         if is_async:
             result = chimeric_openai_client._handle_tool_execution_and_continue_async(
                 {}, [{"role": "user", "content": "Hello"}], "gpt-4", None
@@ -1705,7 +1703,7 @@ class TestOpenAIClient:
         assert chunks == []
 
     def test_process_event_function_call_item_edge_cases(self, chimeric_openai_client):
-        """Test _process_event with function_call item edge cases for 100% coverage."""
+        """Test _process_event with various function call item configurations."""
         client = chimeric_openai_client
 
         # Test case 1: response.output_item.added with item that has no type attribute
@@ -1717,7 +1715,7 @@ class TestOpenAIClient:
             delattr(event.item, "type")
 
         accumulated, tool_calls, chunk = client._process_event(event, "", {})
-        # Should continue to next if statement (line 316)
+        # Should continue processing without creating tool calls
         assert accumulated == ""
         assert tool_calls == {}
         assert chunk is None
@@ -1729,7 +1727,7 @@ class TestOpenAIClient:
         event.item.type = "text"  # Not function_call
 
         accumulated, tool_calls, chunk = client._process_event(event, "", {})
-        # Should continue to next if statement (line 316)
+        # Should continue processing without creating tool calls
         assert accumulated == ""
         assert tool_calls == {}
         assert chunk is None
@@ -1740,13 +1738,13 @@ class TestOpenAIClient:
         event.item = None
 
         accumulated, tool_calls, chunk = client._process_event(event, "", {})
-        # Should continue to next if statement (line 316)
+        # Should continue processing without creating tool calls
         assert accumulated == ""
         assert tool_calls == {}
         assert chunk is None
 
     def test_streaming_with_chunk_but_no_tool_execution(self, chimeric_openai_client):
-        """Test streaming where chunk is yielded but tool execution is not triggered."""
+        """Test streaming response processing without triggering tool execution."""
         client = chimeric_openai_client
 
         # Create a mock event that generates a chunk but doesn't trigger tool execution
@@ -1789,7 +1787,7 @@ class TestOpenAIClient:
             client._process_event = original_process_event
 
     def test_streaming_with_no_chunks_generated(self, chimeric_openai_client):
-        """Test streaming where _process_event returns None for chunk (covers 420->418 branch)."""
+        """Test streaming behavior when event processing produces no chunks."""
         client = chimeric_openai_client
 
         # Create a mock event
@@ -1801,7 +1799,7 @@ class TestOpenAIClient:
 
         # Mock _process_event to return None for chunk
         def mock_process_event(event, accumulated, tool_calls):
-            # This simulates the case where _process_event returns None for chunk
+            # Simulate event processing that produces no output chunk
             return accumulated, tool_calls, None
 
         # Patch _process_event
@@ -1826,7 +1824,7 @@ class TestOpenAIClient:
             client._process_event = original_process_event
 
     async def test_async_streaming_with_no_chunks_generated(self, chimeric_openai_client):
-        """Test async streaming where _process_event returns None for chunk (covers 463->461 branch)."""
+        """Test async streaming behavior when event processing produces no chunks."""
         client = chimeric_openai_client
 
         # Create a mock event
@@ -1839,7 +1837,7 @@ class TestOpenAIClient:
 
         # Mock _process_event to return None for chunk
         def mock_process_event(event, accumulated, tool_calls):
-            # This simulates the case where _process_event returns None for chunk
+            # Simulate event processing that produces no output chunk
             return accumulated, tool_calls, None
 
         # Patch _process_event
