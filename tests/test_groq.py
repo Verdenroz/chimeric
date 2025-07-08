@@ -586,6 +586,7 @@ class TestGroqClient:
         result = client._process_function_call(mock_call)
         assert result["call_id"] == "call_calc"
         assert result["result"] == "8"
+        assert "is_error" not in result
 
         # Test tool error handling
         result = client._execute_tool_call(
@@ -593,6 +594,7 @@ class TestGroqClient:
         )
         assert "error" in result
         assert "Tool error" in result["error"]
+        assert result["is_error"] is True
 
         # Test unregistered tool
         unregistered_call = SimpleNamespace(
@@ -617,8 +619,40 @@ class TestGroqClient:
         with pytest.raises(ToolRegistrationError, match="not callable"):
             client._process_function_call(bad_call)
 
-        # Test _execute_tool_call with non-callable tool
-        tool_call = ToolCall(call_id="bad_call", name="bad_tool", arguments="{}")
+        # Reset the monkeypatch first
+        monkeypatch.undo()
+
+        # Test _process_function_call with JSON decode error
+        def mock_json_error_tool(param: str) -> str:
+            return f"Result: {param}"
+
+        json_tool = Tool(name="json_tool", description="JSON tool", function=mock_json_error_tool)
+        client.tool_manager.register(
+            func=json_tool.function, name=json_tool.name, description=json_tool.description
+        )
+
+        json_error_call = SimpleNamespace(
+            id="call_json_error",
+            function=SimpleNamespace(name="json_tool", arguments="invalid json"),
+        )
+        result = client._process_function_call(json_error_call)
+        assert "error" in result
+        assert result["call_id"] == "call_json_error"
+        assert result["is_error"] is True
+
+        # Test _execute_tool_call with non-callable tool (re-register the bad tool for this test)
+        mock_tool_2 = Mock(spec=Tool)
+        mock_tool_2.name = "bad_tool_2"
+        mock_tool_2.function = "not_callable_2"
+
+        def mock_get_tool_2(name):
+            if name == "bad_tool_2":
+                return mock_tool_2
+            return client.tool_manager.get_tool(name)
+
+        monkeypatch.setattr(client.tool_manager, "get_tool", mock_get_tool_2)
+
+        tool_call = ToolCall(call_id="bad_call_2", name="bad_tool_2", arguments="{}")
         with pytest.raises(ToolRegistrationError, match="not callable"):
             client._execute_tool_call(tool_call)
 
@@ -919,6 +953,7 @@ class TestGroqClient:
                 "name": "error_tool",
                 "arguments": "{}",
                 "error": "Tool failed",
+                "is_error": True,
             }
         ]
         error_updated = client._update_messages_with_tool_results(original_messages, error_results)

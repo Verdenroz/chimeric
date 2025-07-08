@@ -339,9 +339,14 @@ class GroqClient(BaseClient[Groq, AsyncGroq, ChatCompletion, ChatCompletionChunk
         if not callable(tool.function):
             raise ToolRegistrationError(f"Tool '{tool_name}' is not callable.")
 
-        args = json.loads(function.arguments)
-        result = tool.function(**args)
-        tool_call_info["result"] = str(result)
+        try:
+            args = json.loads(function.arguments) or {}
+            result = tool.function(**args)
+            tool_call_info["result"] = str(result)
+        except Exception as e:
+            tool_call_info["error"] = str(e)
+            tool_call_info["is_error"] = True
+
         return tool_call_info
 
     def _handle_function_tool_calls(
@@ -349,8 +354,8 @@ class GroqClient(BaseClient[Groq, AsyncGroq, ChatCompletion, ChatCompletionChunk
     ) -> tuple[list[dict[str, Any]], list[Any]]:
         """Processes tool calls from a response and updates the message history.
 
-        If the response contains tool calls, this method executes them, appends the
-        call and result to the message list, and returns metadata about the calls.
+        Based on Groq documentation, processes all tool calls in parallel within
+        a single iteration following the official pattern.
 
         Args:
             response: The Groq response containing potential tool calls.
@@ -399,8 +404,8 @@ class GroqClient(BaseClient[Groq, AsyncGroq, ChatCompletion, ChatCompletionChunk
             messages_list.append(
                 {
                     "role": "tool",
+                    "content": tool_call_info.get("result", tool_call_info.get("error", "")),
                     "tool_call_id": call.id,
-                    "content": tool_call_info["result"],
                 }
             )
 
@@ -419,7 +424,7 @@ class GroqClient(BaseClient[Groq, AsyncGroq, ChatCompletion, ChatCompletionChunk
             ToolRegistrationError: If the requested tool is not registered or not callable.
         """
         tool_name = call.name
-        tool_call_info = {
+        tool_call_info: dict[str, Any] = {
             "call_id": call.call_id,
             "name": tool_name,
             "arguments": call.arguments,
@@ -429,11 +434,12 @@ class GroqClient(BaseClient[Groq, AsyncGroq, ChatCompletion, ChatCompletionChunk
             raise ToolRegistrationError(f"Tool '{tool_name}' is not callable.")
 
         try:
-            args = json.loads(call.arguments)
+            args = json.loads(call.arguments) or {}
             result = tool.function(**args)
             tool_call_info["result"] = str(result)
         except Exception as e:
             tool_call_info["error"] = str(e)
+            tool_call_info["is_error"] = True
 
         return tool_call_info
 
@@ -735,11 +741,12 @@ class GroqClient(BaseClient[Groq, AsyncGroq, ChatCompletion, ChatCompletionChunk
             response, normalized_messages
         )
 
-        # If tool calls were made, send their results back to the model
+        # If tool calls were made, send their results back to the model for a final response
         if tool_calls_metadata:
-            response = self._client.chat.completions.create(
+            final_response = self._client.chat.completions.create(
                 model=model, messages=updated_messages, tools=tools_param, **filtered_kwargs
             )
+            return self._create_chimeric_response(final_response, tool_calls_metadata)
 
         return self._create_chimeric_response(response, tool_calls_metadata)
 
@@ -803,11 +810,12 @@ class GroqClient(BaseClient[Groq, AsyncGroq, ChatCompletion, ChatCompletionChunk
             response, normalized_messages
         )
 
-        # If tool calls were made, send their results back to the model
+        # If tool calls were made, send their results back to the model for a final response
         if tool_calls_metadata:
-            response = await self._async_client.chat.completions.create(
+            final_response = await self._async_client.chat.completions.create(
                 model=model, messages=updated_messages, tools=tools_param, **filtered_kwargs
             )
+            return self._create_chimeric_response(final_response, tool_calls_metadata)
 
         return self._create_chimeric_response(response, tool_calls_metadata)
 
