@@ -29,25 +29,25 @@ from chimeric.types import (
 class AnthropicClient(
     BaseClient[Anthropic, AsyncAnthropic, Message, MessageStreamEvent, FileMetadata]
 ):
-    """Anthropic Client for interacting with Claude models via the Anthropic API.
+    """Client for interacting with Anthropic's Claude models.
 
     This client provides a unified interface for synchronous and asynchronous
-    interactions with Anthropic's API via the `anthropic` library. It returns `chimeric`
-    response objects that wrap the native Anthropic responses.
+    interactions with the Anthropic API. It supports features like automatic
+    tool execution, streaming, and file uploads.
     """
 
     def __init__(self, api_key: str, **kwargs: Any) -> None:
-        """Initializes the Anthropic client.
+        """Initializes the AnthropicClient.
 
         Args:
             api_key: The Anthropic API key for authentication.
-            **kwargs: Additional keyword arguments to pass to the Anthropic client constructor.
+            **kwargs: Additional arguments to pass to the Anthropic client.
         """
         self._provider_name = "Anthropic"
         super().__init__(api_key=api_key, **kwargs)
 
     def _get_generic_types(self) -> dict[str, type]:
-        """Returns the concrete Anthropic client types for `kwargs` filtering.
+        """Gets the concrete Anthropic client types for `kwargs` filtering.
 
         Returns:
             A dictionary mapping client type names to their respective classes.
@@ -90,7 +90,7 @@ class AnthropicClient(
         return Capability(multimodal=True, streaming=True, tools=True, agents=False, files=True)
 
     def _get_model_aliases(self) -> list[str]:
-        """Returns Anthropic model aliases.
+        """Gets a list of Anthropic model aliases.
 
         Returns:
             A list of alias model names.
@@ -109,10 +109,10 @@ class AnthropicClient(
         ]
 
     def _list_models_impl(self) -> list[ModelSummary]:
-        """Lists available models from Anthropic API.
+        """Lists available models from the Anthropic API.
 
         Returns:
-            A list of ModelSummary objects for all available models from the API.
+            A list of ModelSummary objects for available models.
         """
         models_response = self.client.models.list()
         return [
@@ -125,196 +125,43 @@ class AnthropicClient(
             for model in models_response.data
         ]
 
-    @staticmethod
-    def _process_event(
-        event: MessageStreamEvent,
-        accumulated: str,
-        tool_calls: dict[str, ToolCallChunk] | None = None,
-    ) -> tuple[str, dict[str, ToolCallChunk], ChimericStreamChunk[MessageStreamEvent] | None]:
-        """Processes a single event from an Anthropic response stream.
-
-        Args:
-            event: The response stream event from the Anthropic API.
-            accumulated: The accumulated content from previous events.
-            tool_calls: Dictionary of accumulated tool calls indexed by ID.
-
-        Returns:
-            A tuple containing the updated accumulated content, updated tool calls,
-            and an optional ChimericStreamChunk to be yielded.
-        """
-        if tool_calls is None:
-            tool_calls = {}
-
-        event_type = event.type
-
-        # Handle text content deltas
-        if event_type == "content_block_delta":
-            if hasattr(event.delta, "text"):
-                delta = event.delta.text
-                accumulated += delta
-                return (
-                    accumulated,
-                    tool_calls,
-                    ChimericStreamChunk(
-                        native=event,
-                        common=StreamChunk(
-                            content=accumulated,
-                            delta=delta,
-                            metadata=event.model_dump(),
-                        ),
-                    ),
-                )
-            # Handle tool use input JSON deltas
-            if hasattr(event.delta, "partial_json"):
-                # Get the content block index from the event
-                block_index = getattr(event, "index", 0)
-                tool_call_id = f"tool_call_{block_index}"
-
-                if tool_call_id not in tool_calls:
-                    tool_calls[tool_call_id] = ToolCallChunk(
-                        id=tool_call_id,
-                        call_id=tool_call_id,
-                        name="",  # Will be set when we get content_block_start
-                        arguments="",
-                        status="started",
-                    )
-
-                # Accumulate the partial JSON
-                tool_calls[tool_call_id].arguments += event.delta.partial_json
-                tool_calls[tool_call_id].arguments_delta = event.delta.partial_json
-                tool_calls[tool_call_id].status = "arguments_streaming"
-                return accumulated, tool_calls, None
-
-        # Handle content block start events
-        elif event_type == "content_block_start":
-            if (
-                hasattr(event, "content_block")
-                and getattr(event.content_block, "type", None) == "tool_use"
-            ):
-                block_index = getattr(event, "index", 0)
-                tool_call_id = f"tool_call_{block_index}"
-
-                tool_calls[tool_call_id] = ToolCallChunk(
-                    id=tool_call_id,
-                    call_id=getattr(event.content_block, "id", tool_call_id),
-                    name=getattr(event.content_block, "name", ""),
-                    arguments="",
-                    status="started",
-                )
-                return accumulated, tool_calls, None
-
-        # Handle content block stop events
-        elif event_type == "content_block_stop":
-            block_index = getattr(event, "index", 0)
-            tool_call_id = f"tool_call_{block_index}"
-
-            if (
-                tool_call_id in tool_calls
-                and tool_calls[tool_call_id].status == "arguments_streaming"
-            ):
-                tool_calls[tool_call_id].status = "completed"
-                tool_calls[tool_call_id].arguments_delta = None
-                return accumulated, tool_calls, None
-
-        # Handle message stop events
-        elif event_type == "message_stop":
-            return (
-                accumulated,
-                tool_calls,
-                ChimericStreamChunk(
-                    native=event,
-                    common=StreamChunk(
-                        content=accumulated,
-                        finish_reason="end_turn",
-                        metadata=event.model_dump(),
-                    ),
-                ),
-            )
-
-        return accumulated, tool_calls, None
-
-    def _stream(
-        self,
-        stream: Stream[MessageStreamEvent],
-    ) -> Generator[ChimericStreamChunk[MessageStreamEvent], None, None]:
-        """Yields processed chunks from a synchronous Anthropic stream.
-
-        Args:
-            stream: The synchronous stream of response events from `client.messages.create`.
-
-        Yields:
-            ChimericStreamChunk containing the processed event data.
-        """
-        accumulated = ""
-        tool_calls = {}
-        for event in stream:
-            accumulated, tool_calls, chunk = self._process_event(event, accumulated, tool_calls)
-            if chunk:
-                yield chunk
-
-    async def _astream(
-        self,
-        stream: AsyncStream[MessageStreamEvent],
-    ) -> AsyncGenerator[ChimericStreamChunk[MessageStreamEvent], None]:
-        """Yields processed chunks from an asynchronous Anthropic stream.
-
-        Args:
-            stream: The asynchronous stream of response events from `async_client.messages.create`.
-
-        Yields:
-            ChimericStreamChunk containing the processed event data.
-        """
-        accumulated = ""
-        tool_calls = {}
-        async for event in stream:
-            accumulated, tool_calls, chunk = self._process_event(event, accumulated, tool_calls)
-            if chunk:
-                yield chunk
+    # =====================================
+    # Message and Tool Processing
+    # =====================================
 
     @staticmethod
-    def _create_chimeric_response(
-        response: Message, tool_calls: list[dict[str, Any]]
-    ) -> ChimericCompletionResponse[Message]:
-        """Creates a ChimericCompletionResponse from a native Anthropic Message.
+    def _format_messages(messages: Input) -> tuple[list[dict[str, Any]], str | None]:
+        """Formats input messages for the Anthropic API.
 
         Args:
-            response: The Anthropic message object from `client.messages.create`.
-            tool_calls: A list of tool calls made and executed during the request.
+            messages: Input messages in various formats.
 
         Returns:
-            A ChimericCompletionResponse wrapping the native response.
+            A tuple containing the list of formatted messages and an optional
+            system prompt.
         """
-        metadata = response.model_dump()
-        if tool_calls:
-            metadata["tool_calls"] = tool_calls
+        if isinstance(messages, str):
+            return [{"role": "user", "content": messages}], None
 
-        # Extract content from the response
-        content = "".join(
-            content_block.text
-            for content_block in response.content
-            if hasattr(content_block, "text")
-        )
+        if not hasattr(messages, "__iter__"):
+            return [{"role": "user", "content": str(messages)}], None
 
-        return ChimericCompletionResponse(
-            native=response,
-            common=CompletionResponse(
-                content=content,
-                usage=Usage(
-                    prompt_tokens=response.usage.input_tokens if response.usage else 0,
-                    completion_tokens=response.usage.output_tokens if response.usage else 0,
-                    total_tokens=(
-                        response.usage.input_tokens + response.usage.output_tokens
-                        if response.usage
-                        else 0
-                    ),
-                ),
-                model=response.model,
-                metadata=metadata,
-            ),
-        )
+        formatted_messages = []
+        system_prompt = None
+
+        for message in messages:
+            if isinstance(message, dict):
+                if message.get("role") == "system":
+                    system_prompt = message.get("content", "")
+                else:
+                    formatted_messages.append(message)
+            else:
+                formatted_messages.append({"role": "user", "content": str(message)})
+
+        return formatted_messages, system_prompt
 
     def _encode_tools(self, tools: Tools = None) -> Tools:
-        """Encodes a list of Tool objects into the format expected by the Anthropic API.
+        """Encodes tools into the format expected by the Anthropic API.
 
         Args:
             tools: A list of Tool objects or dictionaries.
@@ -336,157 +183,458 @@ class AnthropicClient(
                     }
                 )
             else:
-                encoded_tools.append(tool)  # Assumes tool is already a dict
+                encoded_tools.append(tool) # Assuming tool is already a dict
+
         return encoded_tools
 
-    def _process_function_call(self, tool_use_block: Any) -> dict[str, Any]:
-        """Executes a function call from the model and returns metadata.
+    def _make_create_params(
+        self, messages: Input, model: str, stream: bool, tools: Tools, **kwargs: Any
+    ) -> dict[str, Any]:
+        """Make API parameters for the Anthropic messages.create call.
 
         Args:
-            tool_use_block: The tool use content block from the Anthropic response.
+            messages: Input messages.
+            model: Model identifier.
+            stream: Whether to stream the response.
+            tools: Tools to include in the request.
+            **kwargs: Additional API parameters.
 
         Returns:
-            A dictionary containing the tool call ID, name, arguments, and result.
-
-        Raises:
-            ToolRegistrationError: If the requested tool is not registered or not callable.
+            A dictionary of parameters for the API call.
         """
-        tool_name = tool_use_block.name
-        tool_call_info = {
-            "call_id": tool_use_block.id,
-            "name": tool_name,
-            "arguments": tool_use_block.input,
-        }
+        formatted_messages, system_prompt = self._format_messages(messages)
+        filtered_kwargs = self._filter_kwargs(self._client.messages.create, kwargs)
 
-        tool = self.tool_manager.get_tool(tool_name)
-        if not callable(tool.function):
-            raise ToolRegistrationError(
-                f"Tool '{tool_name}' is not callable or not registered properly."
+        # Add tool usage instruction to system prompt if tools are provided
+        if tools:
+            tool_instruction = "You have access to tools. Always use the appropriate tools to perform calculations, look up information, or complete tasks rather than doing them manually. When a user asks for calculations, use the calculator tool. When they ask for information retrieval, use the appropriate search or data tools."
+            system_prompt = (
+                f"{system_prompt} {tool_instruction}" if system_prompt else tool_instruction
             )
 
-        try:
-            # Enhanced error handling for tool execution
-            result = tool.function(**tool_use_block.input)
-            tool_call_info["result"] = str(result)
-
-        except Exception as e:
-            # Handle tool execution errors gracefully
-            error_msg = f"Error executing tool '{tool_name}': {e!s}"
-            tool_call_info["result"] = error_msg
-            tool_call_info["error"] = "true"
-
-        return tool_call_info
-
-    def _execute_tool_call(self, call: ToolCall) -> dict[str, Any]:
-        """Executes a single tool call and returns metadata.
-
-        Args:
-            call: The ToolCall object containing call information.
-
-        Returns:
-            A dictionary containing the tool call ID, name, arguments, and result.
-
-        Raises:
-            ToolRegistrationError: If the requested tool is not registered or not callable.
-        """
-        tool_name = call.name
-        tool_call_info = {
-            "call_id": call.call_id,
-            "name": tool_name,
-            "arguments": call.arguments,
+        params = {
+            "model": model,
+            "messages": formatted_messages,
+            "max_tokens": filtered_kwargs.get("max_tokens", 4096),
+            "stream": stream,
+            "tools": tools if tools else NOT_GIVEN,
         }
-        tool = self.tool_manager.get_tool(tool_name)
-        if not callable(tool.function):
-            raise ToolRegistrationError(f"Tool '{tool_name}' is not callable.")
 
-        try:
-            args = json.loads(call.arguments)
-            result = tool.function(**args)
-            tool_call_info["result"] = str(result)
-        except Exception as e:
-            error_msg = f"Error executing tool '{tool_name}': {e!s}"
-            tool_call_info["result"] = error_msg
-            tool_call_info["error"] = "true"
+        if system_prompt:
+            params["system"] = system_prompt
 
-        return tool_call_info
+        # Add optional parameters
+        for param in ["temperature", "top_p", "top_k", "stop_sequences", "metadata"]:
+            if param in filtered_kwargs:
+                params[param] = filtered_kwargs[param]
 
-    def _execute_accumulated_tool_calls(
-        self, tool_calls: dict[str, ToolCallChunk]
-    ) -> list[dict[str, Any]]:
-        """Executes all accumulated tool calls and returns their results.
+        return params
 
-        Args:
-            tool_calls: Dictionary of accumulated tool calls.
-
-        Returns:
-            List of tool call results with metadata.
-        """
-        results = []
-        for tool_call in tool_calls.values():
-            if tool_call.status == "completed" and tool_call.name:
-                tool_call_obj = ToolCall(
-                    call_id=tool_call.call_id or tool_call.id,
-                    name=tool_call.name,
-                    arguments=tool_call.arguments,
-                )
-                result = self._execute_tool_call(tool_call_obj)
-                results.append(result)
-        return results
+    # =====================================
+    # Tool Execution Methods
+    # =====================================
 
     @staticmethod
-    def _update_messages_with_tool_results(
-        messages: Input, tool_results: list[dict[str, Any]]
-    ) -> list[Any]:
-        """Updates message history with tool call results in Anthropic format.
+    def _parse_tool_arguments(arguments: str | dict[str, Any]) -> dict[str, Any]:
+        """Parses tool arguments from string or dict format.
 
         Args:
-            messages: Original message history.
-            tool_results: List of tool call results.
+            arguments: The tool arguments, which can be a JSON string or a dict.
 
         Returns:
-            Updated messages with tool calls and results.
+            A dictionary of parsed arguments.
         """
+        if isinstance(arguments, str):
+            return json.loads(arguments.strip()) if arguments.strip() else {}
+        return arguments if not isinstance(arguments, str) else {}
+
+    def _execute_single_tool(self, call: ToolCall) -> dict[str, Any]:
+        """Executes a single tool call and returns its metadata.
+
+        Args:
+            call: The tool call to execute.
+
+        Returns:
+            A dictionary containing call metadata and results.
+
+        Raises:
+            ToolRegistrationError: If the tool is not callable.
+        """
+        tool = self.tool_manager.get_tool(call.name)
+        if not callable(tool.function):
+            raise ToolRegistrationError(f"Tool '{call.name}' is not callable")
+
+        tool_metadata = {
+            "call_id": call.call_id,
+            "name": call.name,
+            "arguments": call.arguments,
+        }
+
+        try:
+            args = self._parse_tool_arguments(call.arguments)
+            result = tool.function(**args)
+            tool_metadata["result"] = str(result)
+        except Exception as e:
+            tool_metadata["result"] = f"Error executing tool '{call.name}': {e!s}"
+            tool_metadata["error"] = "true"
+
+        return tool_metadata
+
+    def _execute_tool_batch(self, tool_calls: dict[str, ToolCallChunk]) -> list[dict[str, Any]]:
+        """Executes all completed tool calls in a batch.
+
+        Args:
+            tool_calls: A dictionary of accumulated tool calls.
+
+        Returns:
+            A list of tool execution results.
+        """
+        completed_calls = [
+            call for call in tool_calls.values() if call.status == "completed" and call.name
+        ]
+
+        results = []
+        for tool_call in completed_calls:
+            call_obj = ToolCall(
+                call_id=tool_call.call_id or tool_call.id,
+                name=tool_call.name,
+                arguments=tool_call.arguments,
+            )
+            result = self._execute_single_tool(call_obj)
+            results.append(result)
+
+        return results
+
+    def _process_response_tools(
+        self, response: Message, messages: Input
+    ) -> tuple[list[dict[str, Any]], Input]:
+        """Processes tool calls from a response and updates message history.
+
+        Args:
+            response: The Anthropic response containing tool calls.
+            messages: The current message history.
+
+        Returns:
+            A tuple containing tool call metadata and the updated messages.
+        """
+        tool_use_blocks = [
+            block for block in response.content if getattr(block, "type", None) == "tool_use"
+        ]
+
+        if not tool_use_blocks:
+            return [], messages
+
         messages_list: list[Any] = list(messages) if isinstance(messages, list) else [messages]
 
-        if tool_results:
-            # Add the assistant message with tool uses
-            assistant_content = []
-            for tool_result in tool_results:
+        # Build assistant message with tool uses
+        assistant_content = []
+        for block in response.content:
+            block_type = getattr(block, "type", None)
+            if block_type == "text":
+                assistant_content.append({"type": "text", "text": block.text})
+            elif block_type == "tool_use":
                 assistant_content.append(
                     {
                         "type": "tool_use",
-                        "id": tool_result["call_id"],
-                        "name": tool_result["name"],
-                        "input": json.loads(tool_result["arguments"]),
+                        "id": block.id,
+                        "name": block.name,
+                        "input": block.input,
                     }
                 )
 
-            messages_list.append(
+        messages_list.append({"role": "assistant", "content": assistant_content})
+
+        # Execute tools and format results
+        tool_metadata = []
+        tool_results = []
+
+        for block in tool_use_blocks:
+            # Execute tool - serialize arguments to string for ToolCall validation
+            serialized_args = (
+                json.dumps(block.input) if isinstance(block.input, dict) else str(block.input)
+            )
+            tool_call = ToolCall(
+                call_id=block.id,
+                name=block.name,
+                arguments=serialized_args,
+            )
+            metadata = self._execute_single_tool(tool_call)
+            tool_metadata.append(metadata)
+
+            # Format result for API
+            tool_results.append(
                 {
-                    "role": "assistant",
-                    "content": assistant_content,
+                    "type": "tool_result",
+                    "tool_use_id": block.id,
+                    "content": metadata["result"],
                 }
             )
 
-            # Add tool result messages
-            tool_results_content = []
-            for tool_result in tool_results:
-                tool_results_content.append(
-                    {
-                        "type": "tool_result",
-                        "tool_use_id": tool_result["call_id"],
-                        "content": tool_result.get("result", tool_result.get("error", "")),
-                    }
+        messages_list.append({"role": "user", "content": tool_results})
+        return tool_metadata, messages_list
+
+    # =====================================
+    # Stream Processing Methods
+    # =====================================
+
+    @staticmethod
+    def _process_content_delta(
+        event: MessageStreamEvent, accumulated: str, tool_calls: dict[str, ToolCallChunk]
+    ) -> tuple[str, dict[str, ToolCallChunk], ChimericStreamChunk[MessageStreamEvent] | None]:
+        """Processes content delta events from the stream.
+
+        Args:
+            event: The message stream event.
+            accumulated: The accumulated content string.
+            tool_calls: The dictionary of in-progress tool calls.
+
+        Returns:
+            A tuple containing the updated accumulated content, tool calls,
+            and an optional ChimericStreamChunk.
+        """
+        if hasattr(event.delta, "text"):
+            delta = event.delta.text
+            accumulated += delta
+            return (
+                accumulated,
+                tool_calls,
+                ChimericStreamChunk(
+                    native=event,
+                    common=StreamChunk(
+                        content=accumulated,
+                        delta=delta,
+                        metadata=event.model_dump(),
+                    ),
+                ),
+            )
+
+        if hasattr(event.delta, "partial_json"):
+            block_index = getattr(event, "index", 0)
+            tool_call_id = f"tool_call_{block_index}"
+
+            if tool_call_id not in tool_calls:
+                tool_calls[tool_call_id] = ToolCallChunk(
+                    id=tool_call_id,
+                    call_id=tool_call_id,
+                    name="",
+                    arguments="",
+                    status="started",
                 )
 
-            messages_list.append(
-                {
-                    "role": "user",
-                    "content": tool_results_content,
-                }
+            tool_calls[tool_call_id].arguments += event.delta.partial_json
+            tool_calls[tool_call_id].arguments_delta = event.delta.partial_json
+            tool_calls[tool_call_id].status = "arguments_streaming"
+
+        return accumulated, tool_calls, None
+
+    @staticmethod
+    def _process_block_start(
+        event: MessageStreamEvent, tool_calls: dict[str, ToolCallChunk]
+    ) -> None:
+        """Processes content block start events from the stream.
+
+        This method identifies tool_use blocks and initializes a new
+        ToolCallChunk.
+
+        Args:
+            event: The message stream event.
+            tool_calls: The dictionary of in-progress tool calls.
+        """
+        if (
+            hasattr(event, "content_block")
+            and getattr(event.content_block, "type", None) == "tool_use"
+        ):
+            block_index = getattr(event, "index", 0)
+            tool_call_id = f"tool_call_{block_index}"
+
+            tool_calls[tool_call_id] = ToolCallChunk(
+                id=tool_call_id,
+                call_id=getattr(event.content_block, "id", tool_call_id),
+                name=getattr(event.content_block, "name", ""),
+                arguments="",
+                status="started",
             )
 
-        return messages_list
+    @staticmethod
+    def _process_block_stop(
+        event: MessageStreamEvent, tool_calls: dict[str, ToolCallChunk]
+    ) -> None:
+        """Processes content block stop events from the stream.
+
+        This method marks a tool call as completed when its block ends.
+
+        Args:
+            event: The message stream event.
+            tool_calls: The dictionary of in-progress tool calls.
+        """
+        block_index = getattr(event, "index", 0)
+        tool_call_id = f"tool_call_{block_index}"
+
+        if tool_call_id in tool_calls and tool_calls[tool_call_id].status == "arguments_streaming":
+            tool_calls[tool_call_id].status = "completed"
+            tool_calls[tool_call_id].arguments_delta = None
+
+    def _process_stream_event(
+        self,
+        event: MessageStreamEvent,
+        accumulated: str,
+        tool_calls: dict[str, ToolCallChunk] | None = None,
+    ) -> tuple[str, dict[str, ToolCallChunk], ChimericStreamChunk[MessageStreamEvent] | None]:
+        """Processes a single event from an Anthropic response stream.
+
+        Args:
+            event: The response stream event from the Anthropic API.
+            accumulated: The accumulated content from previous events.
+            tool_calls: A dictionary of accumulated tool calls indexed by ID.
+
+        Returns:
+            A tuple containing updated accumulated content, updated tool calls,
+            and an optional ChimericStreamChunk to be yielded.
+        """
+        if tool_calls is None:
+            tool_calls = {}
+
+        event_type = event.type
+
+        if event_type == "content_block_delta":
+            return self._process_content_delta(event, accumulated, tool_calls)
+
+        if event_type == "content_block_start":
+            self._process_block_start(event, tool_calls)
+
+        elif event_type == "content_block_stop":
+            self._process_block_stop(event, tool_calls)
+
+        elif event_type == "message_stop":
+            return (
+                accumulated,
+                tool_calls,
+                ChimericStreamChunk(
+                    native=event,
+                    common=StreamChunk(
+                        content=accumulated,
+                        finish_reason="end_turn",
+                        metadata={
+                            **event.model_dump(),
+                            "tool_calls_found": len(tool_calls),
+                            "completed_tool_calls": len(
+                                [c for c in tool_calls.values() if c.status == "completed"]
+                            ),
+                        },
+                    ),
+                ),
+            )
+
+        return accumulated, tool_calls, None
+
+    def _stream(
+        self, stream: Stream[MessageStreamEvent]
+    ) -> Generator[ChimericStreamChunk[MessageStreamEvent], None, None]:
+        """Processes a synchronous Anthropic stream.
+
+        Args:
+            stream: The synchronous stream of MessageStreamEvent objects.
+
+        Yields:
+            ChimericStreamChunk objects.
+        """
+        accumulated = ""
+        tool_calls = {}
+        for event in stream:
+            accumulated, tool_calls, chunk = self._process_stream_event(
+                event, accumulated, tool_calls
+            )
+            if chunk:
+                yield chunk
+
+    async def _astream(
+        self, stream: AsyncStream[MessageStreamEvent]
+    ) -> AsyncGenerator[ChimericStreamChunk[MessageStreamEvent], None]:
+        """Processes an asynchronous Anthropic stream.
+
+        Args:
+            stream: The asynchronous stream of MessageStreamEvent objects.
+
+        Yields:
+            ChimericStreamChunk objects.
+        """
+        accumulated = ""
+        tool_calls = {}
+        async for event in stream:
+            accumulated, tool_calls, chunk = self._process_stream_event(
+                event, accumulated, tool_calls
+            )
+            if chunk:
+                yield chunk
+
+    # =====================================
+    # Response Creation Methods
+    # =====================================
+
+    @staticmethod
+    def _generate_tool_summary(tool_calls: list[dict[str, Any]]) -> str:
+        """Generates a summary for responses with only tool calls.
+
+        Args:
+            tool_calls: A list of executed tool call metadata dictionaries.
+
+        Returns:
+            A formatted string summarizing the tool execution results.
+        """
+        results = []
+        for tool_call in tool_calls:
+            name = tool_call.get("name", "unknown")
+            args = tool_call.get("arguments", {})
+            result = tool_call.get("result", "")
+
+            if isinstance(args, dict) and args:
+                arg_str = ", ".join(f"{k}={v}" for k, v in args.items())
+                results.append(f"{name}({arg_str}) → {result}")
+            else:
+                results.append(f"{name}() → {result}")
+
+        return "Tool execution results:\n" + "\n".join(results) if results else ""
+
+    def _create_chimeric_response(
+        self, response: Message, tool_calls: list[dict[str, Any]]
+    ) -> ChimericCompletionResponse[Message]:
+        """Creates a ChimericCompletionResponse from a native Anthropic Message.
+
+        Args:
+            response: The Anthropic message object.
+            tool_calls: A list of executed tool calls.
+
+        Returns:
+            A ChimericCompletionResponse wrapping the native response.
+        """
+        metadata = response.model_dump()
+        if tool_calls:
+            metadata["tool_calls"] = tool_calls
+
+        # Extract text content
+        content = "".join(block.text for block in response.content if hasattr(block, "text"))
+
+        # Generate summary for tool-only responses
+        if not content.strip() and tool_calls:
+            content = self._generate_tool_summary(tool_calls)
+
+        return ChimericCompletionResponse(
+            native=response,
+            common=CompletionResponse(
+                content=content,
+                usage=Usage(
+                    prompt_tokens=response.usage.input_tokens if response.usage else 0,
+                    completion_tokens=response.usage.output_tokens if response.usage else 0,
+                    total_tokens=(
+                        response.usage.input_tokens + response.usage.output_tokens
+                        if response.usage
+                        else 0
+                    ),
+                ),
+                model=response.model,
+                metadata=metadata,
+            ),
+        )
 
     def _process_stream_with_tools_sync(
         self,
@@ -496,24 +644,30 @@ class AnthropicClient(
         original_tools: Tools | None = None,
         **original_kwargs: Any,
     ) -> Generator[ChimericStreamChunk[MessageStreamEvent], None, None]:
-        """Process a synchronous stream with automatic tool execution.
+        """Processes a synchronous stream with automatic tool execution.
+
+        This method handles the streaming response, executes any tool calls
+        that appear, and continues the chat completion with the tool results.
 
         Args:
-            stream: The synchronous stream object.
-            original_messages: Original messages for tool call continuation.
-            original_model: Original model for tool call continuation.
-            original_tools: Original tools for tool call continuation.
-            **original_kwargs: Original kwargs for tool call continuation.
+            stream: The synchronous stream from the Anthropic API.
+            original_messages: The initial list of messages.
+            original_model: The model being used.
+            original_tools: The list of available tools.
+            **original_kwargs: Additional arguments for the API call.
 
         Yields:
-            ChimericStreamChunk containing the processed event data.
+            ChimericStreamChunk objects from the initial and subsequent streams.
         """
         accumulated = ""
         tool_calls = {}
 
         for event in stream:
-            accumulated, tool_calls, chunk = self._process_event(event, accumulated, tool_calls)
+            accumulated, tool_calls, chunk = self._process_stream_event(
+                event, accumulated, tool_calls
+            )
             if chunk:
+                yield chunk
                 # Check if we need to execute tools and continue
                 if (
                     chunk.common.finish_reason
@@ -529,7 +683,6 @@ class AnthropicClient(
                         **original_kwargs,
                     )
                     return
-                yield chunk
 
     async def _process_stream_with_tools_async(
         self,
@@ -539,24 +692,30 @@ class AnthropicClient(
         original_tools: Tools | None = None,
         **original_kwargs: Any,
     ) -> AsyncGenerator[ChimericStreamChunk[MessageStreamEvent], None]:
-        """Process an asynchronous stream with automatic tool execution.
+        """Processes an asynchronous stream with automatic tool execution.
+
+        This method handles the async streaming response, executes any tool calls
+        that appear, and continues the chat completion with the tool results.
 
         Args:
-            stream: The asynchronous stream object.
-            original_messages: Original messages for tool call continuation.
-            original_model: Original model for tool call continuation.
-            original_tools: Original tools for tool call continuation.
-            **original_kwargs: Original kwargs for tool call continuation.
+            stream: The asynchronous stream from the Anthropic API.
+            original_messages: The initial list of messages.
+            original_model: The model being used.
+            original_tools: The list of available tools.
+            **original_kwargs: Additional arguments for the API call.
 
         Yields:
-            ChimericStreamChunk containing the processed event data.
+            ChimericStreamChunk objects from the initial and subsequent streams.
         """
         accumulated = ""
         tool_calls = {}
 
         async for event in stream:
-            accumulated, tool_calls, chunk = self._process_event(event, accumulated, tool_calls)
+            accumulated, tool_calls, chunk = self._process_stream_event(
+                event, accumulated, tool_calls
+            )
             if chunk:
+                yield chunk
                 # Check if we need to execute tools and continue
                 if (
                     chunk.common.finish_reason
@@ -573,7 +732,6 @@ class AnthropicClient(
                     ):
                         yield tool_chunk
                     return
-                yield chunk
 
     def _handle_tool_execution_and_continue_sync(
         self,
@@ -583,10 +741,21 @@ class AnthropicClient(
         tools: Tools | None,
         **kwargs: Any,
     ) -> Generator[ChimericStreamChunk[MessageStreamEvent], None, None]:
-        """Execute tools and continue streaming synchronously."""
-        completed_tool_calls = self._execute_accumulated_tool_calls(tool_calls)
+        """Executes tools and continues the conversation stream synchronously.
+
+        Args:
+            tool_calls: A dictionary of completed tool call chunks.
+            messages: The current list of messages.
+            model: The model to use for continuation.
+            tools: The list of available tools.
+            **kwargs: Additional arguments for the continuation API call.
+
+        Yields:
+            ChimericStreamChunk objects from the continuation stream.
+        """
+        completed_tool_calls = self._execute_tool_batch(tool_calls)
         if completed_tool_calls:
-            updated_messages = self._update_messages_with_tool_results(
+            updated_messages = AnthropicClient._update_messages_with_tool_results(
                 messages, completed_tool_calls
             )
             tools_param = tools if tools is not None else NOT_GIVEN
@@ -604,7 +773,7 @@ class AnthropicClient(
             )
             yield from self._process_stream_with_tools_sync(
                 continuation_stream,
-                original_messages=messages,
+                original_messages=updated_messages,
                 original_model=model,
                 original_tools=tools,
                 **kwargs,
@@ -618,10 +787,21 @@ class AnthropicClient(
         tools: Tools | None,
         **kwargs: Any,
     ) -> AsyncGenerator[ChimericStreamChunk[MessageStreamEvent], None]:
-        """Execute tools and continue streaming asynchronously."""
-        completed_tool_calls = self._execute_accumulated_tool_calls(tool_calls)
+        """Executes tools and continues the conversation stream asynchronously.
+
+        Args:
+            tool_calls: A dictionary of completed tool call chunks.
+            messages: The current list of messages.
+            model: The model to use for continuation.
+            tools: The list of available tools.
+            **kwargs: Additional arguments for the continuation API call.
+
+        Yields:
+            ChimericStreamChunk objects from the continuation stream.
+        """
+        completed_tool_calls = self._execute_tool_batch(tool_calls)
         if completed_tool_calls:
-            updated_messages = self._update_messages_with_tool_results(
+            updated_messages = AnthropicClient._update_messages_with_tool_results(
                 messages, completed_tool_calls
             )
             tools_param = tools if tools is not None else NOT_GIVEN
@@ -639,147 +819,148 @@ class AnthropicClient(
             )
             async for chunk in self._process_stream_with_tools_async(
                 continuation_stream,
-                original_messages=messages,
+                original_messages=updated_messages,
                 original_model=model,
                 original_tools=tools,
                 **kwargs,
             ):
                 yield chunk
 
-    def _handle_function_tool_calls(
-        self, response: Message, messages: Input
-    ) -> tuple[list[dict[str, Any]], Input]:
-        """Processes tool calls from a response and updates the message history.
+    @staticmethod
+    def _update_messages_with_tool_results(
+        messages: Input, tool_results: list[dict[str, Any]]
+    ) -> list[Any]:
+        """Updates the message history with tool call results.
 
-        If the response contains tool calls, this method executes them, appends the
-        call and result to the message list, and returns metadata about the calls.
+        This method constructs the assistant's tool_use message and the
+        user's tool_result message to continue the conversation.
 
         Args:
-            response: The Anthropic response containing potential tool calls.
-            messages: The current list of messages to append to.
+            messages: The current list of messages.
+            tool_results: A list of dictionaries containing tool execution results.
 
         Returns:
-            A tuple containing (tool_calls_metadata, updated_messages).
+            The updated list of messages.
         """
-        tool_use_blocks = [
-            block for block in response.content if getattr(block, "type", None) == "tool_use"
-        ]
-        if not tool_use_blocks:
-            return [], messages
+        if not tool_results:
+            return list(messages) if isinstance(messages, list) else [messages]
 
-        # Ensure messages is a mutable list
-        messages_list = list(messages) if isinstance(messages, list) else [messages]
-        tool_calls_metadata = []
+        messages_list: list[Any] = list(messages) if isinstance(messages, list) else [messages]
 
-        # Add the assistant's message with tool uses
+        # Add assistant message with tool uses
         assistant_content = []
-        for block in response.content:
-            block_type = getattr(block, "type", None)
-            if block_type == "text":
-                assistant_content.append({"type": "text", "text": block.text})
-            elif block_type == "tool_use":
-                assistant_content.append(
-                    {
-                        "type": "tool_use",
-                        "id": block.id,
-                        "name": block.name,
-                        "input": block.input,
-                    }
-                )
-
-        messages_list.append({"role": "assistant", "content": assistant_content})  # type: ignore[arg-type]
-
-        # Process tool calls and add results
-        tool_results = []
-        for block in tool_use_blocks:
-            tool_call_info = self._process_function_call(block)
-            tool_calls_metadata.append(tool_call_info)
-
-            content = tool_call_info["result"]
-            tool_results.append(
+        for tool_result in tool_results:
+            input_data = AnthropicClient._parse_tool_arguments(tool_result["arguments"])
+            assistant_content.append(
                 {
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": content,
+                    "type": "tool_use",
+                    "id": tool_result["call_id"],
+                    "name": tool_result["name"],
+                    "input": input_data,
                 }
             )
 
-        messages_list.append({"role": "user", "content": tool_results})  # type: ignore[arg-type]
+        messages_list.append({"role": "assistant", "content": assistant_content})
 
-        return tool_calls_metadata, messages_list
+        # Add tool result messages
+        tool_results_content = []
+        for tool_result in tool_results:
+            tool_results_content.append(
+                {
+                    "type": "tool_result",
+                    "tool_use_id": tool_result["call_id"],
+                    "content": tool_result.get("result", tool_result.get("error", "")),
+                }
+            )
 
-    @staticmethod
-    def _format_messages(messages: Input) -> tuple[list[dict[str, Any]], str | None]:
-        """Formats messages for the Anthropic API.
+        messages_list.append({"role": "user", "content": tool_results_content})
 
-        Args:
-            messages: Input messages to format.
+        return messages_list
 
-        Returns:
-            A tuple of (formatted_messages, system_prompt).
-        """
-        if isinstance(messages, str):
-            return [{"role": "user", "content": messages}], None
+    def _handle_tool_execution_loop(
+        self, response: Message, params: dict[str, Any]
+    ) -> tuple[Message, list[dict[str, Any]]]:
+        """Handles the tool execution loop for non-streaming responses.
 
-        if not hasattr(messages, "__iter__") or isinstance(messages, str):
-            return [{"role": "user", "content": str(messages)}], None
-
-        formatted_messages = []
-        system_prompt = None
-
-        for message in messages:
-            if isinstance(message, dict):
-                if message.get("role") == "system":
-                    system_prompt = message.get("content", "")
-                else:
-                    formatted_messages.append(message)
-            else:
-                # Handle string messages
-                formatted_messages.append({"role": "user", "content": str(message)})
-
-        return formatted_messages, system_prompt
-
-    def _create_params(
-        self,
-        messages: Input,
-        model: str,
-        stream: bool,
-        tools: Tools,
-        **kwargs: Any,
-    ) -> dict[str, Any]:
-        """Creates API parameters for the Anthropic messages.create call.
+        This method repeatedly executes tools and calls the API until the model
+        provides a final response instead of more tool calls.
 
         Args:
-            messages: Input messages.
-            model: Model to use.
-            stream: Whether to stream the response.
-            tools: Tools to include.
-            **kwargs: Additional API parameters.
+            response: The initial response from the API.
+            params: API parameters for continuation calls.
 
         Returns:
-            Dictionary of parameters for the API call.
+            A tuple containing the final API response and a list of all
+            executed tool call metadata.
         """
-        formatted_messages, system_prompt = self._format_messages(messages)
-        filtered_kwargs = self._filter_kwargs(self._client.messages.create, kwargs)
+        all_tool_calls = []
+        current_messages = params["messages"]
+        max_iterations = 5
 
-        params = {
-            "model": model,
-            "messages": formatted_messages,
-            "max_tokens": filtered_kwargs.get("max_tokens", 4096),
-            "stream": stream,
-            "tools": tools if tools else NOT_GIVEN,
-        }
+        for _ in range(max_iterations):
+            tool_calls, updated_messages = self._process_response_tools(response, current_messages)
 
-        if system_prompt:
-            params["system"] = system_prompt
+            if not tool_calls:
+                break
 
-        # Add optional parameters with validation
-        optional_params = ["temperature", "top_p", "top_k", "stop_sequences", "metadata"]
-        for key in optional_params:
-            if key in filtered_kwargs:
-                params[key] = filtered_kwargs[key]
+            all_tool_calls.extend(tool_calls)
+            current_messages = updated_messages
 
-        return params
+            # Request final response
+            current_messages.append(
+                {
+                    "role": "user",
+                    "content": "Please provide your final response based on the tool results above.",
+                }
+            )
+
+            final_params = params.copy()
+            final_params.update({"messages": current_messages, "stream": False})
+            response = self._client.messages.create(**final_params)
+
+        return response, all_tool_calls
+
+    async def _handle_async_tool_execution_loop(
+        self, response: Message, params: dict[str, Any]
+    ) -> tuple[Message, list[dict[str, Any]]]:
+        """Handles the asynchronous tool execution loop for non-streaming responses.
+
+        This method repeatedly executes tools and calls the API asynchronously
+        until the model provides a final response.
+
+        Args:
+            response: The initial response from the API.
+            params: API parameters for continuation calls.
+
+        Returns:
+            A tuple containing the final API response and a list of all
+            executed tool call metadata.
+        """
+        all_tool_calls = []
+        current_messages = params["messages"]
+        max_iterations = 5
+
+        for _ in range(max_iterations):
+            tool_calls, updated_messages = self._process_response_tools(response, current_messages)
+
+            if not tool_calls:
+                break
+
+            all_tool_calls.extend(tool_calls)
+            current_messages = updated_messages
+
+            current_messages.append(
+                {
+                    "role": "user",
+                    "content": "Please provide your final response based on the tool results above.",
+                }
+            )
+
+            final_params = params.copy()
+            final_params.update({"messages": current_messages, "stream": False})
+            response = await self._async_client.messages.create(**final_params)
+
+        return response, all_tool_calls
 
     def _chat_completion_impl(
         self,
@@ -794,22 +975,18 @@ class AnthropicClient(
     ):
         """Sends a synchronous chat completion request to the Anthropic API.
 
-        This method supports a two-pass mechanism for tool calls. If the model
-        responds with a tool call, the tool is executed and a second request
-        is made with the tool's result.
-
         Args:
-            messages: The input messages for the chat completion.
+            messages: Input messages for the chat completion.
             model: The model to use for the completion.
             stream: Whether to return a streaming response.
-            tools: A list of tools (already encoded for the API).
-            **kwargs: Additional arguments for the `client.messages.create` method.
+            tools: A list of available tools.
+            **kwargs: Additional arguments for the API call.
 
         Returns:
-            A ChimericCompletionResponse for a single response, or a generator
-            of ChimericStreamChunk for a streaming response.
+            A ChimericCompletionResponse for a single response or a generator
+            for a streaming response.
         """
-        params = self._create_params(messages, model, stream, tools, **kwargs)
+        params = self._make_create_params(messages, model, stream, tools, **kwargs)
         response = self._client.messages.create(**params)
 
         if isinstance(response, Stream):
@@ -828,19 +1005,12 @@ class AnthropicClient(
                 )
             return self._stream(response)
 
-        # Handle tool calls
-        tool_calls_metadata, updated_messages = self._handle_function_tool_calls(
-            response, params["messages"]
-        )
+        # Handle tool execution if tools are available
+        if tools:
+            response, all_tool_calls = self._handle_tool_execution_loop(response, params)
+            return self._create_chimeric_response(response, all_tool_calls)
 
-        # If tool calls were made, send their results back to the model
-        if tool_calls_metadata:
-            final_params = params.copy()
-            final_params["messages"] = updated_messages
-            final_params["stream"] = False
-            response = self._client.messages.create(**final_params)
-
-        return self._create_chimeric_response(response, tool_calls_metadata)
+        return self._create_chimeric_response(response, [])
 
     async def _achat_completion_impl(
         self,
@@ -855,22 +1025,18 @@ class AnthropicClient(
     ):
         """Sends an asynchronous chat completion request to the Anthropic API.
 
-        This method supports a two-pass mechanism for tool calls. If the model
-        responds with a tool call, the tool is executed and a second request
-        is made with the tool's result.
-
         Args:
-            messages: The input messages for the chat completion.
+            messages: Input messages for the chat completion.
             model: The model to use for the completion.
             stream: Whether to return a streaming response.
-            tools: A list of tools (already encoded for the API).
-            **kwargs: Additional arguments for the `async_client.messages.create` method.
+            tools: A list of available tools.
+            **kwargs: Additional arguments for the API call.
 
         Returns:
-            A ChimericCompletionResponse for a single response, or an async
-            generator of ChimericStreamChunk for a streaming response.
+            A ChimericCompletionResponse for a single response or an async
+            generator for a streaming response.
         """
-        params = self._create_params(messages, model, stream, tools, **kwargs)
+        params = self._make_create_params(messages, model, stream, tools, **kwargs)
         response = await self._async_client.messages.create(**params)
 
         if isinstance(response, AsyncStream):
@@ -889,29 +1055,27 @@ class AnthropicClient(
                 )
             return self._astream(response)
 
-        # Handle tool calls
-        tool_calls_metadata, updated_messages = self._handle_function_tool_calls(
-            response, params["messages"]
-        )
+        # Handle tool execution if tools are available
+        if tools:
+            response, all_tool_calls = await self._handle_async_tool_execution_loop(
+                response, params
+            )
+            return self._create_chimeric_response(response, all_tool_calls)
 
-        # If tool calls were made, send their results back to the model
-        if tool_calls_metadata:
-            final_params = params.copy()
-            final_params["messages"] = updated_messages
-            final_params["stream"] = False
-            response = await self._async_client.messages.create(**final_params)
-
-        return self._create_chimeric_response(response, tool_calls_metadata)
+        return self._create_chimeric_response(response, [])
 
     def _upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[FileMetadata]:
         """Uploads a file to Anthropic.
 
         Args:
-            **kwargs: Provider-specific arguments for file upload, passed to `client.beta.files.upload`.
+            **kwargs: Provider-specific arguments for file upload. Must include
+                the 'file' parameter.
 
         Returns:
-            A ChimericFileUploadResponse containing the native response and
-            common file upload information.
+            A ChimericFileUploadResponse containing upload information.
+
+        Raises:
+            ValueError: If the 'file' parameter is missing from kwargs.
         """
         if "file" not in kwargs:
             raise ValueError("'file' parameter is required for file upload")
