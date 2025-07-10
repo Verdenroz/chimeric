@@ -183,7 +183,7 @@ class AnthropicClient(
                     }
                 )
             else:
-                encoded_tools.append(tool) # Assuming tool is already a dict
+                encoded_tools.append(tool)  # Assuming tool is already a dict
 
         return encoded_tools
 
@@ -207,7 +207,10 @@ class AnthropicClient(
 
         # Add tool usage instruction to system prompt if tools are provided
         if tools:
-            tool_instruction = "You have access to tools. Always use the appropriate tools to perform calculations, look up information, or complete tasks rather than doing them manually. When a user asks for calculations, use the calculator tool. When they ask for information retrieval, use the appropriate search or data tools."
+            tool_instruction = (
+                "You have access to tools. Use them when appropriate to help answer the user's questions. "
+                "When you need to use multiple tools, call them in parallel whenever possible for efficiency."
+            )
             system_prompt = (
                 f"{system_prompt} {tool_instruction}" if system_prompt else tool_instruction
             )
@@ -367,6 +370,7 @@ class AnthropicClient(
                     "type": "tool_result",
                     "tool_use_id": block.id,
                     "content": metadata["result"],
+                    "is_error": "error" in metadata,
                 }
             )
 
@@ -680,6 +684,7 @@ class AnthropicClient(
                         original_messages,
                         original_model,
                         original_tools,
+                        accumulated,
                         **original_kwargs,
                     )
                     return
@@ -728,6 +733,7 @@ class AnthropicClient(
                         original_messages,
                         original_model,
                         original_tools,
+                        accumulated,
                         **original_kwargs,
                     ):
                         yield tool_chunk
@@ -739,6 +745,7 @@ class AnthropicClient(
         messages: Input,
         model: str,
         tools: Tools | None,
+        accumulated_content: str,
         **kwargs: Any,
     ) -> Generator[ChimericStreamChunk[MessageStreamEvent], None, None]:
         """Executes tools and continues the conversation stream synchronously.
@@ -748,6 +755,7 @@ class AnthropicClient(
             messages: The current list of messages.
             model: The model to use for continuation.
             tools: The list of available tools.
+            accumulated_content: The accumulated text content from the previous response.
             **kwargs: Additional arguments for the continuation API call.
 
         Yields:
@@ -755,25 +763,59 @@ class AnthropicClient(
         """
         completed_tool_calls = self._execute_tool_batch(tool_calls)
         if completed_tool_calls:
-            updated_messages = AnthropicClient._update_messages_with_tool_results(
-                messages, completed_tool_calls
-            )
+            # Build the assistant message including both text and tool uses
+            messages_list: list[Any] = list(messages) if isinstance(messages, list) else [messages]
+
+            assistant_content = []
+            # Add any text content that was accumulated
+            if accumulated_content:
+                assistant_content.append({"type": "text", "text": accumulated_content})
+
+            # Add tool use blocks
+            for tool_call_chunk in tool_calls.values():
+                if tool_call_chunk.status == "completed":
+                    input_data = self._parse_tool_arguments(tool_call_chunk.arguments)
+                    assistant_content.append(
+                        {
+                            "type": "tool_use",
+                            "id": tool_call_chunk.call_id,
+                            "name": tool_call_chunk.name,
+                            "input": input_data,
+                        }
+                    )
+
+            messages_list.append({"role": "assistant", "content": assistant_content})
+
+            # Add tool results in a single user message
+            tool_results_content = []
+            for tool_result in completed_tool_calls:
+                tool_results_content.append(
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": tool_result["call_id"],
+                        "content": tool_result["result"],
+                        "is_error": "error" in tool_result,
+                    }
+                )
+
+            messages_list.append({"role": "user", "content": tool_results_content})
+
+            # Continue the conversation naturally
             tools_param = tools if tools is not None else NOT_GIVEN
-            # Ensure max_tokens is provided (required by Anthropic API)
             continuation_kwargs = kwargs.copy()
             if "max_tokens" not in continuation_kwargs:
                 continuation_kwargs["max_tokens"] = 4096
 
             continuation_stream = self._client.messages.create(
                 model=model,
-                messages=updated_messages,
+                messages=messages_list,
                 tools=tools_param,
                 stream=True,
                 **continuation_kwargs,
             )
             yield from self._process_stream_with_tools_sync(
                 continuation_stream,
-                original_messages=updated_messages,
+                original_messages=messages_list,
                 original_model=model,
                 original_tools=tools,
                 **kwargs,
@@ -785,6 +827,7 @@ class AnthropicClient(
         messages: Input,
         model: str,
         tools: Tools | None,
+        accumulated_content: str,
         **kwargs: Any,
     ) -> AsyncGenerator[ChimericStreamChunk[MessageStreamEvent], None]:
         """Executes tools and continues the conversation stream asynchronously.
@@ -794,6 +837,7 @@ class AnthropicClient(
             messages: The current list of messages.
             model: The model to use for continuation.
             tools: The list of available tools.
+            accumulated_content: The accumulated text content from the previous response.
             **kwargs: Additional arguments for the continuation API call.
 
         Yields:
@@ -801,81 +845,64 @@ class AnthropicClient(
         """
         completed_tool_calls = self._execute_tool_batch(tool_calls)
         if completed_tool_calls:
-            updated_messages = AnthropicClient._update_messages_with_tool_results(
-                messages, completed_tool_calls
-            )
+            # Build the assistant message including both text and tool uses
+            messages_list: list[Any] = list(messages) if isinstance(messages, list) else [messages]
+
+            assistant_content = []
+            # Add any text content that was accumulated
+            if accumulated_content:
+                assistant_content.append({"type": "text", "text": accumulated_content})
+
+            # Add tool use blocks
+            for tool_call_chunk in tool_calls.values():
+                if tool_call_chunk.status == "completed":
+                    input_data = self._parse_tool_arguments(tool_call_chunk.arguments)
+                    assistant_content.append(
+                        {
+                            "type": "tool_use",
+                            "id": tool_call_chunk.call_id,
+                            "name": tool_call_chunk.name,
+                            "input": input_data,
+                        }
+                    )
+
+            messages_list.append({"role": "assistant", "content": assistant_content})
+
+            # Add tool results in a single user message
+            tool_results_content = []
+            for tool_result in completed_tool_calls:
+                tool_results_content.append(
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": tool_result["call_id"],
+                        "content": tool_result["result"],
+                        "is_error": "error" in tool_result,
+                    }
+                )
+
+            messages_list.append({"role": "user", "content": tool_results_content})
+
+            # Continue the conversation naturally
             tools_param = tools if tools is not None else NOT_GIVEN
-            # Ensure max_tokens is provided (required by Anthropic API)
             continuation_kwargs = kwargs.copy()
             if "max_tokens" not in continuation_kwargs:
                 continuation_kwargs["max_tokens"] = 4096
 
             continuation_stream = await self._async_client.messages.create(
                 model=model,
-                messages=updated_messages,
+                messages=messages_list,
                 tools=tools_param,
                 stream=True,
                 **continuation_kwargs,
             )
             async for chunk in self._process_stream_with_tools_async(
                 continuation_stream,
-                original_messages=updated_messages,
+                original_messages=messages_list,
                 original_model=model,
                 original_tools=tools,
                 **kwargs,
             ):
                 yield chunk
-
-    @staticmethod
-    def _update_messages_with_tool_results(
-        messages: Input, tool_results: list[dict[str, Any]]
-    ) -> list[Any]:
-        """Updates the message history with tool call results.
-
-        This method constructs the assistant's tool_use message and the
-        user's tool_result message to continue the conversation.
-
-        Args:
-            messages: The current list of messages.
-            tool_results: A list of dictionaries containing tool execution results.
-
-        Returns:
-            The updated list of messages.
-        """
-        if not tool_results:
-            return list(messages) if isinstance(messages, list) else [messages]
-
-        messages_list: list[Any] = list(messages) if isinstance(messages, list) else [messages]
-
-        # Add assistant message with tool uses
-        assistant_content = []
-        for tool_result in tool_results:
-            input_data = AnthropicClient._parse_tool_arguments(tool_result["arguments"])
-            assistant_content.append(
-                {
-                    "type": "tool_use",
-                    "id": tool_result["call_id"],
-                    "name": tool_result["name"],
-                    "input": input_data,
-                }
-            )
-
-        messages_list.append({"role": "assistant", "content": assistant_content})
-
-        # Add tool result messages
-        tool_results_content = []
-        for tool_result in tool_results:
-            tool_results_content.append(
-                {
-                    "type": "tool_result",
-                    "tool_use_id": tool_result["call_id"],
-                    "content": tool_result.get("result", tool_result.get("error", "")),
-                }
-            )
-
-        messages_list.append({"role": "user", "content": tool_results_content})
-
-        return messages_list
 
     def _handle_tool_execution_loop(
         self, response: Message, params: dict[str, Any]
@@ -883,7 +910,7 @@ class AnthropicClient(
         """Handles the tool execution loop for non-streaming responses.
 
         This method repeatedly executes tools and calls the API until the model
-        provides a final response instead of more tool calls.
+        provides a response without tool calls.
 
         Args:
             response: The initial response from the API.
@@ -894,10 +921,9 @@ class AnthropicClient(
             executed tool call metadata.
         """
         all_tool_calls = []
-        current_messages = params["messages"]
-        max_iterations = 5
+        current_messages = params["messages"].copy()
 
-        for _ in range(max_iterations):
+        while True:
             tool_calls, updated_messages = self._process_response_tools(response, current_messages)
 
             if not tool_calls:
@@ -906,17 +932,10 @@ class AnthropicClient(
             all_tool_calls.extend(tool_calls)
             current_messages = updated_messages
 
-            # Request final response
-            current_messages.append(
-                {
-                    "role": "user",
-                    "content": "Please provide your final response based on the tool results above.",
-                }
-            )
-
-            final_params = params.copy()
-            final_params.update({"messages": current_messages, "stream": False})
-            response = self._client.messages.create(**final_params)
+            # Continue the conversation naturally without forcing a final response
+            params_copy = params.copy()
+            params_copy.update({"messages": current_messages, "stream": False})
+            response = self._client.messages.create(**params_copy)
 
         return response, all_tool_calls
 
@@ -926,7 +945,7 @@ class AnthropicClient(
         """Handles the asynchronous tool execution loop for non-streaming responses.
 
         This method repeatedly executes tools and calls the API asynchronously
-        until the model provides a final response.
+        until the model provides a response without tool calls.
 
         Args:
             response: The initial response from the API.
@@ -937,10 +956,9 @@ class AnthropicClient(
             executed tool call metadata.
         """
         all_tool_calls = []
-        current_messages = params["messages"]
-        max_iterations = 5
+        current_messages = params["messages"].copy()
 
-        for _ in range(max_iterations):
+        while True:
             tool_calls, updated_messages = self._process_response_tools(response, current_messages)
 
             if not tool_calls:
@@ -949,16 +967,10 @@ class AnthropicClient(
             all_tool_calls.extend(tool_calls)
             current_messages = updated_messages
 
-            current_messages.append(
-                {
-                    "role": "user",
-                    "content": "Please provide your final response based on the tool results above.",
-                }
-            )
-
-            final_params = params.copy()
-            final_params.update({"messages": current_messages, "stream": False})
-            response = await self._async_client.messages.create(**final_params)
+            # Continue the conversation naturally without forcing a final response
+            params_copy = params.copy()
+            params_copy.update({"messages": current_messages, "stream": False})
+            response = await self._async_client.messages.create(**params_copy)
 
         return response, all_tool_calls
 
