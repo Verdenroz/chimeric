@@ -22,7 +22,7 @@ from chimeric.types import (
     StreamChunk,
     Tool,
     Tools,
-    Usage,
+    Usage, ToolParameters,
 )
 
 
@@ -108,7 +108,7 @@ class CerebrasClient(
 
     @staticmethod
     def _create_chimeric_response(
-        response: ChatCompletionResponse, tool_calls: list[dict[str, Any]]
+            response: ChatCompletionResponse, tool_calls: list[dict[str, Any]]
     ) -> ChimericCompletionResponse[ChatCompletionResponse]:
         """Creates a ChimericCompletionResponse from a native Cerebras ChatCompletion.
 
@@ -134,7 +134,7 @@ class CerebrasClient(
                 usage=Usage(
                     prompt_tokens=(response.usage.prompt_tokens if response.usage else 0) or 0,
                     completion_tokens=(response.usage.completion_tokens if response.usage else 0)
-                    or 0,
+                                      or 0,
                     total_tokens=(response.usage.total_tokens if response.usage else 0) or 0,
                 ),
                 model=response.model,
@@ -159,7 +159,7 @@ class CerebrasClient(
             if isinstance(tool, Tool):
                 # Get parameters and remove 'strict' from the parameters schema since
                 # Cerebras expects it only in the function object
-                parameters = tool.parameters.model_dump() if tool.parameters else {}
+                parameters = tool.parameters.model_dump() if isinstance(tool.parameters, ToolParameters) else {}
                 parameters.pop("strict", None)  # Remove strict from parameters
 
                 encoded_tools.append(
@@ -178,7 +178,7 @@ class CerebrasClient(
         return encoded_tools
 
     def _process_function_call(
-        self, call: ChatCompletionResponseChoiceMessageToolCall
+            self, call: ChatCompletionResponseChoiceMessageToolCall
     ) -> dict[str, Any]:
         """Executes a function call from the model and returns metadata.
 
@@ -202,66 +202,19 @@ class CerebrasClient(
         if not callable(tool.function):
             raise ToolRegistrationError(f"Tool '{tool_name}' is not callable.")
 
-        args = json.loads(call.function.arguments)
-        result = tool.function(**args)
-        tool_call_info["result"] = str(result)
+        try:
+            args = json.loads(call.function.arguments)
+            result = tool.function(**args)
+            tool_call_info["result"] = str(result)
+        except Exception as e:
+            tool_call_info["error"] = str(e)
+            tool_call_info["result"] = f"Error: {e!s}"
+
         return tool_call_info
 
-    def _handle_function_tool_calls(
-        self, response: ChatCompletionResponse, messages: Input
-    ) -> tuple[list[dict[str, Any]], Input]:
-        """Processes tool calls from a response and updates the message history.
-
-        Args:
-            response: The Cerebras response containing potential tool calls.
-            messages: The current list of messages to append to.
-
-        Returns:
-            A tuple containing (tool_calls_metadata, updated_messages).
-        """
-        choice = response.choices[0] if response.choices else None
-        if not choice or not choice.message.tool_calls:
-            return [], messages
-
-        # Ensure messages is a mutable list of dictionaries for appending
-        messages_list: list[Any] = list(messages) if isinstance(messages, list) else [messages]
-        tool_calls_metadata = []
-
-        # Add the assistant's message with tool calls
-        messages_list.append(
-            {
-                "role": "assistant",
-                "tool_calls": [
-                    {
-                        "id": call.id,
-                        "type": "function",
-                        "function": {
-                            "name": call.function.name,
-                            "arguments": call.function.arguments,
-                        },
-                    }
-                    for call in choice.message.tool_calls
-                ],
-            }
-        )
-
-        for call in choice.message.tool_calls:
-            tool_call_info = self._process_function_call(call)
-            tool_calls_metadata.append(tool_call_info)
-
-            # Append the tool result to the message history
-            messages_list.append(
-                {
-                    "role": "tool",
-                    "tool_call_id": call.id,
-                    "content": tool_call_info["result"],
-                }
-            )
-
-        return tool_calls_metadata, messages_list
-
+    @staticmethod
     def _stream(
-        self, stream: Generator[ChatChunkResponse, None, None]
+            stream: Generator[ChatChunkResponse, None, None]
     ) -> Generator[ChimericStreamChunk[ChatChunkResponse], None, None]:
         """Yields processed chunks from a synchronous Cerebras stream.
 
@@ -286,8 +239,9 @@ class CerebrasClient(
                     ),
                 )
 
+    @staticmethod
     async def _astream(
-        self, stream: AsyncGenerator[ChatChunkResponse, None]
+            stream: AsyncGenerator[ChatChunkResponse, None]
     ) -> AsyncGenerator[ChimericStreamChunk[ChatChunkResponse], None]:
         """Yields processed chunks from an asynchronous Cerebras stream.
 
@@ -312,16 +266,396 @@ class CerebrasClient(
                     ),
                 )
 
+    def _process_stream_with_tools_sync(
+            self,
+            stream: Generator[ChatChunkResponse, None, None],
+            original_messages: list[dict[str, Any]],
+            original_model: str,
+            original_tools: Tools | None = None,
+            **original_kwargs: Any,
+    ) -> Generator[ChimericStreamChunk[ChatChunkResponse], None, None]:
+        """Processes a synchronous stream with automatic tool execution.
+
+        Args:
+            stream: The synchronous stream from the Cerebras API.
+            original_messages: The initial list of messages.
+            original_model: The model being used.
+            original_tools: The list of available tools.
+            **original_kwargs: Additional arguments for the API call.
+
+        Yields:
+            ChimericStreamChunk objects from the initial and subsequent streams.
+        """
+        accumulated = ""
+        accumulated_tool_calls = []
+
+        for chunk in stream:
+            if chunk.choices and chunk.choices[0].delta.content:
+                delta = chunk.choices[0].delta.content
+                accumulated += delta
+
+            # Check for tool calls in the delta
+            if chunk.choices and chunk.choices[0].delta.tool_calls:
+                accumulated_tool_calls.extend(chunk.choices[0].delta.tool_calls)
+
+            yield ChimericStreamChunk(
+                native=chunk,
+                common=StreamChunk(
+                    content=accumulated,
+                    delta=chunk.choices[0].delta.content if chunk.choices else "",
+                    finish_reason=chunk.choices[0].finish_reason if chunk.choices else None,
+                    metadata=chunk.model_dump(),
+                ),
+            )
+
+            # If the stream is complete, and we have tool calls, execute them
+            if chunk.choices and chunk.choices[0].finish_reason and accumulated_tool_calls:
+                # Execute tools and continue conversation
+                yield from self._handle_stream_tool_execution_sync(
+                    accumulated_tool_calls,
+                    original_messages,
+                    original_model,
+                    original_tools,
+                    accumulated,
+                    **original_kwargs,
+                )
+                return
+
+    async def _process_stream_with_tools_async(
+            self,
+            stream: AsyncGenerator[ChatChunkResponse, None],
+            original_messages: list[dict[str, Any]],
+            original_model: str,
+            original_tools: Tools | None = None,
+            **original_kwargs: Any,
+    ) -> AsyncGenerator[ChimericStreamChunk[ChatChunkResponse], None]:
+        """Processes an asynchronous stream with automatic tool execution.
+
+        Args:
+            stream: The asynchronous stream from the Cerebras API.
+            original_messages: The initial list of messages.
+            original_model: The model being used.
+            original_tools: The list of available tools.
+            **original_kwargs: Additional arguments for the API call.
+
+        Yields:
+            ChimericStreamChunk objects from the initial and subsequent streams.
+        """
+        accumulated = ""
+        accumulated_tool_calls = []
+
+        async for chunk in stream:
+            if chunk.choices and chunk.choices[0].delta.content:
+                delta = chunk.choices[0].delta.content
+                accumulated += delta
+
+            # Check for tool calls in the delta
+            if chunk.choices and chunk.choices[0].delta.tool_calls:
+                accumulated_tool_calls.extend(chunk.choices[0].delta.tool_calls)
+
+            yield ChimericStreamChunk(
+                native=chunk,
+                common=StreamChunk(
+                    content=accumulated,
+                    delta=chunk.choices[0].delta.content if chunk.choices else "",
+                    finish_reason=chunk.choices[0].finish_reason if chunk.choices else None,
+                    metadata=chunk.model_dump(),
+                ),
+            )
+
+            # If the stream is complete, and we have tool calls, execute them
+            if chunk.choices and chunk.choices[0].finish_reason and accumulated_tool_calls:
+                # Execute tools and continue conversation
+                async for tool_chunk in self._handle_stream_tool_execution_async(
+                        accumulated_tool_calls,
+                        original_messages,
+                        original_model,
+                        original_tools,
+                        accumulated,
+                        **original_kwargs,
+                ):
+                    yield tool_chunk
+                return
+
+    def _handle_stream_tool_execution_sync(
+            self,
+            tool_calls: list[Any],
+            messages: list[dict[str, Any]],
+            model: str,
+            tools: Tools | None,
+            accumulated_content: str,
+            **kwargs: Any,
+    ) -> Generator[ChimericStreamChunk[ChatChunkResponse], None, None]:
+        """Executes tools from a stream and continues the conversation.
+
+        Args:
+            tool_calls: Tool calls from the stream.
+            messages: Current message history.
+            model: Model to use.
+            tools: Available tools.
+            accumulated_content: Text content accumulated from the stream.
+            **kwargs: Additional API parameters.
+
+        Yields:
+            ChimericStreamChunk objects from the continuation.
+        """
+        # Build the assistant message with content and tool calls
+        assistant_message = {
+            "role": "assistant",
+            "content": accumulated_content or "",
+            "tool_calls": [
+                {
+                    "id": call.id,
+                    "type": "function",
+                    "function": {
+                        "name": call.function.name,
+                        "arguments": call.function.arguments,
+                    },
+                }
+                for call in tool_calls
+            ],
+        }
+        messages.append(assistant_message)
+
+        # Execute tools and add results
+        for call in tool_calls:
+            tool_call_info = self._process_function_call(call)
+            messages.append({
+                "role": "tool",
+                "tool_call_id": call.id,
+                "content": tool_call_info["result"],
+            })
+
+        # Continue conversation
+        filtered_kwargs = self._filter_kwargs(self._client.chat.completions.create, kwargs)
+        continuation = self._client.chat.completions.create(
+            model=model,
+            messages=messages,
+            tools=tools,
+            stream=True,
+            **filtered_kwargs,
+        )
+
+        yield from self._process_stream_with_tools_sync(
+            continuation,
+            messages,
+            model,
+            tools,
+            **kwargs,
+        )
+
+    async def _handle_stream_tool_execution_async(
+            self,
+            tool_calls: list[Any],
+            messages: list[dict[str, Any]],
+            model: str,
+            tools: Tools | None,
+            accumulated_content: str,
+            **kwargs: Any,
+    ) -> AsyncGenerator[ChimericStreamChunk[ChatChunkResponse], None]:
+        """Executes tools from a stream and continues the conversation asynchronously.
+
+        Args:
+            tool_calls: Tool calls from the stream.
+            messages: Current message history.
+            model: Model to use.
+            tools: Available tools.
+            accumulated_content: Text content accumulated from the stream.
+            **kwargs: Additional API parameters.
+
+        Yields:
+            ChimericStreamChunk objects from the continuation.
+        """
+        # Build the assistant message with content and tool calls
+        assistant_message = {
+            "role": "assistant",
+            "content": accumulated_content or "",
+            "tool_calls": [
+                {
+                    "id": call.id,
+                    "type": "function",
+                    "function": {
+                        "name": call.function.name,
+                        "arguments": call.function.arguments,
+                    },
+                }
+                for call in tool_calls
+            ],
+        }
+        messages.append(assistant_message)
+
+        # Execute tools and add results
+        for call in tool_calls:
+            tool_call_info = self._process_function_call(call)
+            messages.append({
+                "role": "tool",
+                "tool_call_id": call.id,
+                "content": tool_call_info["result"],
+            })
+
+        # Continue conversation
+        filtered_kwargs = self._filter_kwargs(self._async_client.chat.completions.create, kwargs)
+        continuation = await self._async_client.chat.completions.create(
+            model=model,
+            messages=messages,
+            tools=tools,
+            stream=True,
+            **filtered_kwargs,
+        )
+
+        async for chunk in self._process_stream_with_tools_async(
+                continuation,
+                messages,
+                model,
+                tools,
+                **kwargs,
+        ):
+            yield chunk
+
+    def _handle_tool_execution_loop(
+            self, response: ChatCompletionResponse, current_messages: list[dict[str, Any]], model: str, tools: Tools, **kwargs: Any
+    ) -> tuple[ChatCompletionResponse, list[dict[str, Any]]]:
+        """Handles the tool execution loop for non-streaming responses.
+
+        Args:
+            response: The initial response from the API.
+            current_messages: The current message history.
+            model: The model being used.
+            tools: The list of available tools.
+            **kwargs: Additional API parameters.
+
+        Returns:
+            A tuple containing the final API response and all tool call metadata.
+        """
+        all_tool_calls = []
+
+        while True:
+            # Check for tool calls in the response
+            choice = response.choices[0] if response.choices else None
+            if not choice or not choice.message.tool_calls:
+                # No tool calls, we're done
+                break
+
+            # Add the assistant's message with tool calls to the conversation
+            assistant_message = {
+                "role": "assistant",
+                "content": choice.message.content or "",
+                "tool_calls": [
+                    {
+                        "id": call.id,
+                        "type": "function",
+                        "function": {
+                            "name": call.function.name,
+                            "arguments": call.function.arguments,
+                        },
+                    }
+                    for call in choice.message.tool_calls
+                ],
+            }
+            current_messages.append(assistant_message)
+
+            # Process each tool call
+            for call in choice.message.tool_calls:
+                tool_call_info = self._process_function_call(call)
+                all_tool_calls.append(tool_call_info)
+
+                # Add the tool result to the conversation
+                current_messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": call.id,
+                        "content": tool_call_info["result"],
+                    }
+                )
+
+            # Continue the conversation
+            filtered_kwargs = self._filter_kwargs(self._client.chat.completions.create, kwargs)
+            response = self._client.chat.completions.create(
+                model=model,
+                messages=current_messages,
+                tools=tools,
+                **filtered_kwargs,
+            )
+
+        return response, all_tool_calls
+
+    async def _handle_async_tool_execution_loop(
+            self, response: ChatCompletionResponse, current_messages: list[dict[str, Any]], model: str, tools: Tools, **kwargs: Any
+    ) -> tuple[ChatCompletionResponse, list[dict[str, Any]]]:
+        """Handles the asynchronous tool execution loop for non-streaming responses.
+
+        Args:
+            response: The initial response from the API.
+            current_messages: The current message history.
+            model: The model being used.
+            tools: The list of available tools.
+            **kwargs: Additional API parameters.
+
+        Returns:
+            A tuple containing the final API response and all tool call metadata.
+        """
+        all_tool_calls = []
+
+        while True:
+            # Check for tool calls in the response
+            choice = response.choices[0] if response.choices else None
+            if not choice or not choice.message.tool_calls:
+                # No tool calls, we're done
+                break
+
+            # Add the assistant's message with tool calls to the conversation
+            assistant_message = {
+                "role": "assistant",
+                "content": choice.message.content or "",
+                "tool_calls": [
+                    {
+                        "id": call.id,
+                        "type": "function",
+                        "function": {
+                            "name": call.function.name,
+                            "arguments": call.function.arguments,
+                        },
+                    }
+                    for call in choice.message.tool_calls
+                ],
+            }
+            current_messages.append(assistant_message)
+
+            # Process each tool call
+            for call in choice.message.tool_calls:
+                tool_call_info = self._process_function_call(call)
+                all_tool_calls.append(tool_call_info)
+
+                # Add the tool result to the conversation
+                current_messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": call.id,
+                        "content": tool_call_info["result"],
+                    }
+                )
+
+            # Continue the conversation
+            filtered_kwargs = self._filter_kwargs(self._async_client.chat.completions.create, kwargs)
+            response = await self._async_client.chat.completions.create(
+                model=model,
+                messages=current_messages,
+                tools=tools,
+                **filtered_kwargs,
+            )
+
+        return response, all_tool_calls
+
     def _chat_completion_impl(
-        self,
-        messages: Input,
-        model: str,
-        stream: bool = False,
-        tools: Tools = None,
-        **kwargs: Any,
+            self,
+            messages: Input,
+            model: str,
+            stream: bool = False,
+            tools: Tools = None,
+            **kwargs: Any,
     ) -> (
-        ChimericCompletionResponse[ChatCompletionResponse]
-        | Generator[ChimericStreamChunk[ChatChunkResponse], None, None]
+            ChimericCompletionResponse[ChatCompletionResponse]
+            | Generator[ChimericStreamChunk[ChatChunkResponse], None, None]
     ):
         """Sends a synchronous chat completion request to the Cerebras API.
 
@@ -338,46 +672,49 @@ class CerebrasClient(
         """
         filtered_kwargs = self._filter_kwargs(self._client.chat.completions.create, kwargs)
 
-        # Handle parallel_tool_calls requirement for certain models
-        if tools and "parallel_tool_calls" not in filtered_kwargs and "scout" in model.lower():
-            filtered_kwargs["parallel_tool_calls"] = False
+        # Convert messages to mutable list
+        current_messages = list(messages) if isinstance(messages, list) else [messages]
 
-        # Send the initial request
+        # Make initial API call
         response = self._client.chat.completions.create(
             model=model,
-            messages=messages,  # type: ignore[arg-type]
+            messages=current_messages,
             stream=stream,
             tools=tools,
             **filtered_kwargs,
         )
 
         if stream:
+            # Handle streaming with tools if needed
+            if tools:
+                return self._process_stream_with_tools_sync(
+                    response,  # type: ignore[arg-type]
+                    current_messages,
+                    model,
+                    tools,
+                    **kwargs,
+                )
             return self._stream(response)  # type: ignore[arg-type]
 
-        # Check for and handle any tool calls requested by the model
-        tool_calls_metadata, updated_messages = self._handle_function_tool_calls(response, messages)  # type: ignore[arg-type]
-
-        # If tool calls were made, send their results back to the model
-        if tool_calls_metadata:
-            response = self._client.chat.completions.create(
-                model=model,
-                messages=updated_messages,  # type: ignore[arg-type]
-                tools=tools,
-                **filtered_kwargs,
+        # Handle tool execution if tools are available
+        if tools:
+            response, all_tool_calls = self._handle_tool_execution_loop(
+                response, current_messages, model, tools, **kwargs
             )
+            return self._create_chimeric_response(response, all_tool_calls)
 
-        return self._create_chimeric_response(response, tool_calls_metadata)  # type: ignore[arg-type]
+        return self._create_chimeric_response(response, [])
 
     async def _achat_completion_impl(
-        self,
-        messages: Input,
-        model: str,
-        stream: bool = False,
-        tools: Tools = None,
-        **kwargs: Any,
+            self,
+            messages: Input,
+            model: str,
+            stream: bool = False,
+            tools: Tools = None,
+            **kwargs: Any,
     ) -> (
-        ChimericCompletionResponse[ChatCompletionResponse]
-        | AsyncGenerator[ChimericStreamChunk[ChatChunkResponse], None]
+            ChimericCompletionResponse[ChatCompletionResponse]
+            | AsyncGenerator[ChimericStreamChunk[ChatChunkResponse], None]
     ):
         """Sends an asynchronous chat completion request to the Cerebras API.
 
@@ -394,35 +731,38 @@ class CerebrasClient(
         """
         filtered_kwargs = self._filter_kwargs(self._async_client.chat.completions.create, kwargs)
 
-        # Handle parallel_tool_calls requirement for certain models
-        if tools and "parallel_tool_calls" not in filtered_kwargs and "scout" in model.lower():
-            filtered_kwargs["parallel_tool_calls"] = False
+        # Convert messages to mutable list
+        current_messages = list(messages) if isinstance(messages, list) else [messages]
 
-        # Send the initial request
+        # Make initial API call
         response = await self._async_client.chat.completions.create(
             model=model,
-            messages=messages,  # type: ignore[arg-type]
+            messages=current_messages,
             stream=stream,
             tools=tools,
             **filtered_kwargs,
         )
 
         if stream:
+            # Handle streaming with tools if needed
+            if tools:
+                return self._process_stream_with_tools_async(
+                    response,  # type: ignore[arg-type]
+                    current_messages,
+                    model,
+                    tools,
+                    **kwargs,
+                )
             return self._astream(response)  # type: ignore[arg-type]
 
-        # Check for and handle any tool calls requested by the model
-        tool_calls_metadata, updated_messages = self._handle_function_tool_calls(response, messages)  # type: ignore[arg-type]
-
-        # If tool calls were made, send their results back to the model
-        if tool_calls_metadata:
-            response = await self._async_client.chat.completions.create(
-                model=model,
-                messages=updated_messages,  # type: ignore[arg-type]
-                tools=tools,
-                **filtered_kwargs,
+        # Handle tool execution if tools are available
+        if tools:
+            response, all_tool_calls = await self._handle_async_tool_execution_loop(
+                response, current_messages, model, tools, **kwargs
             )
+            return self._create_chimeric_response(response, all_tool_calls)
 
-        return self._create_chimeric_response(response, tool_calls_metadata)  # type: ignore[arg-type]
+        return self._create_chimeric_response(response, [])
 
     def _upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[None]:
         """Cerebras does not support file uploads.
