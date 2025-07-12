@@ -138,55 +138,143 @@ class GrokClient(BaseClient[Client, AsyncClient, Response, Chunk, Any]):
 
         return model_summaries
 
-    @staticmethod
-    def _stream(chat: Any) -> Generator[ChimericStreamChunk[Chunk], None, None]:
-        """Processes a streaming chat response.
+    def _stream(
+        self, chat: Any, tools_enabled: bool = False
+    ) -> Generator[ChimericStreamChunk[Chunk], None, None]:
+        """Processes a streaming chat response with optional tool call handling.
 
         Args:
             chat: The chat instance from xai-sdk.
+            tools_enabled: Whether tools are enabled for this chat.
 
         Yields:
             ChimericStreamChunk containing the processed stream data.
         """
-        accumulated_content = ""
+        if not tools_enabled:
+            # Simple streaming without tool handling
+            accumulated_content = ""
+            for _response, chunk in chat.stream():
+                delta = chunk.content if hasattr(chunk, "content") else ""
+                accumulated_content += delta
 
-        for _response, chunk in chat.stream():
-            delta = chunk.content if hasattr(chunk, "content") else ""
-            accumulated_content += delta
+                yield ChimericStreamChunk(
+                    native=chunk,
+                    common=StreamChunk(
+                        content=accumulated_content,
+                        delta=delta,
+                        metadata=getattr(chunk, "metadata", {}),
+                    ),
+                )
+        else:
+            # Streaming with tool call handling
+            while True:
+                accumulated_content = ""
+                last_response = None
 
-            yield ChimericStreamChunk(
-                native=chunk,
-                common=StreamChunk(
-                    content=accumulated_content,
-                    delta=delta,
-                    metadata=getattr(chunk, "metadata", {}),
-                ),
-            )
+                # Stream all chunks for the current response
+                for response, chunk in chat.stream():
+                    last_response = response
+                    delta = chunk.content if hasattr(chunk, "content") else ""
+                    accumulated_content += delta
 
-    @staticmethod
-    async def _astream(chat: Any) -> AsyncGenerator[ChimericStreamChunk[Chunk], None]:
-        """Processes an async streaming chat response.
+                    yield ChimericStreamChunk(
+                        native=chunk,
+                        common=StreamChunk(
+                            content=accumulated_content,
+                            delta=delta,
+                            metadata=getattr(chunk, "metadata", {}),
+                        ),
+                    )
+
+                # After streaming is complete, check if we have tool calls to process
+                if (
+                    last_response
+                    and hasattr(last_response, "tool_calls")
+                    and last_response.tool_calls
+                ):
+                    # Append the assistant response with tool calls
+                    chat.append(last_response)
+
+                    # Process all tool calls only once after streaming
+                    for tool_call in last_response.tool_calls:
+                        tool_call_info = self._process_function_call(tool_call)
+                        # Add the tool result to chat
+                        chat.append(tool_result(tool_call_info["result"]))
+
+                    # Continue to get the next response which will be streamed
+                    continue
+                else:
+                    # No more tool calls, we're done
+                    break
+
+    async def _astream(
+        self, chat: Any, tools_enabled: bool = False
+    ) -> AsyncGenerator[ChimericStreamChunk[Chunk], None]:
+        """Processes an async streaming chat response with optional tool call handling.
 
         Args:
             chat: The chat instance from xai-sdk.
+            tools_enabled: Whether tools are enabled for this chat.
 
         Yields:
             ChimericStreamChunk containing the processed stream data.
         """
-        accumulated_content = ""
+        if not tools_enabled:
+            # Simple streaming without tool handling
+            accumulated_content = ""
+            async for _response, chunk in chat.stream():
+                delta = chunk.content if hasattr(chunk, "content") else ""
+                accumulated_content += delta
 
-        async for _response, chunk in chat.stream():
-            delta = chunk.content if hasattr(chunk, "content") else ""
-            accumulated_content += delta
+                yield ChimericStreamChunk(
+                    native=chunk,
+                    common=StreamChunk(
+                        content=accumulated_content,
+                        delta=delta,
+                        metadata=getattr(chunk, "metadata", {}),
+                    ),
+                )
+        else:
+            # Streaming with tool call handling
+            while True:
+                accumulated_content = ""
+                last_response = None
 
-            yield ChimericStreamChunk(
-                native=chunk,
-                common=StreamChunk(
-                    content=accumulated_content,
-                    delta=delta,
-                    metadata=getattr(chunk, "metadata", {}),
-                ),
-            )
+                # Stream all chunks for the current response
+                async for response, chunk in chat.stream():
+                    last_response = response
+                    delta = chunk.content if hasattr(chunk, "content") else ""
+                    accumulated_content += delta
+
+                    yield ChimericStreamChunk(
+                        native=chunk,
+                        common=StreamChunk(
+                            content=accumulated_content,
+                            delta=delta,
+                            metadata=getattr(chunk, "metadata", {}),
+                        ),
+                    )
+
+                # After streaming is complete, check if we have tool calls to process
+                if (
+                    last_response
+                    and hasattr(last_response, "tool_calls")
+                    and last_response.tool_calls
+                ):
+                    # Append the assistant response with tool calls
+                    chat.append(last_response)
+
+                    # Process all tool calls only once after streaming
+                    for tool_call in last_response.tool_calls:
+                        tool_call_info = self._process_function_call(tool_call)
+                        # Add the tool result to chat
+                        chat.append(tool_result(tool_call_info["result"]))
+
+                    # Continue to get the next response which will be streamed
+                    continue
+                else:
+                    # No more tool calls, we're done
+                    break
 
     @staticmethod
     def _create_chimeric_response(
@@ -334,62 +422,68 @@ class GrokClient(BaseClient[Client, AsyncClient, Response, Chunk, Any]):
     def _handle_function_tool_calls(
         self, response: Response, chat: Any
     ) -> tuple[list[dict[str, Any]], Response]:
-        """Processes tool calls from a response and executes them.
+        """Processes tool calls from a response and executes them iteratively until complete.
 
         Args:
             response: The xai-sdk response containing potential tool calls.
             chat: The chat instance to append tool results to.
 
         Returns:
-            A tuple containing (tool_calls_metadata, final_response).
+            A tuple containing (all_tool_calls_metadata, final_response).
         """
-        if not hasattr(response, "tool_calls") or not response.tool_calls:
-            return [], response
+        all_tool_calls_metadata = []
+        current_response = response
 
-        # Append the assistant response with tool calls
-        chat.append(response)
-        tool_calls_metadata = []
+        # Continue processing until no more tool calls
+        while hasattr(current_response, "tool_calls") and current_response.tool_calls:
+            # Append the assistant response with tool calls
+            chat.append(current_response)
 
-        for tool_call in response.tool_calls:
-            tool_call_info = self._process_function_call(tool_call)
-            tool_calls_metadata.append(tool_call_info)
+            # Process all tool calls in this response
+            for tool_call in current_response.tool_calls:
+                tool_call_info = self._process_function_call(tool_call)
+                all_tool_calls_metadata.append(tool_call_info)
 
-            # Add the tool result to chat using tool_result
-            chat.append(tool_result(tool_call_info["result"]))
+                # Add the tool result to chat using tool_result
+                chat.append(tool_result(tool_call_info["result"]))
 
-        # Get final response after tool calls
-        final_response = chat.sample()
-        return tool_calls_metadata, final_response
+            # Get the next response to check for more tool calls
+            current_response = chat.sample()
+
+        return all_tool_calls_metadata, current_response
 
     async def _handle_function_tool_calls_async(
         self, response: Response, chat: Any
     ) -> tuple[list[dict[str, Any]], Response]:
-        """Processes tool calls from a response and executes them asynchronously.
+        """Processes tool calls from a response and executes them iteratively until complete.
 
         Args:
             response: The xai-sdk response containing potential tool calls.
             chat: The async chat instance to append tool results to.
 
         Returns:
-            A tuple containing (tool_calls_metadata, final_response).
+            A tuple containing (all_tool_calls_metadata, final_response).
         """
-        if not hasattr(response, "tool_calls") or not response.tool_calls:
-            return [], response
+        all_tool_calls_metadata = []
+        current_response = response
 
-        # Append the assistant response with tool calls
-        chat.append(response)
-        tool_calls_metadata = []
+        # Continue processing until no more tool calls
+        while hasattr(current_response, "tool_calls") and current_response.tool_calls:
+            # Append the assistant response with tool calls
+            chat.append(current_response)
 
-        for tool_call in response.tool_calls:
-            tool_call_info = self._process_function_call(tool_call)
-            tool_calls_metadata.append(tool_call_info)
+            # Process all tool calls in this response
+            for tool_call in current_response.tool_calls:
+                tool_call_info = self._process_function_call(tool_call)
+                all_tool_calls_metadata.append(tool_call_info)
 
-            # Add the tool result to chat using tool_result
-            chat.append(tool_result(tool_call_info["result"]))
+                # Add the tool result to chat using tool_result
+                chat.append(tool_result(tool_call_info["result"]))
 
-        # Get final response after tool calls
-        final_response = await chat.sample()
-        return tool_calls_metadata, final_response
+            # Get the next response to check for more tool calls
+            current_response = await chat.sample()
+
+        return all_tool_calls_metadata, current_response
 
     def _create_chat_params(
         self, messages: Input, model: str, tools: Tools, **kwargs: Any
@@ -494,7 +588,7 @@ class GrokClient(BaseClient[Client, AsyncClient, Response, Chunk, Any]):
             chat.append(message)
 
         if stream:
-            return self._stream(chat)
+            return self._stream(chat, tools_enabled=bool(tools))
 
         response = chat.sample()
         tool_calls_metadata, final_response = self._handle_function_tool_calls(response, chat)
@@ -528,7 +622,7 @@ class GrokClient(BaseClient[Client, AsyncClient, Response, Chunk, Any]):
             chat.append(message)
 
         if stream:
-            return self._astream(chat)
+            return self._astream(chat, tools_enabled=bool(tools))
 
         response = await chat.sample()
         tool_calls_metadata, final_response = await self._handle_function_tool_calls_async(
