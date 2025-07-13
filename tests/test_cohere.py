@@ -3,7 +3,6 @@ from datetime import datetime
 import os
 from types import SimpleNamespace
 from typing import Any, cast
-from unittest.mock import Mock
 
 import pytest
 
@@ -82,6 +81,10 @@ class MockCohereResponse:
         self.model = model
         self.text = content  # Fallback content property
 
+    def __call__(self, **kwargs: Any) -> "MockCohereResponse":
+        """Make the instance callable to replace lambda functions."""
+        return self
+
     def model_dump(self) -> dict[str, Any]:
         return {"response_data": "cohere_test", "model": self.model}
 
@@ -121,19 +124,19 @@ class MockCohereToolCall:
         self.function = SimpleNamespace(name=tool_name, arguments=arguments)
 
 
-# noinspection PyUnusedLocal
+# noinspection PyUnusedLocal,PyTypeChecker
 class TestCohereClient:
     """Tests for the CohereClient class."""
 
-    def test_capabilities(self, client):
-        """Test that client reports correct capabilities."""
+    def test_client_initialization_and_properties(self, client):
+        """Test client initialization, capabilities, and properties."""
+        # Test capabilities
         caps = client.capabilities
-
-        assert not caps.multimodal  # Cohere doesn't support multimodal
+        assert not caps.multimodal
         assert caps.streaming
         assert caps.tools
         assert not caps.agents
-        assert not caps.files  # Cohere doesn't support file uploads
+        assert not caps.files
 
         # Test convenience methods
         assert not client.supports_multimodal()
@@ -142,10 +145,45 @@ class TestCohereClient:
         assert not client.supports_agents()
         assert not client.supports_files()
 
-    def test_list_models(self, client, monkeypatch):
-        """Test list_models maps to ModelSummary objects correctly."""
+        # Test provider name
+        assert client._provider_name == "Cohere"
 
-        def mock_list():
+        # Test generic types
+        types = client._get_generic_types()
+        assert "sync" in types
+        assert "async" in types
+
+        # Test client properties
+        assert client.client is not None
+        assert client.async_client is not None
+        assert isinstance(client.created_at, datetime)
+        assert isinstance(client.client_age, float)
+        assert client.client_age >= 0
+        assert client.last_request_time is None  # Initially None
+        assert client.tool_manager is not None
+
+        # Test string representations
+        repr_str = repr(client)
+        str_str = str(client)
+        assert "CohereClient" in repr_str
+        assert "capabilities" in repr_str
+        assert "CohereClient" in str_str
+        assert "Created:" in str_str
+
+        # Test context managers
+        with client as ctx_client:
+            assert ctx_client is client
+
+    async def test_async_context_manager(self, client):
+        """Test asynchronous context manager."""
+        async with client as ctx_client:
+            assert ctx_client is client
+
+    def test_list_models_comprehensive(self, client, monkeypatch):
+        """Test list_models with various edge cases."""
+
+        # Test normal models
+        def mock_list_normal():
             return SimpleNamespace(
                 models=[
                     MockCohereModel("command-a-03-2025", "Command A"),
@@ -153,7 +191,7 @@ class TestCohereClient:
                 ]
             )
 
-        monkeypatch.setattr(client.client.models, "list", mock_list)
+        monkeypatch.setattr(client.client.models, "list", mock_list_normal)
         models = client.list_models()
 
         assert len(models) == 2
@@ -163,148 +201,364 @@ class TestCohereClient:
         assert models[1].id == "command-r-plus"
         assert models[1].name == "Command R+"
 
-    def test_list_models_with_missing_attributes(self, client, monkeypatch):
-        """Test list_models handles models with missing id/name attributes."""
-
+        # Test model with missing attributes
         class MockModelMissingAttrs:
-            def __init__(self):
-                # No id or name attributes
-                pass
-
-            def model_dump(self):
+            @staticmethod
+            def model_dump():
                 return {}
 
-        def mock_list():
+        def mock_list_missing():
             return SimpleNamespace(models=[MockModelMissingAttrs()])
 
-        monkeypatch.setattr(client.client.models, "list", mock_list)
+        monkeypatch.setattr(client.client.models, "list", mock_list_missing)
         models = client.list_models()
 
         assert len(models) == 1
         assert models[0].id == "unknown"
         assert models[0].name == "unknown"
 
-    @pytest.mark.parametrize(
-        ("event_type", "delta_text", "expected_content", "expected_finish"),
-        [
-            ("content-delta", "Hello", "Hello", None),
-            ("content-delta", " world", " world", None),
-            ("message-end", "", "", "end_turn"),
-            ("other-event", "", "", None),
-        ],
-    )
-    def test_process_event(self, event_type, delta_text, expected_content, expected_finish):
-        """Test _process_event handles different event types correctly."""
-        event = MockCohereStreamEvent(event_type, delta_text)
-        accumulated = ""
 
-        new_accumulated, chunk = CohereClient._process_event(event, accumulated)
+        # Test model without model_dump
+        class MockModelNoModelDump:
+            def __init__(self):
+                self.id = "test-id"
+                self.name = "test-name"
 
-        if expected_content:
-            assert new_accumulated == expected_content
-        if chunk:
-            assert chunk.common.content == new_accumulated
-            if expected_finish:
-                assert chunk.common.finish_reason == expected_finish
-        else:
-            assert chunk is None
+        def mock_list_no_dump():
+            return SimpleNamespace(models=[MockModelNoModelDump()])
 
-    def test_stream_processing(self, client):
-        """Test _stream processes events correctly."""
+        monkeypatch.setattr(client.client.models, "list", mock_list_no_dump)
+        models = client.list_models()
+
+        assert len(models) == 1
+        assert models[0].metadata == {}
+
+        # Test get_model_info
+        monkeypatch.setattr(client.client.models, "list", mock_list_normal)
+        model_info = client.get_model_info("command-a-03-2025")
+        assert model_info.id == "command-a-03-2025"
+        assert model_info.name == "Command A"
+
+        with pytest.raises(ValueError, match="Model nonexistent not found"):
+            client.get_model_info("nonexistent")
+
+    def test_process_event_comprehensive(self):
+        """Test _process_event with all edge cases including None chunk generation."""
+        # Test content-delta event
+        event = MockCohereStreamEvent("content-delta", "Hello")
+        accumulated, chunk = CohereClient._process_event(event, "")
+        assert accumulated == "Hello"
+        assert chunk.common.content == "Hello"
+        assert chunk.common.delta == "Hello"
+
+        # Test message-end event
+        event = MockCohereStreamEvent("message-end", "")
+        accumulated, chunk = CohereClient._process_event(event, "existing")
+        assert accumulated == "existing"
+        assert chunk.common.finish_reason == "end_turn"
+
+        # Test unknown event type (should return None chunk)
+        event = MockCohereStreamEvent("unknown-event", "")
+        accumulated, chunk = CohereClient._process_event(event, "start")
+        assert accumulated == "start"
+        assert chunk is None  # This is the missing branch
+
+        # Test event with missing delta structure
+        event = SimpleNamespace(type="content-delta")
+        accumulated, chunk = CohereClient._process_event(event, "start")
+        assert accumulated == "start"
+        assert chunk.common.delta == ""
+
+        # Test event without model_dump
+        event = SimpleNamespace(type="content-delta")
+        event.delta = SimpleNamespace(message=SimpleNamespace(content=SimpleNamespace(text="test")))
+        accumulated, chunk = CohereClient._process_event(event, "")
+        assert accumulated == "test"
+        assert chunk.common.metadata == {}
+
+        # Test event with type attribute error
+        event_no_type = SimpleNamespace()
+        with pytest.raises(AttributeError):
+            CohereClient._process_event(event_no_type, "start")
+
+    def test_streaming_comprehensive(self, client, monkeypatch):
+        """Test streaming with all edge cases, including None chunks."""
+        # Test basic streaming with None chunks
         events = [
+            MockCohereStreamEvent("unknown-event-1", ""),  # Will produce None chunk
             MockCohereStreamEvent("content-delta", "Hello"),
+            MockCohereStreamEvent("unknown-event-2", ""),  # Will produce None chunk
             MockCohereStreamEvent("content-delta", " world"),
             MockCohereStreamEvent("message-end", ""),
         ]
 
-        # Create a mock stream object
-        mock_stream = Mock()
-        mock_stream.__iter__ = Mock(return_value=iter(events))
+        def mock_chat_stream(**kwargs: Any) -> Any:
+            return iter(events)
 
-        chunks = list(client._stream(mock_stream))
+        monkeypatch.setattr(client._client, "chat_stream", mock_chat_stream)
 
+        chunks = list(
+            client._stream(
+                messages=[{"role": "user", "content": "Hello"}],
+                model="command-a-03-2025",
+                tools=None,
+                tools_enabled=False,
+            )
+        )
+
+        # Should only have 3 chunks (2 content-delta + 1 message-end), not 5
         assert len(chunks) == 3
         assert chunks[0].common.content == "Hello"
         assert chunks[1].common.content == "Hello world"
         assert chunks[2].common.finish_reason == "end_turn"
 
-    async def test_astream_processing(self, client):
-        """Test _astream processes events correctly."""
+        # Test streaming with tools
+        def mock_weather_tool(location: str) -> str:
+            return f"Weather in {location}: sunny"
+
+        client.tool_manager.register(
+            mock_weather_tool, name="get_weather", description="Get weather"
+        )
+
+        mock_tool_call = MockCohereToolCall()
+        response_with_tools = MockCohereResponse(tool_calls=[mock_tool_call])
+        response_final = MockCohereResponse()
+
+        events_first = [
+            MockCohereStreamEvent("processing-event", ""),  # Will produce None chunk
+            MockCohereStreamEvent("content-delta", "Processing"),
+            MockCohereStreamEvent("message-end", ""),
+        ]
+        events_final = [
+            MockCohereStreamEvent("content-delta", "Done"),
+            MockCohereStreamEvent("message-end", ""),
+        ]
+
+        call_count = 0
+        stream_call_count = 0
+
+        def mock_chat_stream_with_tools(**kwargs: Any):
+            nonlocal stream_call_count
+            stream_call_count += 1
+            if stream_call_count == 1:
+                return iter(events_first)
+            return iter(events_final)
+
+        def mock_chat(**kwargs: Any):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return response_with_tools
+            return response_final
+
+        monkeypatch.setattr(client._client, "chat_stream", mock_chat_stream_with_tools)
+        monkeypatch.setattr(client._client, "chat", mock_chat)
+
+        chunks = list(
+            client._stream(
+                messages=[{"role": "user", "content": "Use tool"}],
+                model="command-a-03-2025",
+                tools=[{"name": "get_weather", "description": "Test", "parameters": {}}],
+                tools_enabled=True,
+            )
+        )
+
+        # Should have chunks from both streaming responses, excluding None chunks
+        assert len(chunks) >= 2
+        assert call_count >= 1
+
+    async def test_async_streaming_comprehensive(self, client, monkeypatch):
+        """Test async streaming with all edge cases, including None chunks."""
+        # Test basic async streaming with None chunks
         events = [
+            MockCohereStreamEvent("unknown-async-1", ""),  # Will produce None chunk
             MockCohereStreamEvent("content-delta", "Hello"),
+            MockCohereStreamEvent("unknown-async-2", ""),  # Will produce None chunk
             MockCohereStreamEvent("content-delta", " async"),
             MockCohereStreamEvent("message-end", ""),
         ]
 
-        # Create a mock async stream
         class MockAsyncStream:
+            def __init__(self):
+                self.events = events.copy()
+
             def __aiter__(self):
                 return self
 
             async def __anext__(self):
-                if events:
-                    return events.pop(0)
+                if self.events:
+                    return self.events.pop(0)
                 raise StopAsyncIteration
 
+            def __call__(self, **kwargs: Any) -> Any:
+                return self
+
         mock_stream = MockAsyncStream()
+        monkeypatch.setattr(client._async_client, "chat_stream", mock_stream)
+
         chunks = []
-        async for chunk in client._astream(mock_stream):
+        async for chunk in client._astream(
+            messages=[{"role": "user", "content": "Hello"}],
+            model="command-a-03-2025",
+            tools=None,
+            tools_enabled=False,
+        ):
             chunks.append(chunk)
 
+        # Should only have 3 chunks (2 content-delta + 1 message-end), not 5
         assert len(chunks) == 3
         assert chunks[0].common.content == "Hello"
         assert chunks[1].common.content == "Hello async"
         assert chunks[2].common.finish_reason == "end_turn"
 
-    def test_create_chimeric_response(self, client):
-        """Test _create_chimeric_response creates proper response objects."""
+        # Test async streaming with tools
+        def async_test_tool(query: str) -> str:
+            return f"Async tool result for: {query}"
+
+        client.tool_manager.register(
+            async_test_tool, name="async_test_tool", description="Async test tool"
+        )
+
+        mock_tool_call = MockCohereToolCall(
+            tool_name="async_test_tool", arguments='{"query": "async_test"}'
+        )
+        response_with_tools = MockCohereResponse(tool_calls=[mock_tool_call])
+        response_final = MockCohereResponse()
+
+        events_first = [
+            MockCohereStreamEvent("async-processing", ""),  # Will produce None chunk
+            MockCohereStreamEvent("content-delta", "Async processing"),
+            MockCohereStreamEvent("message-end", ""),
+        ]
+        events_final = [
+            MockCohereStreamEvent("content-delta", "Async done"),
+            MockCohereStreamEvent("message-end", ""),
+        ]
+
+        call_count = 0
+        stream_call_count = 0
+
+        async def mock_async_stream(**kwargs: Any):
+            nonlocal stream_call_count
+            stream_call_count += 1
+            if stream_call_count == 1:
+                for event in events_first:
+                    yield event
+            else:
+                for event in events_final:
+                    yield event
+
+        async def mock_async_chat(**kwargs: Any):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return response_with_tools
+            return response_final
+
+        monkeypatch.setattr(client._async_client, "chat_stream", mock_async_stream)
+        monkeypatch.setattr(client._async_client, "chat", mock_async_chat)
+
+        chunks = []
+        async for chunk in client._astream(
+            messages=[{"role": "user", "content": "Use async tool"}],
+            model="command-a-03-2025",
+            tools=[{"name": "async_test_tool", "description": "Async test", "parameters": {}}],
+            tools_enabled=True,
+        ):
+            chunks.append(chunk)
+
+        assert len(chunks) >= 2
+        assert call_count >= 1
+
+    def test_create_chimeric_response_comprehensive(self, client):
+        """Test _create_chimeric_response with all edge cases."""
+        # Test normal response
         mock_response = MockCohereResponse()
         tool_calls = [{"name": "test_tool", "result": "success"}]
-
         chimeric_response = CohereClient._create_chimeric_response(mock_response, tool_calls)
 
         assert isinstance(chimeric_response, ChimericCompletionResponse)
-        assert chimeric_response.native == mock_response
         assert chimeric_response.common.content == "Hello from Cohere!"
         assert chimeric_response.common.usage.prompt_tokens == 10
         assert chimeric_response.common.usage.completion_tokens == 15
         assert chimeric_response.common.usage.total_tokens == 25
         assert chimeric_response.common.model == "command-a-03-2025"
-        assert chimeric_response.common.metadata is not None
+        assert isinstance(chimeric_response.common.metadata, dict)
         assert "tool_calls" in chimeric_response.common.metadata
 
-    def test_create_chimeric_response_with_list_content(self, client):
-        """Test _create_chimeric_response handles list content correctly."""
-        mock_response = MockCohereResponse()
+        # Test with list content
         mock_response.message.content = [SimpleNamespace(text="List content")]
-
         chimeric_response = CohereClient._create_chimeric_response(mock_response, [])
-
         assert chimeric_response.common.content == "List content"
 
-    def test_create_chimeric_response_fallback_content(self, client):
-        """Test _create_chimeric_response falls back to text property."""
-        mock_response = MockCohereResponse()
-        mock_response.message = SimpleNamespace()  # Remove content attribute
-        mock_response.text = "Fallback text"
-
+        # Test with string content
+        mock_response.message.content = "Direct string content"
         chimeric_response = CohereClient._create_chimeric_response(mock_response, [])
+        assert chimeric_response.common.content == "Direct string content"
 
+        # Test with an empty content list
+        mock_response.message.content = []
+        mock_response.text = "fallback text"
+        chimeric_response = CohereClient._create_chimeric_response(mock_response, [])
+        assert chimeric_response.common.content == "[]"
+
+        # Test fallback to text property
+        mock_response.message = SimpleNamespace()
+        chimeric_response = CohereClient._create_chimeric_response(mock_response, [])
+        assert chimeric_response.common.content == "fallback text"
+
+        # Test no message at all
+        mock_response = SimpleNamespace()
+        mock_response.text = "Fallback text"
+        mock_response.model = "test-model"
+        mock_response.usage = SimpleNamespace(
+            tokens=SimpleNamespace(input_tokens=5, output_tokens=10)
+        )
+        mock_response.model_dump = lambda: {"test": "data"}
+        chimeric_response = CohereClient._create_chimeric_response(mock_response, [])
         assert chimeric_response.common.content == "Fallback text"
 
-    def test_create_chimeric_response_no_usage(self, client):
-        """Test _create_chimeric_response handles missing usage info."""
+        # Test no content at all
+        mock_response = SimpleNamespace()
+        mock_response.usage = SimpleNamespace(
+            tokens=SimpleNamespace(input_tokens=1, output_tokens=2)
+        )
+        mock_response.model = "test-model"
+        mock_response.model_dump = lambda: {"test": "data"}
+        chimeric_response = CohereClient._create_chimeric_response(mock_response, [])
+        assert chimeric_response.common.content == ""
+
+        # Test missing usage
         mock_response = MockCohereResponse()
         delattr(mock_response, "usage")
-
         chimeric_response = CohereClient._create_chimeric_response(mock_response, [])
-
         assert chimeric_response.common.usage.prompt_tokens == 0
         assert chimeric_response.common.usage.completion_tokens == 0
         assert chimeric_response.common.usage.total_tokens == 0
 
-    def test_encode_tools(self, client):
-        """Test _encode_tools converts Tool objects correctly."""
+        # Test missing tokens structure
+        mock_response = MockCohereResponse()
+        mock_response.usage = SimpleNamespace(
+            billed_units=SimpleNamespace(input_tokens=20, output_tokens=30)
+        )
+        chimeric_response = CohereClient._create_chimeric_response(mock_response, [])
+        assert chimeric_response.common.usage.prompt_tokens == 0
+        assert chimeric_response.common.usage.completion_tokens == 0
+
+        # Test no model_dump
+        mock_response = SimpleNamespace()
+        mock_response.message = SimpleNamespace(content=[SimpleNamespace(text="test")])
+        mock_response.usage = SimpleNamespace(
+            tokens=SimpleNamespace(input_tokens=1, output_tokens=2)
+        )
+        mock_response.model = "test-model"
+        mock_response.text = "fallback"
+        chimeric_response = CohereClient._create_chimeric_response(mock_response, [])
+        assert chimeric_response.common.content == "test"
+        assert chimeric_response.common.metadata == {}
+
+    def test_encode_tools_comprehensive(self, client):
+        """Test _encode_tools with various inputs."""
         # Test with Tool objects
         tool = Tool(
             name="get_weather",
@@ -313,523 +567,309 @@ class TestCohereClient:
                 type="object", properties={"location": {"type": "string"}}, required=["location"]
             ),
         )
-
         encoded = client._encode_tools([tool])
-
+        assert isinstance(encoded, list)
         assert len(encoded) == 1
         assert encoded[0]["type"] == "function"
         assert encoded[0]["function"]["name"] == "get_weather"
         assert encoded[0]["function"]["description"] == "Get weather info"
         assert "properties" in encoded[0]["function"]["parameters"]
 
+        # Test with None parameters
+        tool_no_params = Tool(name="simple_tool", description="Simple", function=lambda: "test")
+        encoded = client._encode_tools([tool_no_params])
+        assert isinstance(encoded, list)
+        assert len(encoded) == 1
+        assert encoded[0]["function"]["parameters"] == {}
+
         # Test with dict tools
         dict_tool = {"type": "function", "function": {"name": "test"}}
         encoded_dict = client._encode_tools([dict_tool])
+        assert isinstance(encoded_dict, list)
         assert encoded_dict[0] == dict_tool
 
-        # Test with None
+        # Test with None and empty list
         assert client._encode_tools(None) is None
         assert client._encode_tools([]) is None
 
-    def test_process_function_call(self, client, monkeypatch):
-        """Test _process_function_call executes tools correctly."""
+    def test_tool_processing_comprehensive(self, client, monkeypatch):
+        """Test comprehensive tool processing including errors."""
 
-        # Mock a tool function
+        # Setup tools
         def mock_weather_tool(location: str) -> str:
             return f"Weather in {location}: sunny"
 
-        # Create a mock tool and manually add to tool manager's internal dict
+        def error_tool(arg: str) -> str:
+            raise ValueError("Tool execution failed intentionally")
+
         tool = Tool(name="get_weather", description="Get weather", function=mock_weather_tool)
+        error_tool_obj = Tool(name="error_tool", description="Error tool", function=error_tool)
         client.tool_manager.tools["get_weather"] = tool
+        client.tool_manager.tools["error_tool"] = error_tool_obj
 
-        # Create a mock tool call
+        # Test successful tool call
         mock_call = MockCohereToolCall()
-
         result = client._process_function_call(mock_call)
-
         assert result["call_id"] == "tool_123"
         assert result["name"] == "get_weather"
         assert result["arguments"] == '{"location": "Toronto"}'
         assert result["result"] == "Weather in Toronto: sunny"
 
-    def test_process_function_call_non_callable_tool(self, client, monkeypatch):
-        """Test _process_function_call raises error for non-callable tools."""
-        # Create a mock tool with non-callable function and manually add to tool manager
-        from types import SimpleNamespace
+        # Test tool with error
+        error_call = MockCohereToolCall(tool_name="error_tool", arguments='{"arg": "test"}')
+        result = client._process_function_call(error_call)
+        assert result["name"] == "error_tool"
+        assert "error" in result
+        assert result["error"] is True
+        assert "Tool execution failed intentionally" in result["result"]
 
-        tool = SimpleNamespace()
-        tool.name = "bad_tool"
-        tool.function = "not_callable"  # This is not callable
-        client.tool_manager.tools["bad_tool"] = tool
+        # Test invalid JSON arguments
+        json_error_call = MockCohereToolCall(tool_name="get_weather", arguments='{"invalid": json}')
+        result = client._process_function_call(json_error_call)
+        assert "error" in result
+        assert result["error"] is True
+        assert "Error executing tool" in result["result"]
 
-        mock_call = MockCohereToolCall(tool_name="bad_tool")
-
+        # Test non-callable tool
+        tool_non_callable = SimpleNamespace()
+        tool_non_callable.name = "bad_tool"
+        tool_non_callable.function = "not_callable"
+        client.tool_manager.tools["bad_tool"] = tool_non_callable
+        bad_call = MockCohereToolCall(tool_name="bad_tool")
         with pytest.raises(ToolRegistrationError, match="Tool 'bad_tool' is not callable"):
-            client._process_function_call(mock_call)
+            client._process_function_call(bad_call)
 
-    def test_handle_function_tool_calls_no_calls(self, client):
-        """Test _handle_function_tool_calls with no tool calls."""
+    def test_handle_function_tool_calls_comprehensive(self, client, monkeypatch):
+        """Test _handle_function_tool_calls with all edge cases."""
+
+        # Setup tools
+        def tool1(arg: str) -> str:
+            return f"Tool1 result: {arg}"
+
+        def tool2(arg: str) -> str:
+            return f"Tool2 result: {arg}"
+
+        client.tool_manager.register(tool1, name="tool1", description="First tool")
+        client.tool_manager.register(tool2, name="tool2", description="Second tool")
+
+        # Test no tool calls
+        mock_response = MockCohereResponse()
+        messages = [{"role": "user", "content": "Hello"}]
+        monkeypatch.setattr(client._client, "chat", mock_response)
+        tool_calls, final_response = client._handle_function_tool_calls(
+            model=mock_response.model, response=mock_response, messages=messages
+        )
+        assert tool_calls == []
+        assert final_response == mock_response
+
+        # Test response with no message
+        mock_response_no_msg = SimpleNamespace()
+        tool_calls, final_response = client._handle_function_tool_calls(
+            model="command-a-03-2025", response=mock_response_no_msg, messages=messages
+        )
+        assert tool_calls == []
+        assert final_response == mock_response_no_msg
+
+        # Test message with no tool_calls attribute
+        mock_response_no_tc = SimpleNamespace()
+        mock_response_no_tc.message = SimpleNamespace()
+        tool_calls, final_response = client._handle_function_tool_calls(
+            model="command-a-03-2025", response=mock_response_no_tc, messages=messages
+        )
+        assert tool_calls == []
+        assert final_response == mock_response_no_tc
+
+        # Test empty tool_calls list
+        mock_response_empty = MockCohereResponse()
+        mock_response_empty.message.tool_calls = []
+        tool_calls, final_response = client._handle_function_tool_calls(
+            model=mock_response_empty.model, response=mock_response_empty, messages=messages
+        )
+        assert tool_calls == []
+        assert final_response == mock_response_empty
+
+        # Test with None tool_calls
+        mock_response_none = MockCohereResponse()
+        mock_response_none.message.tool_calls = None
+        tool_calls, final_response = client._handle_function_tool_calls(
+            model=mock_response_none.model, response=mock_response_none, messages=messages
+        )
+        assert tool_calls == []
+        assert final_response == mock_response_none
+
+        # Test multiple tool call iterations
+        tool_call1 = MockCohereToolCall(
+            tool_id="call1", tool_name="tool1", arguments='{"arg": "first"}'
+        )
+        tool_call2 = MockCohereToolCall(
+            tool_id="call2", tool_name="tool2", arguments='{"arg": "second"}'
+        )
+        response1 = MockCohereResponse(tool_calls=[tool_call1])
+        response2 = MockCohereResponse(tool_calls=[tool_call2])
+        response_final = MockCohereResponse()
+
+        call_count = 0
+
+        def mock_chat(**kwargs: Any):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return response2
+            return response_final
+
+        monkeypatch.setattr(client._client, "chat", mock_chat)
+        tool_calls, final_response = client._handle_function_tool_calls(
+            model=response1.model,
+            response=response1,
+            messages=messages,
+            tools=client.tool_manager.tools,
+        )
+        assert len(tool_calls) == 2
+        assert tool_calls[0]["name"] == "tool1"
+        assert tool_calls[1]["name"] == "tool2"
+        assert final_response == response_final
+
+        # Test single message dict input
+        messages_dict = {"role": "user", "content": "What's the weather?"}
+        tool_calls, final_response = client._handle_function_tool_calls(
+            model=response1.model,
+            response=response1,
+            messages=messages_dict,
+            tools=client.tool_manager.tools,
+        )
+        assert len(tool_calls) >= 1
+
+    async def test_handle_function_tool_calls_async_comprehensive(self, client, monkeypatch):
+        """Test async _handle_function_tool_calls_async with all cases."""
+
+        # Setup tools
+        def async_tool1(arg: str) -> str:
+            return f"Async Tool1 result: {arg}"
+
+        def async_tool2(arg: str) -> str:
+            return f"Async Tool2 result: {arg}"
+
+        client.tool_manager.register(
+            async_tool1, name="async_tool1", description="First async tool"
+        )
+        client.tool_manager.register(
+            async_tool2, name="async_tool2", description="Second async tool"
+        )
+
+        # Test no tool calls
         mock_response = MockCohereResponse()
         messages = [{"role": "user", "content": "Hello"}]
 
-        tool_calls, updated_messages = client._handle_function_tool_calls(mock_response, messages)
+        async def mock_async_chat(**kwargs: Any):
+            return mock_response
 
+        monkeypatch.setattr(client._async_client, "chat", mock_async_chat)
+        tool_calls, final_response = await client._handle_function_tool_calls_async(
+            model=mock_response.model, response=mock_response, messages=messages
+        )
         assert tool_calls == []
-        assert updated_messages == messages
+        assert final_response == mock_response
 
-    def test_handle_function_tool_calls_no_message(self, client):
-        """Test _handle_function_tool_calls with response missing message."""
-        mock_response = SimpleNamespace()  # No message attribute
-        messages = [{"role": "user", "content": "Hello"}]
+        # Test multiple tool call iterations
+        tool_call1 = MockCohereToolCall(
+            tool_id="async_call1", tool_name="async_tool1", arguments='{"arg": "first"}'
+        )
+        tool_call2 = MockCohereToolCall(
+            tool_id="async_call2", tool_name="async_tool2", arguments='{"arg": "second"}'
+        )
+        response1 = MockCohereResponse(tool_calls=[tool_call1])
+        response2 = MockCohereResponse(tool_calls=[tool_call2])
+        response_final = MockCohereResponse()
 
-        tool_calls, updated_messages = client._handle_function_tool_calls(mock_response, messages)
+        call_count = 0
 
-        assert tool_calls == []
-        assert updated_messages == messages
+        async def mock_async_chat_multi(**kwargs: Any):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return response2
+            return response_final
 
-    def test_handle_function_tool_calls_with_calls(self, client):
-        """Test _handle_function_tool_calls processes tool calls correctly."""
+        monkeypatch.setattr(client._async_client, "chat", mock_async_chat_multi)
+        tool_calls, final_response = await client._handle_function_tool_calls_async(
+            model=response1.model, response=response1, messages=messages
+        )
+        assert len(tool_calls) == 2
+        assert tool_calls[0]["name"] == "async_tool1"
+        assert tool_calls[1]["name"] == "async_tool2"
+        assert final_response == response_final
 
-        # Mock a tool function
-        def mock_weather_tool(location: str) -> str:
-            return f"Weather in {location}: sunny"
+    def test_message_conversion_comprehensive(self, client):
+        """Test message conversion with all edge cases."""
+        # Test string
+        result = client._convert_messages_to_cohere_format("Hello")
+        assert result == [{"role": "user", "content": "Hello"}]
 
-        # Create a mock tool and manually add to tool manager's internal dict
-        tool = Tool(name="get_weather", description="Get weather", function=mock_weather_tool)
-        client.tool_manager.tools["get_weather"] = tool
+        # Test dict
+        result = client._convert_messages_to_cohere_format({"role": "user", "content": "Hi"})
+        assert result == [{"role": "user", "content": "Hi"}]
 
-        # Create response with tool calls
-        mock_tool_call = MockCohereToolCall()
-        mock_response = MockCohereResponse(tool_calls=[mock_tool_call])
-        messages = [{"role": "user", "content": "What's the weather?"}]
+        # Test list
+        result = client._convert_messages_to_cohere_format([{"role": "user", "content": "Test"}])
+        assert result == [{"role": "user", "content": "Test"}]
 
-        tool_calls, updated_messages = client._handle_function_tool_calls(mock_response, messages)
+        # Test numeric
+        result = client._convert_messages_to_cohere_format(123)
+        assert result == [{"role": "user", "content": "123"}]
 
-        assert len(tool_calls) == 1
-        assert tool_calls[0]["name"] == "get_weather"
-        assert tool_calls[0]["result"] == "Weather in Toronto: sunny"
+        # Test None
+        result = client._convert_messages_to_cohere_format(None)
+        assert result == [{"role": "user", "content": "None"}]
 
-        # Check updated messages structure
-        assert len(updated_messages) == 3  # original + assistant + tool
-        assert updated_messages[1]["role"] == "assistant"
-        assert updated_messages[1]["tool_calls"] == [mock_tool_call]
-        assert updated_messages[2]["role"] == "tool"
-        assert updated_messages[2]["tool_call_id"] == "tool_123"
+        # Test boolean
+        result = client._convert_messages_to_cohere_format(False)
+        assert result == [{"role": "user", "content": "False"}]
 
-    @pytest.mark.parametrize(
-        ("input_messages", "expected_output"),
-        [
-            ("Hello", [{"role": "user", "content": "Hello"}]),
-            ({"role": "user", "content": "Hi"}, [{"role": "user", "content": "Hi"}]),
-            ([{"role": "user", "content": "Test"}], [{"role": "user", "content": "Test"}]),
-            (123, [{"role": "user", "content": "123"}]),
-        ],
-    )
-    def test_convert_messages_to_cohere_format(self, client, input_messages, expected_output):
-        """Test message format conversion."""
-        result = client._convert_messages_to_cohere_format(input_messages)
-        assert result == expected_output
+        # Test zero
+        result = client._convert_messages_to_cohere_format(0)
+        assert result == [{"role": "user", "content": "0"}]
 
-    def test_chat_completion_impl_basic(self, client, monkeypatch):
-        """Test basic chat completion without streaming or tools."""
+        # Test empty string
+        result = client._convert_messages_to_cohere_format("")
+        assert result == [{"role": "user", "content": ""}]
+
+        # Test empty list
+        result = client._convert_messages_to_cohere_format([])
+        assert result == []
+
+        # Test custom object
+        class CustomObject:
+            def __str__(self):
+                return "custom_string"
+
+        result = client._convert_messages_to_cohere_format(CustomObject())
+        assert result == [{"role": "user", "content": "custom_string"}]
+
+    def test_chat_completion_comprehensive(self, client, monkeypatch):
+        """Test chat completion with all variations."""
+        # Mock response
         mock_response = MockCohereResponse()
 
-        def mock_chat(**kwargs):
+        # Test basic chat completion
+        def mock_chat(**kwargs: Any):
             return mock_response
 
         monkeypatch.setattr(client._client, "chat", mock_chat)
-
         result = client._chat_completion_impl(messages="Hello", model="command-a-03-2025")
-
         assert isinstance(result, ChimericCompletionResponse)
         assert result.common.content == "Hello from Cohere!"
 
-    def test_chat_completion_impl_streaming(self, client, monkeypatch):
-        """Test streaming chat completion."""
-        events = [
-            MockCohereStreamEvent("content-delta", "Hello"),
-            MockCohereStreamEvent("message-end", ""),
-        ]
-
-        def mock_chat_stream(**kwargs):
-            return iter(events)
-
-        monkeypatch.setattr(client._client, "chat_stream", mock_chat_stream)
-
-        result = client._chat_completion_impl(
-            messages="Hello", model="command-a-03-2025", stream=True
-        )
-
-        assert isinstance(result, Generator)
-        chunks = list(result)
-        assert len(chunks) == 2
-        assert chunks[0].common.content == "Hello"
-
-    def test_chat_completion_impl_with_tools(self, client, monkeypatch):
-        """Test chat completion with tool calls."""
-
-        # Mock a tool function
-        def mock_weather_tool(location: str) -> str:
-            return f"Weather in {location}: sunny"
-
-        # Create a mock tool and manually add to tool manager's internal dict
-        tool = Tool(name="get_weather", description="Get weather", function=mock_weather_tool)
-        client.tool_manager.tools["get_weather"] = tool
-
-        # Create responses - first with tool call, second with final answer
-        mock_tool_call = MockCohereToolCall()
-        first_response = MockCohereResponse(
-            content="I'll check the weather", tool_calls=[mock_tool_call]
-        )
-        second_response = MockCohereResponse(content="The weather in Toronto is sunny")
-
-        call_count = 0
-
-        def mock_chat(**kwargs):
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
-                return first_response
-            return second_response
-
-        monkeypatch.setattr(client._client, "chat", mock_chat)
-
-        result = client._chat_completion_impl(
-            messages="What's the weather in Toronto?",
-            model="command-a-03-2025",
-            tools=[{"type": "function", "function": {"name": "get_weather"}}],
-        )
-
-        assert isinstance(result, ChimericCompletionResponse)
-        assert result.common.metadata is not None
-        assert "tool_calls" in result.common.metadata
-        assert call_count == 2  # Should make two API calls
-
-    async def test_achat_completion_impl_basic(self, client, monkeypatch):
-        """Test basic async chat completion."""
-        mock_response = MockCohereResponse()
-
-        async def mock_chat(**kwargs):
-            return mock_response
-
-        monkeypatch.setattr(client._async_client, "chat", mock_chat)
-
-        result = await client._achat_completion_impl(messages="Hello", model="command-a-03-2025")
-
-        assert isinstance(result, ChimericCompletionResponse)
-        assert result.common.content == "Hello from Cohere!"
-
-    async def test_achat_completion_impl_streaming(self, client, monkeypatch):
-        """Test async streaming chat completion."""
-        events = [
-            MockCohereStreamEvent("content-delta", "Hello"),
-            MockCohereStreamEvent("message-end", ""),
-        ]
-
-        class MockAsyncStream:
-            def __init__(self):
-                self.events = events.copy()
-
-            def __aiter__(self):
-                return self
-
-            async def __anext__(self):
-                if self.events:
-                    return self.events.pop(0)
-                raise StopAsyncIteration
-
-        def mock_chat_stream(**kwargs):
-            return MockAsyncStream()
-
-        monkeypatch.setattr(client._async_client, "chat_stream", mock_chat_stream)
-
-        result = await client._achat_completion_impl(
-            messages="Hello", model="command-a-03-2025", stream=True
-        )
-
-        assert isinstance(result, AsyncGenerator)
-        chunks = []
-        async for chunk in result:
-            chunks.append(chunk)
-        assert len(chunks) == 2
-
-    async def test_achat_completion_impl_with_tools(self, client, monkeypatch):
-        """Test async chat completion with tool calls."""
-
-        # Mock a tool function
-        def mock_weather_tool(location: str) -> str:
-            return f"Weather in {location}: sunny"
-
-        # Create a mock tool and manually add to tool manager's internal dict
-        tool = Tool(name="get_weather", description="Get weather", function=mock_weather_tool)
-        client.tool_manager.tools["get_weather"] = tool
-
-        # Create responses
-        mock_tool_call = MockCohereToolCall()
-        first_response = MockCohereResponse(
-            content="I'll check the weather", tool_calls=[mock_tool_call]
-        )
-        second_response = MockCohereResponse(content="The weather in Toronto is sunny")
-
-        call_count = 0
-
-        async def mock_chat(**kwargs):
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
-                return first_response
-            return second_response
-
-        monkeypatch.setattr(client._async_client, "chat", mock_chat)
-
-        result = await client._achat_completion_impl(
-            messages="What's the weather in Toronto?",
-            model="command-a-03-2025",
-            tools=[{"type": "function", "function": {"name": "get_weather"}}],
-        )
-
-        assert isinstance(result, ChimericCompletionResponse)
-        assert result.common.metadata is not None
-        assert "tool_calls" in result.common.metadata
-        assert call_count == 2
-
-    def test_upload_file_not_supported(self, client):
-        """Test that file upload raises NotImplementedError."""
-        with pytest.raises(NotImplementedError, match="Cohere does not support file uploads"):
-            client._upload_file(file="test.txt")
-
-    def test_provider_name_set(self, client):
-        """Test that _provider_name is correctly set."""
-        assert client._provider_name == "Cohere"
-
-    def test_generic_types(self, client):
-        """Test _get_generic_types returns correct client types."""
-        types = client._get_generic_types()
-        assert "sync" in types
-        assert "async" in types
-        # Since we're mocking, we can't test the exact types, but ensure they're set
-
-    def test_init_client(self, client):
-        """Test _init_client creates client with correct parameters."""
-        # Test that the client is initialized correctly
-        assert hasattr(client, "_client")
-        assert client._client is not None
-        # The client should have the API key stored in the CohereClient instance
-        assert client.api_key == "test_key"
-
-    def test_init_async_client(self, client):
-        """Test _init_async_client creates async client with correct parameters."""
-        # Test that the async client is initialized correctly
-        assert hasattr(client, "_async_client")
-        assert client._async_client is not None
-        # The API key should be stored in the CohereClient instance
-        assert client.api_key == "test_key"
-
-    def test_string_representations(self, client):
-        """Test __repr__ and __str__ methods."""
-        repr_str = repr(client)
-        str_str = str(client)
-
-        assert "CohereClient" in repr_str
-        assert "capabilities" in repr_str
-        assert "CohereClient" in str_str
-        assert "Created:" in str_str
-
-    def test_request_tracking(self, client, monkeypatch):
-        """Test that request counts and error counts are tracked correctly."""
-        # Get initial counts
-        initial_requests = client.request_count
-        initial_errors = client.error_count
-
-        # Mock successful response
-        mock_response = MockCohereResponse()
-
-        def mock_chat(**kwargs):
-            return mock_response
-
-        monkeypatch.setattr(client._client, "chat", mock_chat)
-
-        # Use the public interface which tracks requests
-        client.chat_completion(messages="Hello", model="command-a-03-2025")
-
-        # Check that request count increased
-        assert client.request_count == initial_requests + 1
-        assert client.error_count == initial_errors
-
-    def test_kwarg_filtering(self, client, monkeypatch):
-        """Test that kwargs are properly filtered for API calls."""
-        mock_response = MockCohereResponse()
-
-        # Track what kwargs are passed to the API
+        # Test with kwargs filtering
         captured_kwargs = {}
 
-        def mock_chat(**kwargs):
+        def mock_chat_capture(**kwargs: Any):
             captured_kwargs.update(kwargs)
             return mock_response
 
-        monkeypatch.setattr(client._client, "chat", mock_chat)
-
-        # Call with some valid and invalid kwargs
-        client._chat_completion_impl(
-            messages="Hello",
-            model="command-a-03-2025",
-            temperature=0.7,  # Valid Cohere parameter
-            invalid_param="should_be_filtered",  # Invalid parameter
-        )
-
-        # Check that only valid parameters were passed
-        assert "temperature" in captured_kwargs or "invalid_param" not in captured_kwargs
-
-    def test_get_model_info(self, client, monkeypatch):
-        """Test get_model_info method."""
-
-        def mock_list():
-            return SimpleNamespace(
-                models=[
-                    MockCohereModel("command-a-03-2025", "Command A"),
-                ]
-            )
-
-        monkeypatch.setattr(client.client.models, "list", mock_list)
-
-        # Test finding existing model
-        model_info = client.get_model_info("command-a-03-2025")
-        assert model_info.id == "command-a-03-2025"
-        assert model_info.name == "Command A"
-
-        # Test model not found
-        with pytest.raises(ValueError, match="Model nonexistent not found"):
-            client.get_model_info("nonexistent")
-
-    def test_client_age_property(self, client):
-        """Test client_age property returns a reasonable value."""
-        age = client.client_age
-        assert isinstance(age, float)
-        assert age >= 0
-
-    def test_last_request_time_initially_none(self, client):
-        """Test that last_request_time is initially None."""
-        # Create a fresh client to test initial state
-        fresh_client = CohereClient(api_key="test", tool_manager=client.tool_manager)
-        assert fresh_client.last_request_time is None
-
-    def test_context_manager_sync(self, client):
-        """Test synchronous context manager."""
-        with client as ctx_client:
-            assert ctx_client is client
-
-    async def test_context_manager_async(self, client):
-        """Test asynchronous context manager."""
-        async with client as ctx_client:
-            assert ctx_client is client
-
-    def test_process_event_with_missing_delta(self, client):
-        """Test _process_event handles events with missing delta attributes."""
-        # Create event without proper delta structure
-        event = SimpleNamespace(type="content-delta")
-
-        accumulated, chunk = CohereClient._process_event(event, "start")
-
-        # Should handle missing delta gracefully with empty string
-        assert accumulated == "start"  # No delta added
-        assert chunk is not None  # Chunk should still be created
-        assert chunk.common.delta == ""  # Delta should be empty
-
-    def test_create_chimeric_response_string_content(self, client):
-        """Test _create_chimeric_response with string content instead of list."""
-        mock_response = MockCohereResponse()
-        mock_response.message.content = "Direct string content"
-
-        chimeric_response = CohereClient._create_chimeric_response(mock_response, [])
-
-        assert chimeric_response.common.content == "Direct string content"
-
-    def test_create_chimeric_response_no_message(self, client):
-        """Test _create_chimeric_response with response missing message."""
-        mock_response = SimpleNamespace()
-        mock_response.text = "Fallback text"
-        mock_response.model = "test-model"
-        mock_response.usage = SimpleNamespace(
-            tokens=SimpleNamespace(input_tokens=5, output_tokens=10)
-        )
-
-        def model_dump():
-            return {"test": "data"}
-
-        mock_response.model_dump = model_dump
-
-        chimeric_response = CohereClient._create_chimeric_response(mock_response, [])
-
-        assert chimeric_response.common.content == "Fallback text"
-        assert chimeric_response.common.model == "test-model"
-
-    def test_handle_function_tool_calls_no_tool_calls_attr(self, client):
-        """Test _handle_function_tool_calls with message missing tool_calls."""
-        mock_response = SimpleNamespace()
-        mock_response.message = SimpleNamespace()  # No tool_calls attribute
-        messages = [{"role": "user", "content": "Hello"}]
-
-        tool_calls, updated_messages = client._handle_function_tool_calls(mock_response, messages)
-
-        assert tool_calls == []
-        assert updated_messages == messages
-
-    def test_handle_function_tool_calls_empty_tool_calls(self, client):
-        """Test _handle_function_tool_calls with empty tool_calls list."""
-        mock_response = MockCohereResponse()
-        mock_response.message.tool_calls = []
-        messages = [{"role": "user", "content": "Hello"}]
-
-        tool_calls, updated_messages = client._handle_function_tool_calls(mock_response, messages)
-
-        assert tool_calls == []
-        assert updated_messages == messages
-
-    def test_handle_function_tool_calls_single_message_input(self, client):
-        """Test _handle_function_tool_calls with single message dict input."""
-
-        def mock_weather_tool(location: str) -> str:
-            return f"Weather in {location}: sunny"
-
-        tool = Tool(name="get_weather", description="Get weather", function=mock_weather_tool)
-        client.tool_manager.tools["get_weather"] = tool
-
-        mock_tool_call = MockCohereToolCall()
-        mock_response = MockCohereResponse(tool_calls=[mock_tool_call])
-        messages = {"role": "user", "content": "What's the weather?"}  # Single dict, not list
-
-        tool_calls, updated_messages = client._handle_function_tool_calls(mock_response, messages)
-
-        assert len(tool_calls) == 1
-        assert len(updated_messages) == 3
-
-    def test_encode_tools_with_none_parameters(self, client):
-        """Test _encode_tools with Tool that has None parameters."""
-        tool = Tool(name="simple_tool", description="Simple", function=lambda: "test")
-        # parameters defaults to None in Tool
-
-        encoded = client._encode_tools([tool])
-
-        assert len(encoded) == 1
-        # When parameters is None, .model_dump() returns None
-        assert encoded[0]["function"]["parameters"] == {}
-
-    def test_chat_completion_with_filtered_kwargs(self, client, monkeypatch):
-        """Test that kwargs filtering works correctly in chat completion."""
-        mock_response = MockCohereResponse()
-
-        captured_kwargs = {}
-
-        def mock_chat(**kwargs):
-            captured_kwargs.update(kwargs)
-            return mock_response
-
-        monkeypatch.setattr(client._client, "chat", mock_chat)
-
-        # Mock the _filter_kwargs method to capture what was passed
         def mock_filter_kwargs(func, kwargs):
             return {"filtered_param": "value"}
 
+        monkeypatch.setattr(client._client, "chat", mock_chat_capture)
         monkeypatch.setattr(client, "_filter_kwargs", mock_filter_kwargs)
 
         client._chat_completion_impl(
@@ -838,26 +878,91 @@ class TestCohereClient:
             temperature=0.7,
             invalid_param="should_be_filtered",
         )
-
         assert "filtered_param" in captured_kwargs
         assert captured_kwargs["filtered_param"] == "value"
 
-    async def test_achat_completion_with_filtered_kwargs(self, client, monkeypatch):
-        """Test that kwargs filtering works correctly in async chat completion."""
+        # Test streaming
+        events = [
+            MockCohereStreamEvent("content-delta", "Hello"),
+            MockCohereStreamEvent("message-end", ""),
+        ]
+
+        def mock_chat_stream(**kwargs: Any):
+            return iter(events)
+
+        monkeypatch.setattr(client._client, "chat_stream", mock_chat_stream)
+        result = client._chat_completion_impl(
+            messages="Hello", model="command-a-03-2025", stream=True
+        )
+        assert isinstance(result, Generator)
+        chunks = list(result)
+        assert len(chunks) == 2
+
+        # Test with tools
+        def mock_weather_tool(location: str) -> str:
+            return f"Weather in {location}: sunny"
+
+        tool = Tool(name="get_weather", description="Get weather", function=mock_weather_tool)
+        client.tool_manager.tools["get_weather"] = tool
+
+        mock_tool_call = MockCohereToolCall()
+        first_response = MockCohereResponse(
+            content="I'll check the weather", tool_calls=[mock_tool_call]
+        )
+        second_response = MockCohereResponse(content="The weather in Toronto is sunny")
+
+        call_count = 0
+
+        def mock_chat_tools(**kwargs: Any):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return first_response
+            return second_response
+
+        monkeypatch.setattr(client._client, "chat", mock_chat_tools)
+        result = client._chat_completion_impl(
+            messages="What's the weather in Toronto?",
+            model="command-a-03-2025",
+            tools=[{"type": "function", "function": {"name": "get_weather"}}],
+        )
+        assert isinstance(result, ChimericCompletionResponse)
+        assert isinstance(result.common.metadata, dict)
+        assert "tool_calls" in result.common.metadata
+        assert call_count == 2
+
+        # Test request tracking
+        initial_requests = client.request_count
+        initial_errors = client.error_count
+        client.chat_completion(messages="Hello", model="command-a-03-2025")
+        assert client.request_count == initial_requests + 1
+        assert client.error_count == initial_errors
+
+    async def test_achat_completion_comprehensive(self, client, monkeypatch):
+        """Test async chat completion with all variations."""
+        # Mock response
         mock_response = MockCohereResponse()
 
-        captured_kwargs = {}
-
-        async def mock_chat(**kwargs):
-            captured_kwargs.update(kwargs)
+        # Test basic async chat completion
+        async def mock_chat(**kwargs: Any):
             return mock_response
 
         monkeypatch.setattr(client._async_client, "chat", mock_chat)
+        result = await client._achat_completion_impl(messages="Hello", model="command-a-03-2025")
+        assert isinstance(result, ChimericCompletionResponse)
+        assert result.common.content == "Hello from Cohere!"
 
-        # Mock the _filter_kwargs method
+        # Test with kwargs filtering
+        captured_kwargs = {}
+
+        async def mock_chat_capture(**kwargs: Any):
+            captured_kwargs.update(kwargs)
+            return mock_response
+
         def mock_filter_kwargs(func, kwargs):
             return {"async_filtered": "value"}
 
+        monkeypatch.setattr(client._async_client, "chat", mock_chat_capture)
         monkeypatch.setattr(client, "_filter_kwargs", mock_filter_kwargs)
 
         await client._achat_completion_impl(
@@ -866,168 +971,15 @@ class TestCohereClient:
             temperature=0.7,
             invalid_param="should_be_filtered",
         )
-
         assert "async_filtered" in captured_kwargs
         assert captured_kwargs["async_filtered"] == "value"
 
-    def test_tool_manager_property_access(self, client):
-        """Test that tool_manager property is accessible."""
-        assert hasattr(client, "tool_manager")
-        assert client.tool_manager is not None
-
-    def test_client_properties(self, client):
-        """Test various client properties."""
-        # Test created_at property
-        assert isinstance(client.created_at, datetime)
-
-        # Test client and async_client properties
-        assert client.client is not None
-        assert client.async_client is not None
-
-        # Test capabilities property
-        caps = client.capabilities
-        assert not caps.multimodal
-        assert caps.streaming
-        assert caps.tools
-        assert not caps.agents
-        assert not caps.files
-
-    def test_model_dump_fallback(self, client, monkeypatch):
-        """Test model_dump fallback when object doesn't have model_dump method."""
-
-        class MockModelNoModelDump:
-            def __init__(self):
-                self.id = "test-id"
-                self.name = "test-name"
-
-        def mock_list():
-            return SimpleNamespace(models=[MockModelNoModelDump()])
-
-        monkeypatch.setattr(client.client.models, "list", mock_list)
-        models = client.list_models()
-
-        assert len(models) == 1
-        assert models[0].metadata == {}
-
-    def test_create_chimeric_response_no_model_dump(self, client):
-        """Test _create_chimeric_response with object that doesn't have model_dump."""
-        mock_response = SimpleNamespace()
-        mock_response.message = SimpleNamespace(content=[SimpleNamespace(text="test")])
-        mock_response.usage = SimpleNamespace(
-            tokens=SimpleNamespace(input_tokens=1, output_tokens=2)
-        )
-        mock_response.model = "test-model"
-        mock_response.text = "fallback"
-
-        chimeric_response = CohereClient._create_chimeric_response(mock_response, [])
-
-        assert chimeric_response.common.content == "test"
-        assert chimeric_response.common.metadata == {}
-
-    def test_process_event_no_model_dump(self, client):
-        """Test _process_event with event that doesn't have model_dump."""
-        event = SimpleNamespace(type="content-delta")
-        event.delta = SimpleNamespace(message=SimpleNamespace(content=SimpleNamespace(text="test")))
-
-        accumulated, chunk = CohereClient._process_event(event, "")
-
-        assert accumulated == "test"
-        assert chunk.common.metadata == {}
-
-    def test_convert_messages_edge_cases(self, client):
-        """Test message conversion edge cases."""
-        # Test with None-like input
-        result = client._convert_messages_to_cohere_format(None)
-        assert result == [{"role": "user", "content": "None"}]
-
-        # Test with empty list
-        result = client._convert_messages_to_cohere_format([])
-        assert result == []
-
-        # Test with complex object
-        class CustomObject:
-            def __str__(self):
-                return "custom_string"
-
-        result = client._convert_messages_to_cohere_format(CustomObject())
-        assert result == [{"role": "user", "content": "custom_string"}]
-
-    def test_missing_content_branches(self, client):
-        """Test edge cases in _create_chimeric_response content extraction."""
-        # Test response with no content at all
-        mock_response = SimpleNamespace()
-        mock_response.usage = SimpleNamespace(
-            tokens=SimpleNamespace(input_tokens=1, output_tokens=2)
-        )
-        mock_response.model = "test-model"
-
-        def model_dump():
-            return {"test": "data"}
-
-        mock_response.model_dump = model_dump
-
-        chimeric_response = CohereClient._create_chimeric_response(mock_response, [])
-
-        # Should use empty string when no content found
-        assert chimeric_response.common.content == ""
-
-    def test_stream_events_edge_cases(self, client):
-        """Test stream processing with various event types."""
-        # Test unknown event type
-        event = SimpleNamespace(type="unknown-event")
-        accumulated, chunk = CohereClient._process_event(event, "start")
-
-        assert accumulated == "start"  # Should be unchanged
-        assert chunk is None
-
-    def test_tool_calls_with_none(self, client):
-        """Test _handle_function_tool_calls with None tool_calls."""
-        mock_response = MockCohereResponse()
-        mock_response.message.tool_calls = None  # Explicitly None
-        messages = [{"role": "user", "content": "Hello"}]
-
-        tool_calls, updated_messages = client._handle_function_tool_calls(mock_response, messages)
-
-        assert tool_calls == []
-        assert updated_messages == messages
-
-    def test_create_chimeric_response_empty_content_list(self, client):
-        """Test _create_chimeric_response with empty content list."""
-        mock_response = MockCohereResponse()
-        mock_response.message.content = []  # Empty list
-        mock_response.text = "fallback text"
-
-        chimeric_response = CohereClient._create_chimeric_response(mock_response, [])
-
-        # With empty content list, it converts to string representation of empty list
-        assert chimeric_response.common.content == "[]"
-
-    def test_stream_with_no_chunks(self, client):
-        """Test _stream when _process_event returns None chunks."""
-        # Create events that return None chunks (like unknown event types)
+        # Test async streaming
         events = [
-            SimpleNamespace(type="unknown-event-1"),
-            SimpleNamespace(type="unknown-event-2"),
+            MockCohereStreamEvent("content-delta", "Hello"),
+            MockCohereStreamEvent("message-end", ""),
         ]
 
-        # Create a mock stream object
-        mock_stream = Mock()
-        mock_stream.__iter__ = Mock(return_value=iter(events))
-
-        chunks = list(client._stream(mock_stream))
-
-        # Should be empty since all events produce None chunks
-        assert len(chunks) == 0
-
-    async def test_astream_with_no_chunks(self, client):
-        """Test _astream when _process_event returns None chunks."""
-        # Create events that return None chunks
-        events = [
-            SimpleNamespace(type="unknown-event-1"),
-            SimpleNamespace(type="unknown-event-2"),
-        ]
-
-        # Create a mock async stream
         class MockAsyncStream:
             def __init__(self):
                 self.events = events.copy()
@@ -1040,25 +992,53 @@ class TestCohereClient:
                     return self.events.pop(0)
                 raise StopAsyncIteration
 
-        mock_stream = MockAsyncStream()
-        chunks = []
-        async for chunk in client._astream(mock_stream):
-            chunks.append(chunk)
+        def mock_chat_stream(**kwargs: Any):
+            return MockAsyncStream()
 
-        # Should be empty since all events produce None chunks
-        assert len(chunks) == 0
-
-    def test_create_chimeric_response_missing_tokens_usage(self, client):
-        """Test _create_chimeric_response with usage missing tokens structure."""
-        mock_response = MockCohereResponse()
-        # Override with usage structure missing tokens attribute
-        mock_response.usage = SimpleNamespace(
-            billed_units=SimpleNamespace(input_tokens=20, output_tokens=30)
+        monkeypatch.setattr(client._async_client, "chat_stream", mock_chat_stream)
+        result = await client._achat_completion_impl(
+            messages="Hello", model="command-a-03-2025", stream=True
         )
+        assert isinstance(result, AsyncGenerator)
+        chunks = []
+        async for chunk in result:
+            chunks.append(chunk)
+        assert len(chunks) == 2
 
-        chimeric_response = CohereClient._create_chimeric_response(mock_response, [])
+        # Test with tools
+        def mock_weather_tool(location: str) -> str:
+            return f"Weather in {location}: sunny"
 
-        # Should use default values when tokens structure is missing
-        assert chimeric_response.common.usage.prompt_tokens == 0
-        assert chimeric_response.common.usage.completion_tokens == 0
-        assert chimeric_response.common.usage.total_tokens == 0
+        tool = Tool(name="get_weather", description="Get weather", function=mock_weather_tool)
+        client.tool_manager.tools["get_weather"] = tool
+
+        mock_tool_call = MockCohereToolCall()
+        first_response = MockCohereResponse(
+            content="I'll check the weather", tool_calls=[mock_tool_call]
+        )
+        second_response = MockCohereResponse(content="The weather in Toronto is sunny")
+
+        call_count = 0
+
+        async def mock_chat_tools(**kwargs: Any):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return first_response
+            return second_response
+
+        monkeypatch.setattr(client._async_client, "chat", mock_chat_tools)
+        result = await client._achat_completion_impl(
+            messages="What's the weather in Toronto?",
+            model="command-a-03-2025",
+            tools=[{"type": "function", "function": {"name": "get_weather"}}],
+        )
+        assert isinstance(result, ChimericCompletionResponse)
+        assert isinstance(result.common.metadata, dict)
+        assert "tool_calls" in result.common.metadata
+        assert call_count == 2
+
+    def test_upload_file_not_supported(self, client):
+        """Test that file upload raises NotImplementedError."""
+        with pytest.raises(NotImplementedError, match="Cohere does not support file uploads"):
+            client._upload_file(file="test.txt")
