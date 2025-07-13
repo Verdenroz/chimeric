@@ -1,5 +1,5 @@
-from collections.abc import AsyncGenerator, Generator
 import json
+from collections.abc import AsyncGenerator, Generator
 from typing import Any
 
 from cohere import AsyncClientV2 as AsyncCohere
@@ -106,8 +106,8 @@ class CohereClient(BaseClient[Cohere, AsyncCohere, Any, Any, Any]):
 
     @staticmethod
     def _process_event(
-        event: Any,
-        accumulated: str,
+            event: Any,
+            accumulated: str,
     ) -> tuple[str, ChimericStreamChunk[Any] | None]:
         """Processes a single event from a Cohere response stream.
 
@@ -150,44 +150,196 @@ class CohereClient(BaseClient[Cohere, AsyncCohere, Any, Any, Any]):
         return accumulated, None
 
     def _stream(
-        self,
-        stream: Any,
+            self,
+            messages: list[dict[str, Any]],
+            model: str,
+            tools: Tools = None,
+            tools_enabled: bool = False,
+            **kwargs: Any
     ) -> Generator[ChimericStreamChunk[Any], None, None]:
-        """Yields processed chunks from a synchronous Cohere stream.
+        """Processes a streaming chat response with optional tool call handling.
 
         Args:
-            stream: The synchronous stream of response events from `client.chat_stream`.
+            messages: The current conversation messages.
+            model: The model to use.
+            tools: The tools available for use.
+            tools_enabled: Whether tools are enabled for this chat.
+            **kwargs: Additional API parameters.
 
         Yields:
-            ChimericStreamChunk containing the processed event data.
+            ChimericStreamChunk containing the processed stream data.
         """
-        accumulated = ""
-        for event in stream:
-            accumulated, chunk = self._process_event(event, accumulated)
-            if chunk:
-                yield chunk
+        current_messages = list(messages)  # Make a copy to avoid modifying original
+
+        while True:
+            if not tools_enabled:
+                # Simple streaming without tool handling
+                stream = self._client.chat_stream(
+                    model=model,
+                    messages=current_messages,
+                    tools=tools,
+                    **kwargs,
+                )
+
+                accumulated_content = ""
+                for event in stream:
+                    accumulated_content, chunk = self._process_event(event, accumulated_content)
+                    if chunk:
+                        yield chunk
+                break
+            else:
+                # Streaming with tool call handling
+                stream = self._client.chat_stream(
+                    model=model,
+                    messages=current_messages,
+                    tools=tools,
+                    **kwargs,
+                )
+
+                accumulated_content = ""
+                last_event = None
+
+                # Stream all events for the current response
+                for event in stream:
+                    last_event = event
+                    accumulated_content, chunk = self._process_event(event, accumulated_content)
+                    if chunk:
+                        yield chunk
+
+                # After streaming is complete, get the full response to check for tool calls
+                response = self._client.chat(
+                    model=model,
+                    messages=current_messages,
+                    tools=tools,
+                    **kwargs,
+                )
+
+                # Check for tool calls and process them
+                if hasattr(response, "message") and hasattr(response.message, "tool_calls") and response.message.tool_calls:
+                    # Add the assistant's tool call message
+                    current_messages.append({
+                        "role": "assistant",
+                        "tool_plan": getattr(response.message, "tool_plan", ""),
+                        "tool_calls": response.message.tool_calls,
+                    })
+
+                    # Process each tool call
+                    for call in response.message.tool_calls:
+                        tool_call_info = self._process_function_call(call)
+
+                        # Add tool result message
+                        current_messages.append({
+                            "role": "tool",
+                            "tool_call_id": call.id,
+                            "content": [{
+                                "type": "document",
+                                "document": {"data": tool_call_info["result"]},
+                            }],
+                        })
+
+                    # Continue to get the next response which will be streamed
+                    continue
+
+                # No more tool calls, we're done
+                break
 
     async def _astream(
-        self,
-        stream: Any,
+            self,
+            messages: list[dict[str, Any]],
+            model: str,
+            tools: Tools = None,
+            tools_enabled: bool = False,
+            **kwargs: Any
     ) -> AsyncGenerator[ChimericStreamChunk[Any], None]:
-        """Yields processed chunks from an asynchronous Cohere stream.
+        """Processes an async streaming chat response with optional tool call handling.
 
         Args:
-            stream: The asynchronous stream of response events from `async_client.chat_stream`.
+            messages: The current conversation messages.
+            model: The model to use.
+            tools: The tools available for use.
+            tools_enabled: Whether tools are enabled for this chat.
+            **kwargs: Additional API parameters.
 
         Yields:
-            ChimericStreamChunk containing the processed event data.
+            ChimericStreamChunk containing the processed stream data.
         """
-        accumulated = ""
-        async for event in stream:
-            accumulated, chunk = self._process_event(event, accumulated)
-            if chunk:
-                yield chunk
+        current_messages = list(messages)  # Make a copy to avoid modifying original
+
+        while True:
+            if not tools_enabled:
+                # Simple streaming without tool handling
+                stream = self._async_client.chat_stream(
+                    model=model,
+                    messages=current_messages,
+                    tools=tools,
+                    **kwargs,
+                )
+
+                accumulated_content = ""
+                async for event in stream:
+                    accumulated_content, chunk = self._process_event(event, accumulated_content)
+                    if chunk:
+                        yield chunk
+                break
+            else:
+                # Streaming with tool call handling
+                stream = self._async_client.chat_stream(
+                    model=model,
+                    messages=current_messages,
+                    tools=tools,
+                    **kwargs,
+                )
+
+                accumulated_content = ""
+                last_event = None
+
+                # Stream all events for the current response
+                async for event in stream:
+                    last_event = event
+                    accumulated_content, chunk = self._process_event(event, accumulated_content)
+                    if chunk:
+                        yield chunk
+
+                # After streaming is complete, get the full response to check for tool calls
+                response = await self._async_client.chat(
+                    model=model,
+                    messages=current_messages,
+                    tools=tools,
+                    **kwargs,
+                )
+
+                # Check for tool calls and process them
+                if hasattr(response, "message") and hasattr(response.message, "tool_calls") and response.message.tool_calls:
+                    # Add the assistant's tool call message
+                    current_messages.append({
+                        "role": "assistant",
+                        "tool_plan": getattr(response.message, "tool_plan", ""),
+                        "tool_calls": response.message.tool_calls,
+                    })
+
+                    # Process each tool call
+                    for call in response.message.tool_calls:
+                        tool_call_info = self._process_function_call(call)
+
+                        # Add tool result message
+                        current_messages.append({
+                            "role": "tool",
+                            "tool_call_id": call.id,
+                            "content": [{
+                                "type": "document",
+                                "document": {"data": tool_call_info["result"]},
+                            }],
+                        })
+
+                    # Continue to get the next response which will be streamed
+                    continue
+                else:
+                    # No more tool calls, we're done
+                    break
 
     @staticmethod
     def _create_chimeric_response(
-        response: Any, tool_calls: list[dict[str, Any]]
+            response: Any, tool_calls: list[dict[str, Any]]
     ) -> ChimericCompletionResponse[Any]:
         """Creates a ChimericCompletionResponse from a native Cohere ChatResponse.
 
@@ -285,63 +437,120 @@ class CohereClient(BaseClient[Cohere, AsyncCohere, Any, Any, Any]):
         if not callable(tool.function):
             raise ToolRegistrationError(f"Tool '{tool_name}' is not callable.")
 
-        args = json.loads(call.function.arguments)
-        result = tool.function(**args)
-        tool_call_info["result"] = str(result)
+        try:
+            args = json.loads(call.function.arguments)
+            result = tool.function(**args)
+            tool_call_info["result"] = str(result)
+        except Exception as e:
+            error_msg = f"Error executing tool '{tool_name}': {e!s}"
+            tool_call_info["result"] = error_msg
+            tool_call_info["error"] = True
+
         return tool_call_info
 
     def _handle_function_tool_calls(
-        self, response: Any, messages: Input
-    ) -> tuple[list[dict[str, Any]], Input]:
-        """Processes tool calls from a response and updates the message history.
+            self, response: Any, messages: list[dict[str, Any]]
+    ) -> tuple[list[dict[str, Any]], Any]:
+        """Processes tool calls from a response and updates the message history iteratively.
 
         Args:
             response: The Cohere response containing potential tool calls.
             messages: The current list of messages to append to.
 
         Returns:
-            A tuple containing (tool_calls_metadata, updated_messages).
+            A tuple containing (all_tool_calls_metadata, final_response).
         """
-        if not hasattr(response, "message") or not hasattr(response.message, "tool_calls"):
-            return [], messages
+        all_tool_calls_metadata = []
+        current_response = response
+        current_messages = list(messages)  # Make a copy
 
-        calls = response.message.tool_calls or []
-        if not calls:
-            return [], messages
+        # Continue processing until no more tool calls
+        while (hasattr(current_response, "message") and
+               hasattr(current_response.message, "tool_calls") and
+               current_response.message.tool_calls):
 
-        # Ensure messages is a mutable list of dictionaries for appending
-        messages_list: list[Any] = list(messages) if isinstance(messages, list) else [messages]
-        tool_calls_metadata = []
-
-        # Add the assistant's tool call message
-        messages_list.append(
-            {
+            # Add the assistant's tool call message
+            current_messages.append({
                 "role": "assistant",
-                "tool_plan": getattr(response.message, "tool_plan", ""),
-                "tool_calls": calls,
-            }
-        )
+                "tool_plan": getattr(current_response.message, "tool_plan", ""),
+                "tool_calls": current_response.message.tool_calls,
+            })
 
-        # Process each tool call
-        for call in calls:
-            tool_call_info = self._process_function_call(call)
-            tool_calls_metadata.append(tool_call_info)
+            # Process each tool call
+            for call in current_response.message.tool_calls:
+                tool_call_info = self._process_function_call(call)
+                all_tool_calls_metadata.append(tool_call_info)
 
-            # Add tool result message
-            messages_list.append(
-                {
+                # Add tool result message
+                current_messages.append({
                     "role": "tool",
                     "tool_call_id": call.id,
-                    "content": [
-                        {
-                            "type": "document",
-                            "document": {"data": tool_call_info["result"]},
-                        }
-                    ],
-                }
+                    "content": [{
+                        "type": "document",
+                        "document": {"data": tool_call_info["result"]},
+                    }],
+                })
+
+            # Get the next response to check for more tool calls
+            current_response = self._client.chat(
+                model=getattr(response, "model", "command-r-08-2024"),
+                messages=current_messages,
+                tools=self._encode_tools(self.tool_manager.get_all_tools()) if self.tool_manager else None,
             )
 
-        return tool_calls_metadata, messages_list
+        return all_tool_calls_metadata, current_response
+
+    async def _handle_function_tool_calls_async(
+            self, response: Any, messages: list[dict[str, Any]]
+    ) -> tuple[list[dict[str, Any]], Any]:
+        """Processes tool calls from a response and updates the message history iteratively.
+
+        Args:
+            response: The Cohere response containing potential tool calls.
+            messages: The current list of messages to append to.
+
+        Returns:
+            A tuple containing (all_tool_calls_metadata, final_response).
+        """
+        all_tool_calls_metadata = []
+        current_response = response
+        current_messages = list(messages)  # Make a copy
+
+        # Continue processing until no more tool calls
+        while (hasattr(current_response, "message") and
+               hasattr(current_response.message, "tool_calls") and
+               current_response.message.tool_calls):
+
+            # Add the assistant's tool call message
+            current_messages.append({
+                "role": "assistant",
+                "tool_plan": getattr(current_response.message, "tool_plan", ""),
+                "tool_calls": current_response.message.tool_calls,
+            })
+
+            # Process each tool call
+            for call in current_response.message.tool_calls:
+                tool_call_info = self._process_function_call(call)
+                all_tool_calls_metadata.append(tool_call_info)
+
+                # Add tool result message
+                current_messages.append({
+                    "role": "tool",
+                    "tool_call_id": call.id,
+                    "content": [{
+                        "type": "document",
+                        "document": {"data": tool_call_info["result"]},
+                    }],
+                })
+
+            # Get the next response to check for more tool calls
+            current_response = await self._async_client.chat(
+                model=getattr(response, "model", "command-r-08-2024"),
+                messages=current_messages,
+                tools=self._encode_tools(self.tool_manager.get_all_tools()) if self.tool_manager else None,
+            )
+
+        return all_tool_calls_metadata, current_response
 
     def _convert_messages_to_cohere_format(self, messages: Input) -> list[dict[str, Any]]:
         """Converts input messages to Cohere API format.
@@ -361,12 +570,12 @@ class CohereClient(BaseClient[Cohere, AsyncCohere, Any, Any, Any]):
         return [{"role": "user", "content": str(messages)}]
 
     def _chat_completion_impl(
-        self,
-        messages: Input,
-        model: str,
-        stream: bool = False,
-        tools: Tools = None,
-        **kwargs: Any,
+            self,
+            messages: Input,
+            model: str,
+            stream: bool = False,
+            tools: Tools = None,
+            **kwargs: Any,
     ) -> ChimericCompletionResponse[Any] | Generator[ChimericStreamChunk[Any], None, None]:
         """Sends a synchronous chat completion request to the Cohere API.
 
@@ -385,14 +594,14 @@ class CohereClient(BaseClient[Cohere, AsyncCohere, Any, Any, Any]):
         cohere_messages = self._convert_messages_to_cohere_format(messages)
 
         if stream:
-            # Send streaming request
-            response = self._client.chat_stream(
-                model=model,
-                messages=cohere_messages,  # type: ignore[arg-type]
-                tools=tools,  # type: ignore[arg-type]
-                **filtered_kwargs,
+            return self._stream(
+                cohere_messages,
+                model,
+                tools=tools,
+                tools_enabled=bool(tools),
+                **filtered_kwargs
             )
-            return self._stream(response)
+
         # Send non-streaming request
         response = self._client.chat(
             model=model,
@@ -401,28 +610,18 @@ class CohereClient(BaseClient[Cohere, AsyncCohere, Any, Any, Any]):
             **filtered_kwargs,
         )
 
-        # Check for and handle any tool calls requested by the model
-        tool_calls_metadata, updated_messages = self._handle_function_tool_calls(response, messages)
+        # Handle tool calls iteratively until complete
+        tool_calls_metadata, final_response = self._handle_function_tool_calls(response, cohere_messages)
 
-        # If tool calls were made, send their results back to the model
-        if tool_calls_metadata:
-            updated_cohere_messages = self._convert_messages_to_cohere_format(updated_messages)
-            response = self._client.chat(
-                model=model,
-                messages=updated_cohere_messages,  # type: ignore[arg-type]
-                tools=tools,  # type: ignore[arg-type]
-                **filtered_kwargs,
-            )
-
-        return self._create_chimeric_response(response, tool_calls_metadata)
+        return self._create_chimeric_response(final_response, tool_calls_metadata)
 
     async def _achat_completion_impl(
-        self,
-        messages: Input,
-        model: str,
-        stream: bool = False,
-        tools: Tools = None,
-        **kwargs: Any,
+            self,
+            messages: Input,
+            model: str,
+            stream: bool = False,
+            tools: Tools = None,
+            **kwargs: Any,
     ) -> ChimericCompletionResponse[Any] | AsyncGenerator[ChimericStreamChunk[Any], None]:
         """Sends an asynchronous chat completion request to the Cohere API.
 
@@ -441,14 +640,14 @@ class CohereClient(BaseClient[Cohere, AsyncCohere, Any, Any, Any]):
         cohere_messages = self._convert_messages_to_cohere_format(messages)
 
         if stream:
-            # Send streaming request
-            response = self._async_client.chat_stream(
-                model=model,
-                messages=cohere_messages,  # type: ignore[arg-type]
-                tools=tools,  # type: ignore[arg-type]
-                **filtered_kwargs,
+            return self._astream(
+                cohere_messages,
+                model,
+                tools=tools,
+                tools_enabled=bool(tools),
+                **filtered_kwargs
             )
-            return self._astream(response)
+
         # Send non-streaming request
         response = await self._async_client.chat(
             model=model,
@@ -457,20 +656,10 @@ class CohereClient(BaseClient[Cohere, AsyncCohere, Any, Any, Any]):
             **filtered_kwargs,
         )
 
-        # Check for and handle any tool calls requested by the model
-        tool_calls_metadata, updated_messages = self._handle_function_tool_calls(response, messages)
+        # Handle tool calls iteratively until complete
+        tool_calls_metadata, final_response = await self._handle_function_tool_calls_async(response, cohere_messages)
 
-        # If tool calls were made, send their results back to the model
-        if tool_calls_metadata:
-            updated_cohere_messages = self._convert_messages_to_cohere_format(updated_messages)
-            response = await self._async_client.chat(
-                model=model,
-                messages=updated_cohere_messages,  # type: ignore[arg-type]
-                tools=tools,  # type: ignore[arg-type]
-                **filtered_kwargs,
-            )
-
-        return self._create_chimeric_response(response, tool_calls_metadata)
+        return self._create_chimeric_response(final_response, tool_calls_metadata)
 
     def _upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[Any]:
         """Uploads a file to Cohere (not supported).
