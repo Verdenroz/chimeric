@@ -4,7 +4,7 @@
 
 .DEFAULT_GOAL := default
 
-.PHONY: default install lint test upgrade build clean
+.PHONY: default install lint test upgrade build clean docs docs-deploy
 
 default: install lint test
 
@@ -30,3 +30,9 @@ clean:
 	-rm -rf .mypy_cache/
 	-rm -rf .venv/
 	-find . -type d -name "__pycache__" -exec rm -rf {} +
+
+docs:
+	uv run mkdocs serve
+
+docs-deploy:
+	uv run mkdocs gh-deploy
