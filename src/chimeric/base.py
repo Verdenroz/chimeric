@@ -1,14 +1,20 @@
 from abc import ABC, abstractmethod
+import asyncio
 from collections.abc import AsyncGenerator, Generator
+import concurrent.futures
 import contextlib
 from datetime import datetime
 import inspect
+import json
 import time
 from typing import Any, Generic, TypeVar
+
+from pydantic import BaseModel, Field
 
 from .exceptions import (
     ChimericError,
     ProviderError,
+    ToolRegistrationError,
 )
 from .tools import ToolManager
 from .types import (
@@ -16,58 +22,106 @@ from .types import (
     ChimericCompletionResponse,
     ChimericFileUploadResponse,
     ChimericStreamChunk,
+    CompletionResponse,
     Input,
+    Message,
     ModelSummary,
+    StreamChunk,
     Tool,
+    ToolCall,
     ToolCallChunk,
+    ToolExecutionResult,
     Tools,
+    Usage,
 )
 
 __all__ = [
-    "AsyncClientType",
-    "BaseClient",
-    "ClientType",
+    "ChimericAsyncClient",
+    "ChimericClient",
     "CompletionResponseType",
     "FileUploadResponseType",
+    "StreamProcessor",
     "StreamType",
 ]
 
-# Type variables for provider-specific responses.
+
+class StreamState(BaseModel):
+    """Maintains state during streaming.
+
+    Attributes:
+        accumulated_content: The accumulated text content so far.
+        tool_calls: Dictionary of tool calls being streamed, keyed by call ID.
+        metadata: Additional metadata accumulated during streaming.
+    """
+
+    accumulated_content: str = ""
+    tool_calls: dict[str, ToolCallChunk] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class StreamProcessor:
+    """Standardized stream processing logic for all providers."""
+
+    def __init__(self):
+        self.state = StreamState()
+
+    def process_content_delta(self, delta: str) -> StreamChunk:
+        """Processes a text content delta."""
+        self.state.accumulated_content += delta
+        return StreamChunk(
+            content=self.state.accumulated_content,
+            delta=delta,
+        )
+
+    def process_tool_call_start(self, call_id: str, name: str) -> None:
+        """Processes the start of a tool call."""
+        self.state.tool_calls[call_id] = ToolCallChunk(
+            id=call_id,
+            call_id=call_id,
+            name=name,
+            arguments="",
+            status="started",
+        )
+
+    def process_tool_call_delta(self, call_id: str, arguments_delta: str) -> None:
+        """Processes a tool call arguments delta."""
+        if call_id in self.state.tool_calls:
+            self.state.tool_calls[call_id].arguments += arguments_delta
+            self.state.tool_calls[call_id].arguments_delta = arguments_delta
+            self.state.tool_calls[call_id].status = "arguments_streaming"
+
+    def process_tool_call_complete(self, call_id: str) -> None:
+        """Marks a tool call as complete."""
+        if call_id in self.state.tool_calls:
+            self.state.tool_calls[call_id].status = "completed"
+            self.state.tool_calls[call_id].arguments_delta = None
+
+    def get_completed_tool_calls(self) -> list[ToolCallChunk]:
+        """Returns all completed tool calls."""
+        return [tc for tc in self.state.tool_calls.values() if tc.status == "completed"]
+
+
+# Type variables for provider-specific types
 ClientType = TypeVar("ClientType")
-AsyncClientType = TypeVar("AsyncClientType")
 CompletionResponseType = TypeVar("CompletionResponseType")
 StreamType = TypeVar("StreamType")
 FileUploadResponseType = TypeVar("FileUploadResponseType")
 
 
-class BaseClient(
+class ChimericClient(
     ABC,
     Generic[
         ClientType,
-        AsyncClientType,
         CompletionResponseType,
         StreamType,
         FileUploadResponseType,
     ],
 ):
-    """Abstract base class for all LLM provider clients.
+    """Abstract base class for synchronous LLM provider clients.
 
-    This class defines the unified interface that provider-specific clients must implement to ensure consistent behavior across different LLM backends.
-    It provides common functionality like request tracking, error handling, and capability management.
-
-    The class uses generics to maintain type safety while allowing provider-specific response types. Subclasses should specify their concrete types
-    when inheriting from this class.
-
-    Type Parameters:
-    ClientType: The provider's native client type
-    CompletionResponseType: The provider's completion response type
-    StreamType: The provider's streaming chunk type
-    AgentResponseType: The provider's agent response type
-    FileUploadResponseType: The provider's file upload response type
-
-    Attributes:
-        api_key: Optional API key for authentication.
-        created_at: Timestamp when the client was instantiated.
+    This class provides a unified interface and common functionality for all
+    provider implementations, including message normalization, tool execution,
+    and response standardization.
     """
 
     def __init__(
@@ -76,19 +130,7 @@ class BaseClient(
         tool_manager: ToolManager,
         **kwargs: Any,
     ) -> None:
-        """Initializes the base client with common settings.
-
-        Sets up request tracking, error counting, and initializes both sync
-        and async clients with filtered kwargs specific to each client type.
-
-        Args:
-            api_key: Optional API key for authentication. Some providers may
-                not require this if using other auth methods.
-            tool_manager: ToolManager instance for managing tools available
-            **kwargs: Additional provider-specific options. Invalid options
-                for the specific provider will be automatically filtered out
-                based on the client's __init__ signature.
-        """
+        """Initializes the base client with common settings."""
         self.api_key = api_key
         self.tool_manager = tool_manager
         self.created_at = datetime.now()
@@ -96,274 +138,325 @@ class BaseClient(
         self._last_request_time: float | None = None
         self._error_count = 0
 
-        # Get the actual client types from the generic parameters.
-        client_types = self._get_generic_types()
+        # Get client type and filter kwargs
+        client_type = self._get_client_type()
+        sync_kwargs = self._filter_client_kwargs(client_type, kwargs)
 
-        # Filter kwargs for each client type to avoid invalid parameter errors.
-        sync_kwargs = self._filter_client_kwargs(client_types["sync"], kwargs)
-        async_kwargs = self._filter_client_kwargs(client_types["async"], kwargs)
-
-        # Initialize clients with filtered kwargs.
-        self._client: ClientType = self._init_client(client_types["sync"], **sync_kwargs)
-        self._async_client: AsyncClientType = self._init_async_client(
-            client_types["async"], **async_kwargs
-        )
+        # Initialize client
+        self._client: ClientType = self._init_client(client_type, **sync_kwargs)
         self._capabilities = self._get_capabilities()
 
+    # ====================================================================
+    # Abstract methods - Required for all providers
+    # ====================================================================
+
     @abstractmethod
-    def _get_generic_types(self) -> dict[str, type]:
-        """Returns the actual types from the Generic parameters.
-
-        Since Python's runtime type information from Generics is limited,
-        subclasses must override this method to provide the actual client
-        types they use. This enables proper kwargs filtering.
-
-        Returns:
-            A dictionary with 'sync' and 'async' keys containing the actual
-            client types used by the provider.
+    def _get_client_type(self) -> type:
+        """Returns the actual client type used by the provider.
 
         Example:
-            return {
-                "sync": openai.Client,
-                "async": openai.AsyncClient,
-            }
+            return openai.Client
         """
-        # Fallback implementation that won't filter anything.
-        return {
-            "sync": object,
-            "async": object,
-        }
-
-    @staticmethod
-    def _filter_client_kwargs(client_type: type, kwargs: dict[str, Any]) -> dict[str, Any]:
-        """Filters kwargs to only include those valid for the client type.
-
-        Inspects the client's __init__ method signature and filters out any
-        kwargs that aren't accepted by that method. This prevents errors
-        when initializing provider-specific clients with unsupported parameters.
-
-        Args:
-            client_type: The client class to filter kwargs for.
-            kwargs: Original keyword arguments to filter.
-
-        Returns:
-            A new dictionary containing only the kwargs that are valid for
-            the client type's __init__ method.
-        """
-        if client_type is object:
-            # Fallback case when actual type info isn't available.
-            return kwargs.copy()
-
-        try:
-            init_method = getattr(client_type, "__init__", None)
-            if init_method is None:
-                return kwargs.copy()
-
-            sig = inspect.signature(init_method)
-
-            # Get parameter names (excluding 'self' and positional-only).
-            param_names = {
-                name
-                for name, param in sig.parameters.items()
-                if name != "self" and param.kind != inspect.Parameter.POSITIONAL_ONLY
-            }
-
-            # Check if the method accepts **kwargs.
-            has_var_kwargs = any(
-                param.kind == inspect.Parameter.VAR_KEYWORD for param in sig.parameters.values()
-            )
-
-            if has_var_kwargs:
-                # Method accepts arbitrary kwargs, return all.
-                return kwargs.copy()
-
-            # Filter kwargs to only include those in the method signature.
-            return {k: v for k, v in kwargs.items() if k in param_names}
-
-        except (ValueError, TypeError, AttributeError):
-            # If the signature inspection fails, return all kwargs as fallback.
-            return kwargs.copy()
-
-    # ====================================================================
-    # Core abstract methods (must be implemented by provider clients)
-    # ====================================================================
+        pass
 
     @abstractmethod
     def _init_client(self, client_type: type, **kwargs: Any) -> ClientType:
-        """Initializes the provider-specific synchronous client.
-
-        Args:
-            client_type: The actual client type for reference.
-            **kwargs: Provider-specific initialization options that have
-                been pre-filtered for this client type.
-
-        Returns:
-            An instance of the provider's synchronous client.
-
-        Example:
-            return openai.Client(api_key=self.api_key, **kwargs)
-        """
-
-    @abstractmethod
-    def _init_async_client(self, async_client_type: type, **kwargs: Any) -> AsyncClientType | None:
-        """Initializes the provider-specific asynchronous client.
-
-        Args:
-            async_client_type: The actual async client type for reference.
-            **kwargs: Provider-specific initialization options that have
-                been pre-filtered for this client type.
-
-        Returns:
-            An instance of the provider's async client, or None if the
-            provider doesn't support async operations.
-
-        Example:
-            return openai.AsyncClient(api_key=self.api_key, **kwargs)
-        """
-        return None  # Default implementation for providers without async support.
+        """Initializes the provider's synchronous client."""
+        pass
 
     @abstractmethod
     def _get_capabilities(self) -> Capability:
-        """Returns the features supported by this provider.
-
-        Returns:
-            A Capability object indicating which features (multimodal input,
-            tool calling, file uploads, etc.) are supported by this provider.
-
-        Example:
-            return Capability(
-                multimodal=True,
-                tools=True,
-                streaming=True,
-                files=False,
-                agents=False,
-            )
-        """
-
-    def _get_model_aliases(self) -> list[str]:
-        """Returns a list of model alias names to include in model listings.
-
-        Providers can override this method to provide additional model aliases
-        that will be included in the list_models() output.
-
-        Returns:
-            A list of alias model names. By default, returns an empty list (no aliases).
-        """
-        return []
+        """Returns the capabilities supported by this provider."""
+        pass
 
     @abstractmethod
     def _list_models_impl(self) -> list[ModelSummary]:
-        """Provider-specific implementation of model listing from API.
+        """Lists available models from the provider's API."""
+        pass
 
-        Returns:
-            A list of ModelSummary objects containing basic information
-            about each available model from the provider's API.
+    @abstractmethod
+    def _messages_to_provider_format(self, messages: list[Message]) -> Any:
+        """Converts standardized messages to provider-specific format."""
+        pass
 
-        Raises:
-            ProviderError: If the provider's API returns an error.
+    @abstractmethod
+    def _tools_to_provider_format(self, tools: list[Tool]) -> Any:
+        """Converts standardized tools to provider-specific format."""
+        pass
+
+    @abstractmethod
+    def _make_provider_request(
+        self,
+        messages: Any,
+        model: str,
+        stream: bool,
+        tools: Any = None,
+        **kwargs: Any,
+    ) -> Any:
+        """Makes the actual API request to the provider."""
+        pass
+
+    @abstractmethod
+    def _process_provider_stream_event(
+        self, event: Any, processor: StreamProcessor
+    ) -> ChimericStreamChunk | None:
+        """Processes a provider-specific stream event.
+
+        Providers should use _create_stream_chunk() to create standardized chunks.
+
+        Example:
+            # For content delta
+            if hasattr(event, 'delta'):
+                return self._create_stream_chunk(
+                    native_event=event,
+                    processor=processor,
+                    content_delta=event.delta
+                )
+
+            # For finish event
+            if event.finish_reason:
+                return self._create_stream_chunk(
+                    native_event=event,
+                    processor=processor,
+                    finish_reason=event.finish_reason
+                )
         """
+        pass
 
-    def list_models(self) -> list[ModelSummary]:
-        """Lists available models from this provider, including aliases.
+    @abstractmethod
+    def _extract_usage_from_response(self, response: Any) -> Usage:
+        """Extracts usage information from provider response."""
+        pass
 
-        Returns:
-            A list of ModelSummary objects containing basic information
-            about each available model, including any aliases defined by _get_model_aliases().
+    @abstractmethod
+    def _extract_content_from_response(self, response: Any) -> str | list[Any]:
+        """Extracts content from provider response."""
+        pass
 
-        Raises:
-            ProviderError: If the provider's API returns an error.
-        """
-        # Get models from provider API
-        api_models = self._list_models_impl()
+    @abstractmethod
+    def _extract_tool_calls_from_response(self, response: Any) -> list[ToolCall] | None:
+        """Extracts tool calls from provider response."""
+        pass
 
-        # Get aliases and add them as simple ModelSummary objects
-        aliases = self._get_model_aliases()
-        alias_models = [
-            ModelSummary(
-                id=alias,
-                name=alias,
-            )
-            for alias in aliases
-        ]
+    def _process_provider_stream(
+        self, stream: Any, processor: StreamProcessor
+    ) -> Generator[ChimericStreamChunk[StreamType], None, None]:
+        """Processes a provider stream using the processor."""
+        for event in stream:
+            chunk = self._process_provider_stream_event(event, processor)
+            if chunk:
+                yield chunk
 
-        return api_models + alias_models
+        # Execute any accumulated tool calls
+        if processor.state.tool_calls:
+            tool_results = self._execute_accumulated_tool_calls(processor.state.tool_calls)
+            if tool_results:
+                # Yield final chunk with tool results
+                final_chunk = StreamChunk(
+                    content=processor.state.accumulated_content,
+                    finish_reason="tool_calls",
+                    metadata={"tool_results": [tr.model_dump() for tr in tool_results]},
+                )
+                yield ChimericStreamChunk(native=None, common=final_chunk)
 
     # ====================================================================
-    # Chat completion methods
+    # Optional methods - Override based on capabilities
     # ====================================================================
 
-    def _encode_tools(self, tools: Tools = None) -> Tools:
-        """Encodes tools into a format suitable for the provider's API."""
+    @staticmethod
+    def _get_model_aliases() -> list[str]:
+        """Return model aliases to include in model listings."""
+        return []
+
+    def _upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[FileUploadResponseType]:
+        """Provider-specific file upload implementation.
+
+        Only implement if supports_files() returns True.
+        """
+        raise NotImplementedError(
+            f"Provider {self.__class__.__name__} does not support file uploads"
+        )
+
+    # ====================================================================
+    # Message and tool normalization
+    # ====================================================================
+
+    @staticmethod
+    def _normalize_messages(messages: Input) -> list[Message]:
+        """Converts various input formats to standardized Message objects."""
+        if isinstance(messages, str):
+            return [Message(role="user", content=messages)]
+
+        if isinstance(messages, Message):
+            return [messages]
+
+        if isinstance(messages, dict):
+            return [Message(**messages)]
+
+        if isinstance(messages, list):
+            normalized = []
+            for msg in messages:
+                if isinstance(msg, str):
+                    normalized.append(Message(role="user", content=msg))
+                elif isinstance(msg, Message):
+                    normalized.append(msg)
+                elif isinstance(msg, dict):
+                    normalized.append(Message(**msg))
+                else:
+                    normalized.append(Message(role="user", content=str(msg)))
+            return normalized
+
+        return [Message(role="user", content=str(messages))]
+
+    @staticmethod
+    def _normalize_tools(tools: Tools) -> list[Tool]:
+        """Converts various tool formats to standardized Tool objects."""
         if not tools:
-            return None
+            return []
 
-        return [tool.model_dump() if isinstance(tool, Tool) else tool for tool in tools]
+        normalized = []
+        for tool in tools:
+            if isinstance(tool, Tool):
+                normalized.append(tool)
+            elif isinstance(tool, dict):
+                # Convert dict to a Tool object
+                normalized.append(Tool(**tool))
+            else:
+                # Try to extract from object attributes
+                normalized.append(
+                    Tool(
+                        name=getattr(tool, "name", "unknown"),
+                        description=getattr(tool, "description", ""),
+                        parameters=getattr(tool, "parameters", {}),
+                        function=getattr(tool, "function", None),
+                    )
+                )
+        return normalized
 
-    def _accumulate_tool_call_arguments(
-        self, tool_calls: dict[str, ToolCallChunk], tool_call_id: str, arguments_delta: str
-    ) -> None:
-        """Accumulates arguments for a streaming tool call.
+    # ====================================================================
+    # Tool execution
+    # ====================================================================
 
-        Args:
-            tool_calls: Dictionary mapping tool call IDs to ToolCallChunk objects.
-            tool_call_id: The ID of the tool call to update.
-            arguments_delta: The new arguments fragment to append.
-        """
-        if tool_call_id in tool_calls:
-            tool_calls[tool_call_id].arguments += arguments_delta
-            tool_calls[tool_call_id].arguments_delta = arguments_delta
+    def _execute_tool_call(self, call: ToolCall) -> ToolExecutionResult:
+        """Executes a single tool call with standardized error handling."""
+        result = ToolExecutionResult(call_id=call.call_id, name=call.name, arguments=call.arguments)
 
-    def _execute_accumulated_tool_calls(
-        self, tool_calls: dict[str, ToolCallChunk]
-    ) -> list[dict[str, Any]]:
-        """Executes all accumulated tool calls and returns their results.
+        try:
+            tool = self.tool_manager.get_tool(call.name)
+            if not tool or not callable(tool.function):
+                raise ToolRegistrationError(f"Tool '{call.name}' is not callable")
 
-        Args:
-            tool_calls: Dictionary of accumulated tool calls.
+            args = json.loads(call.arguments) if call.arguments else {}
+            execution_result = tool.function(**args)
+            result.result = str(execution_result)
 
-        Returns:
-            List of tool call results with metadata.
-        """
+        except json.JSONDecodeError as e:
+            result.error = f"Invalid JSON arguments: {e}"
+            result.is_error = True
+        except ToolRegistrationError as e:
+            result.error = str(e)
+            result.is_error = True
+        except Exception as e:
+            result.error = f"Tool execution failed: {e}"
+            result.is_error = True
+
+        return result
+
+    def _execute_tool_calls(self, calls: list[ToolCall]) -> list[ToolExecutionResult]:
+        """Executes multiple tool calls in parallel."""
+        if not calls:
+            return []
+
         results = []
-        for tool_call in tool_calls.values():
-            if tool_call.status == "completed":
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future_to_call = {
+                executor.submit(self._execute_tool_call, call): call for call in calls
+            }
+            for future in concurrent.futures.as_completed(future_to_call):
+                call = future_to_call[future]
                 try:
-                    tool = self.tool_manager.get_tool(tool_call.name)
-                    if tool and tool.function:
-                        import json
-
-                        args = json.loads(tool_call.arguments)
-                        result = tool.function(**args)
-                        results.append(
-                            {
-                                "call_id": tool_call.call_id or tool_call.id,
-                                "name": tool_call.name,
-                                "arguments": tool_call.arguments,
-                                "result": str(result),
-                            }
-                        )
+                    result = future.result()
+                    results.append(result)
                 except Exception as e:
                     results.append(
-                        {
-                            "call_id": tool_call.call_id or tool_call.id,
-                            "name": tool_call.name,
-                            "arguments": tool_call.arguments,
-                            "error": str(e),
-                        }
+                        ToolExecutionResult(
+                            call_id=call.call_id,
+                            name=call.name,
+                            arguments=call.arguments,
+                            error=str(e),
+                            is_error=True,
+                        )
                     )
         return results
 
-    def _process_tools(self, auto_tool: bool, tools: Tools = None) -> Tools:
-        """Processes tools for chat completion requests."""
-        if tools and not self.supports_tools():
-            raise ChimericError("This provider does not support tool calling")
+    def _execute_accumulated_tool_calls(
+        self, tool_calls: dict[str, ToolCallChunk]
+    ) -> list[ToolExecutionResult]:
+        """Executes accumulated tool calls from streaming.
 
-        final_tools = tools
-        if not final_tools and auto_tool:
-            # Automatically include all tools bound to the client if no tools specified
-            final_tools = self.tool_manager.get_all_tools()
+        Converts ToolCallChunk objects to ToolCall and executes them.
+        """
+        calls = []
+        for tool_call in tool_calls.values():
+            if tool_call.status == "completed":
+                calls.append(
+                    ToolCall(
+                        call_id=tool_call.call_id or tool_call.id,
+                        name=tool_call.name,
+                        arguments=tool_call.arguments,
+                    )
+                )
 
-        return self._encode_tools(final_tools)
+        return self._execute_tool_calls(calls)
+
+    # ====================================================================
+    # Response creation helpers
+    # ====================================================================
+
+    @staticmethod
+    def _create_completion_response(
+        native_response: CompletionResponseType,
+        content: str | list[Any],
+        usage: Usage | None = None,
+        model: str | None = None,
+        tool_calls: list[ToolExecutionResult] | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> ChimericCompletionResponse[CompletionResponseType]:
+        """Creates a standardized completion response."""
+        response_metadata = metadata or {}
+        if tool_calls:
+            response_metadata["tool_calls"] = [tc.model_dump() for tc in tool_calls]
+
+        return ChimericCompletionResponse(
+            native=native_response,
+            common=CompletionResponse(
+                content=content, usage=usage or Usage(), model=model, metadata=response_metadata
+            ),
+        )
+
+    @staticmethod
+    def _create_stream_chunk(
+        native_event: StreamType,
+        processor: StreamProcessor,
+        content_delta: str | None = None,
+        finish_reason: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> ChimericStreamChunk[StreamType]:
+        """Creates a standardized stream chunk."""
+        if content_delta is not None:
+            chunk = processor.process_content_delta(content_delta)
+        else:
+            chunk = StreamChunk(
+                content=processor.state.accumulated_content,
+                finish_reason=finish_reason,
+                metadata=metadata or processor.state.metadata,
+            )
+
+        return ChimericStreamChunk(native=native_event, common=chunk)
+
+    # ====================================================================
+    # Public API
+    # ====================================================================
 
     def chat_completion(
         self,
@@ -379,41 +472,637 @@ class BaseClient(
     ):
         """Generates a synchronous chat completion.
 
-        Handles request tracking and error counting, then delegates to the
-        provider-specific implementation.
-
         Args:
-            messages: Input for the completion. Can be a string prompt,
-                list of messages, or dictionary of provider-specific parameters.
-            model: Model identifier to use for the completion.
-            tools: Optional list of tools to make available to the model.
-            stream: Whether to return a streaming response.
-            auto_tool: If True, automatically includes all tools bound to the client
-            **kwargs: Provider-specific parameters passed directly to the
-                underlying SDK after filtering.
+            messages: Input messages (string, list, or Message objects)
+            model: Model identifier to use
+            stream: Whether to stream the response
+            tools: Optional list of tools to make available
+            auto_tool: If True, automatically includes all registered tools
+            **kwargs: Provider-specific parameters
 
         Returns:
-            Either a ChimericCompletionResponse containing both native and
-            standardized response formats, or a Generator of streaming chunks
-            if streaming is enabled.
+            ChimericCompletionResponse or Generator of ChimericStreamChunk
 
         Raises:
-            ProviderError: If the provider's API returns an error.
-            ValueError: If required parameters are missing or invalid.
+            ChimericError: If requested capability is not supported
+            ProviderError: If the provider API returns an error
         """
         if stream and not self.supports_streaming():
             raise ChimericError("This provider does not support streaming responses")
+
         try:
             self._request_count += 1
             self._last_request_time = time.time()
-            encoded_tools = self._process_tools(auto_tool, tools)
 
-            return self._chat_completion_impl(messages, model, stream, encoded_tools, **kwargs)
+            # Process tools
+            final_tools = tools
+            if not final_tools and auto_tool and self.supports_tools():
+                final_tools = self.tool_manager.get_all_tools()
+
+            if final_tools and not self.supports_tools():
+                raise ChimericError("This provider does not support tool calling")
+
+            # Normalize inputs
+            normalized_messages = self._normalize_messages(messages)
+            normalized_tools = self._normalize_tools(final_tools) if final_tools else None
+
+            # Convert to provider format
+            provider_messages = self._messages_to_provider_format(normalized_messages)
+            provider_tools = (
+                self._tools_to_provider_format(normalized_tools) if normalized_tools else None
+            )
+
+            # Make API call
+            response = self._make_provider_request(
+                provider_messages, model, stream, provider_tools, **kwargs
+            )
+
+            if stream:
+                # Create StreamProcessor for streaming responses
+                stream_processor = StreamProcessor()
+                return self._process_provider_stream(response, stream_processor)
+            # Extract standard components
+            content = self._extract_content_from_response(response)
+            usage = self._extract_usage_from_response(response)
+            tool_calls = self._extract_tool_calls_from_response(response) if final_tools else None
+
+            # Execute tool calls if any
+            tool_results = None
+            if tool_calls:
+                tool_results = self._execute_tool_calls(tool_calls)
+
+            return self._create_completion_response(
+                native_response=response,
+                content=content,
+                usage=usage,
+                model=model,
+                tool_calls=tool_results,
+            )
         except Exception:
             self._error_count += 1
             raise
 
-    async def achat_completion(
+    def upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[FileUploadResponseType]:
+        """Uploads a file to the provider.
+
+        Args:
+            **kwargs: Provider-specific file upload parameters
+
+        Returns:
+            ChimericFileUploadResponse with native and common formats
+
+        Raises:
+            NotImplementedError: If provider doesn't support files
+            ProviderError: If upload fails
+        """
+        if not self.supports_files():
+            raise NotImplementedError("Provider does not support file uploads")
+
+        try:
+            self._request_count += 1
+            self._last_request_time = time.time()
+            return self._upload_file(**kwargs)
+        except Exception as e:
+            self._error_count += 1
+            if isinstance(e, (ProviderError, ValueError, NotImplementedError)):
+                raise
+
+            provider_name = getattr(self, "_provider_name", self.__class__.__name__)
+            raise ProviderError(
+                provider=provider_name,
+                response_text=f"Failed to upload file: {e!s}",
+                endpoint="file_upload",
+                status_code=getattr(e, "status_code", None),
+            ) from e
+
+    def list_models(self) -> list[ModelSummary]:
+        """Lists all available models including aliases."""
+        api_models = self._list_models_impl()
+
+        # Add aliases
+        aliases = self._get_model_aliases()
+        alias_models = [ModelSummary(id=alias, name=alias) for alias in aliases]
+
+        return api_models + alias_models
+
+    def get_model_info(self, model_id: str) -> ModelSummary:
+        """Gets information about a specific model."""
+        models = self.list_models()
+        for model in models:
+            if model.id == model_id or model.name == model_id:
+                return model
+        raise ValueError(f"Model {model_id} not found")
+
+    # ====================================================================
+    # Capability checks
+    # ====================================================================
+
+    def supports_multimodal(self) -> bool:
+        """Whether the provider supports multimodal inputs."""
+        return self._capabilities.multimodal
+
+    def supports_tools(self) -> bool:
+        """Whether the provider supports tool/function calling."""
+        return self._capabilities.tools
+
+    def supports_agents(self) -> bool:
+        """Whether the provider supports agent workflows."""
+        return self._capabilities.agents
+
+    def supports_files(self) -> bool:
+        """Whether the provider supports file uploads."""
+        return self._capabilities.files
+
+    def supports_streaming(self) -> bool:
+        """Whether the provider supports streaming responses."""
+        return self._capabilities.streaming
+
+    # ====================================================================
+    # Properties
+    # ====================================================================
+
+    @property
+    def capabilities(self) -> Capability:
+        """All capabilities of this provider."""
+        return self._capabilities
+
+    @property
+    def client(self) -> ClientType:
+        """The underlying synchronous client."""
+        return self._client
+
+    @property
+    def request_count(self) -> int:
+        """Total number of API requests made."""
+        return self._request_count
+
+    @property
+    def error_count(self) -> int:
+        """Total number of errors encountered."""
+        return self._error_count
+
+    @property
+    def last_request_time(self) -> float | None:
+        """Unix timestamp of the last request."""
+        return self._last_request_time
+
+    @property
+    def client_age(self) -> float:
+        """Age of this client in seconds."""
+        return (datetime.now() - self.created_at).total_seconds()
+
+    # ====================================================================
+    # Utility methods
+    # ====================================================================
+
+    @staticmethod
+    def _filter_client_kwargs(client_type: type, kwargs: dict[str, Any]) -> dict[str, Any]:
+        """Filters kwargs to only include valid parameters for a client type."""
+        if client_type is object:
+            return kwargs.copy()
+
+        try:
+            init_method = getattr(client_type, "__init__", None)
+            if init_method is None:
+                return kwargs.copy()
+
+            sig = inspect.signature(init_method)
+            param_names = {
+                name
+                for name, param in sig.parameters.items()
+                if name != "self" and param.kind != inspect.Parameter.POSITIONAL_ONLY
+            }
+
+            has_var_kwargs = any(
+                param.kind == inspect.Parameter.VAR_KEYWORD for param in sig.parameters.values()
+            )
+
+            if has_var_kwargs:
+                return kwargs.copy()
+
+            return {k: v for k, v in kwargs.items() if k in param_names}
+
+        except (ValueError, TypeError, AttributeError):
+            return kwargs.copy()
+
+    @staticmethod
+    def _filter_kwargs(func: Any, kwargs: dict[str, Any]) -> dict[str, Any]:
+        """Filters kwargs to only include valid parameters for a function."""
+        try:
+            sig = inspect.signature(func)
+            param_names = {
+                name
+                for name, param in sig.parameters.items()
+                if param.kind != inspect.Parameter.POSITIONAL_ONLY
+            }
+
+            has_var_kwargs = any(
+                param.kind == inspect.Parameter.VAR_KEYWORD for param in sig.parameters.values()
+            )
+
+            if has_var_kwargs:
+                return kwargs.copy()
+
+            return {k: v for k, v in kwargs.items() if k in param_names}
+        except (ValueError, TypeError, AttributeError):
+            return {}
+
+    # ====================================================================
+    # Context managers
+    # ====================================================================
+
+    def __enter__(self):
+        """Enters the context manager."""
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Exits the context manager, closing the client."""
+        if hasattr(self._client, "close"):
+            self._client.close()
+
+    # ====================================================================
+    # String representations
+    # ====================================================================
+
+    def __repr__(self) -> str:
+        """Returns a detailed string representation."""
+        return (
+            f"{self.__class__.__name__}("
+            f"capabilities={self._capabilities}, "
+            f"requests={self._request_count}, "
+            f"errors={self._error_count})"
+        )
+
+    def __str__(self) -> str:
+        """Returns a human-readable string representation."""
+        return (
+            f"{self.__class__.__name__} Client\n"
+            f"- Created: {self.created_at}\n"
+            f"- Requests: {self._request_count}\n"
+            f"- Errors: {self._error_count}\n"
+            f"- Capabilities: {self._capabilities}"
+        )
+
+
+class ChimericAsyncClient(
+    ABC,
+    Generic[
+        ClientType,
+        CompletionResponseType,
+        StreamType,
+        FileUploadResponseType,
+    ],
+):
+    """Abstract base class for asynchronous LLM provider clients.
+
+    This class provides a unified interface and common functionality for all
+    provider implementations, including message normalization, tool execution,
+    and response standardization.
+    """
+
+    def __init__(
+        self,
+        api_key: str,
+        tool_manager: ToolManager,
+        **kwargs: Any,
+    ) -> None:
+        """Initializes the base async client with common settings."""
+        self.api_key = api_key
+        self.tool_manager = tool_manager
+        self.created_at = datetime.now()
+        self._request_count = 0
+        self._last_request_time: float | None = None
+        self._error_count = 0
+
+        # Get client type and filter kwargs
+        client_type = self._get_async_client_type()
+        async_kwargs = self._filter_client_kwargs(client_type, kwargs)
+
+        # Initialize client
+        self._async_client: ClientType = self._init_async_client(client_type, **async_kwargs)
+        self._capabilities = self._get_capabilities()
+
+    # ====================================================================
+    # Abstract methods - Required for all providers
+    # ====================================================================
+
+    @abstractmethod
+    def _get_async_client_type(self) -> type:
+        """Returns the actual async client type used by the provider.
+
+        Example:
+            return openai.AsyncClient
+        """
+        pass
+
+    @abstractmethod
+    def _init_async_client(self, async_client_type: type, **kwargs: Any) -> ClientType:
+        """Initializes the provider's asynchronous client."""
+        pass
+
+    @abstractmethod
+    def _get_capabilities(self) -> Capability:
+        """Returns the capabilities supported by this provider."""
+        pass
+
+    @abstractmethod
+    def _list_models_impl(self) -> list[ModelSummary]:
+        """Lists available models from the provider's API."""
+        pass
+
+    @abstractmethod
+    def _messages_to_provider_format(self, messages: list[Message]) -> Any:
+        """Converts standardized messages to provider-specific format."""
+        pass
+
+    @abstractmethod
+    def _tools_to_provider_format(self, tools: list[Tool]) -> Any:
+        """Converts standardized tools to provider-specific format."""
+        pass
+
+    @abstractmethod
+    async def _make_async_provider_request(
+        self,
+        messages: Any,
+        model: str,
+        stream: bool,
+        tools: Any = None,
+        **kwargs: Any,
+    ) -> Any:
+        """Makes the actual async API request to the provider."""
+        pass
+
+    @abstractmethod
+    def _process_provider_stream_event(
+        self, event: Any, processor: StreamProcessor
+    ) -> ChimericStreamChunk | None:
+        """Processes a provider-specific stream event.
+
+        Providers should use _create_stream_chunk() to create standardized chunks.
+
+        Example:
+            # For content delta
+            if hasattr(event, 'delta'):
+                return self._create_stream_chunk(
+                    native_event=event,
+                    processor=processor,
+                    content_delta=event.delta
+                )
+
+            # For finish event
+            if event.finish_reason:
+                return self._create_stream_chunk(
+                    native_event=event,
+                    processor=processor,
+                    finish_reason=event.finish_reason
+                )
+        """
+        pass
+
+    @abstractmethod
+    def _extract_usage_from_response(self, response: Any) -> Usage:
+        """Extracts usage information from provider response."""
+        pass
+
+    @abstractmethod
+    def _extract_content_from_response(self, response: Any) -> str | list[Any]:
+        """Extracts content from provider response."""
+        pass
+
+    @abstractmethod
+    def _extract_tool_calls_from_response(self, response: Any) -> list[ToolCall] | None:
+        """Extracts tool calls from provider response."""
+        pass
+
+    async def _process_async_provider_stream(
+        self, stream: Any, processor: StreamProcessor
+    ) -> AsyncGenerator[ChimericStreamChunk[StreamType], None]:
+        """Processes an async provider stream using the processor."""
+        async for event in stream:
+            chunk = self._process_provider_stream_event(event, processor)
+            if chunk:
+                yield chunk
+
+        # Execute any accumulated tool calls
+        if processor.state.tool_calls:
+            tool_results = await self._execute_accumulated_tool_calls(processor.state.tool_calls)
+            if tool_results:
+                # Yield final chunk with tool results
+                final_chunk = StreamChunk(
+                    content=processor.state.accumulated_content,
+                    finish_reason="tool_calls",
+                    metadata={"tool_results": [tr.model_dump() for tr in tool_results]},
+                )
+                yield ChimericStreamChunk(native=None, common=final_chunk)
+
+    # ====================================================================
+    # Optional methods - Override based on capabilities
+    # ====================================================================
+
+    @staticmethod
+    def _get_model_aliases() -> list[str]:
+        """Return model aliases to include in model listings."""
+        return []
+
+    def _upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[FileUploadResponseType]:
+        """Provider-specific file upload implementation.
+
+        Only implement if supports_files() returns True.
+        """
+        raise NotImplementedError(
+            f"Provider {self.__class__.__name__} does not support file uploads"
+        )
+
+    # ====================================================================
+    # Message and tool normalization
+    # ====================================================================
+
+    @staticmethod
+    def _normalize_messages(messages: Input) -> list[Message]:
+        """Converts various input formats to standardized Message objects."""
+        if isinstance(messages, str):
+            return [Message(role="user", content=messages)]
+
+        if isinstance(messages, Message):
+            return [messages]
+
+        if isinstance(messages, dict):
+            return [Message(**messages)]
+
+        if isinstance(messages, list):
+            normalized = []
+            for msg in messages:
+                if isinstance(msg, str):
+                    normalized.append(Message(role="user", content=msg))
+                elif isinstance(msg, Message):
+                    normalized.append(msg)
+                elif isinstance(msg, dict):
+                    normalized.append(Message(**msg))
+                else:
+                    normalized.append(Message(role="user", content=str(msg)))
+            return normalized
+
+        return [Message(role="user", content=str(messages))]
+
+    @staticmethod
+    def _normalize_tools(tools: Tools) -> list[Tool]:
+        """Converts various tool formats to standardized Tool objects."""
+        if not tools:
+            return []
+
+        normalized = []
+        for tool in tools:
+            if isinstance(tool, Tool):
+                normalized.append(tool)
+            elif isinstance(tool, dict):
+                # Convert dict to a Tool object
+                normalized.append(Tool(**tool))
+            else:
+                # Try to extract from object attributes
+                normalized.append(
+                    Tool(
+                        name=getattr(tool, "name", "unknown"),
+                        description=getattr(tool, "description", ""),
+                        parameters=getattr(tool, "parameters", {}),
+                        function=getattr(tool, "function", None),
+                    )
+                )
+        return normalized
+
+    # ====================================================================
+    # Tool execution
+    # ====================================================================
+
+    async def _execute_tool_call(self, call: ToolCall) -> ToolExecutionResult:
+        """Executes a single tool call with standardized error handling."""
+        result = ToolExecutionResult(call_id=call.call_id, name=call.name, arguments=call.arguments)
+
+        try:
+            tool = self.tool_manager.get_tool(call.name)
+            if not tool or not callable(tool.function):
+                raise ToolRegistrationError(f"Tool '{call.name}' is not callable")
+
+            args = json.loads(call.arguments) if call.arguments else {}
+
+            # Check if the tool function is async
+            if inspect.iscoroutinefunction(tool.function):
+                execution_result = await tool.function(**args)
+            else:
+                execution_result = tool.function(**args)
+
+            result.result = str(execution_result)
+
+        except json.JSONDecodeError as e:
+            result.error = f"Invalid JSON arguments: {e}"
+            result.is_error = True
+        except ToolRegistrationError as e:
+            result.error = str(e)
+            result.is_error = True
+        except Exception as e:
+            result.error = f"Tool execution failed: {e}"
+            result.is_error = True
+
+        return result
+
+    async def _execute_tool_calls(self, calls: list[ToolCall]) -> list[ToolExecutionResult]:
+        """Executes multiple tool calls in parallel using asyncio."""
+        if not calls:
+            return []
+
+        # Create tasks for all tool calls
+        tasks = [self._execute_tool_call(call) for call in calls]
+
+        # Execute all tasks concurrently
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Process results and handle any exceptions
+        final_results = []
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                final_results.append(
+                    ToolExecutionResult(
+                        call_id=calls[i].call_id,
+                        name=calls[i].name,
+                        arguments=calls[i].arguments,
+                        error=str(result),
+                        is_error=True,
+                    )
+                )
+            else:
+                final_results.append(result)
+
+        return final_results
+
+    async def _execute_accumulated_tool_calls(
+        self, tool_calls: dict[str, ToolCallChunk]
+    ) -> list[ToolExecutionResult]:
+        """Executes accumulated tool calls from streaming.
+
+        Converts ToolCallChunk objects to ToolCall and executes them.
+        """
+        calls = []
+        for tool_call in tool_calls.values():
+            if tool_call.status == "completed":
+                calls.append(
+                    ToolCall(
+                        call_id=tool_call.call_id or tool_call.id,
+                        name=tool_call.name,
+                        arguments=tool_call.arguments,
+                    )
+                )
+
+        return await self._execute_tool_calls(calls)
+
+    # ====================================================================
+    # Response creation helpers
+    # ====================================================================
+
+    @staticmethod
+    def _create_completion_response(
+        native_response: CompletionResponseType,
+        content: str | list[Any],
+        usage: Usage | None = None,
+        model: str | None = None,
+        tool_calls: list[ToolExecutionResult] | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> ChimericCompletionResponse[CompletionResponseType]:
+        """Creates a standardized completion response."""
+        response_metadata = metadata or {}
+        if tool_calls:
+            response_metadata["tool_calls"] = [tc.model_dump() for tc in tool_calls]
+
+        return ChimericCompletionResponse(
+            native=native_response,
+            common=CompletionResponse(
+                content=content, usage=usage or Usage(), model=model, metadata=response_metadata
+            ),
+        )
+
+    @staticmethod
+    def _create_stream_chunk(
+        native_event: StreamType,
+        processor: StreamProcessor,
+        content_delta: str | None = None,
+        finish_reason: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> ChimericStreamChunk[StreamType]:
+        """Creates a standardized stream chunk."""
+        if content_delta is not None:
+            chunk = processor.process_content_delta(content_delta)
+        else:
+            chunk = StreamChunk(
+                content=processor.state.accumulated_content,
+                finish_reason=finish_reason,
+                metadata=metadata or processor.state.metadata,
+            )
+
+        return ChimericStreamChunk(native=native_event, common=chunk)
+
+    # ====================================================================
+    # Public API
+    # ====================================================================
+
+    async def chat_completion(
         self,
         messages: Input,
         model: str,
@@ -427,143 +1116,90 @@ class BaseClient(
     ):
         """Generates an asynchronous chat completion.
 
-        Async version of chat_completion with the same functionality but
-        non-blocking operation.
-
         Args:
-            messages: Input for the completion. Can be a string prompt,
-                list of messages, or dictionary of provider-specific parameters.
-            model: Model identifier to use for the completion.
-            tools: Optional list of tools to make available to the model.
-            stream: Whether to return a streaming response.
-            auto_tool: If True, automatically includes all tools bound to the client
-            **kwargs: Provider-specific parameters passed directly to the
-                underlying SDK after filtering.
+            messages: Input messages (string, list, or Message objects)
+            model: Model identifier to use
+            stream: Whether to stream the response
+            tools: Optional list of tools to make available
+            auto_tool: If True, automatically includes all registered tools
+            **kwargs: Provider-specific parameters
 
         Returns:
-            Either a ChimericCompletionResponse containing both native and
-            standardized response formats, or an AsyncGenerator of streaming
-            chunks if streaming is enabled.
+            ChimericCompletionResponse or AsyncGenerator of ChimericStreamChunk
 
         Raises:
-            ProviderError: If the provider's API returns an error.
-            ValueError: If required parameters are missing or invalid.
-            NotImplementedError: If the provider doesn't support async operations.
+            ChimericError: If requested capability is not supported
+            ProviderError: If the provider API returns an error
         """
         if stream and not self.supports_streaming():
             raise ChimericError("This provider does not support streaming responses")
+
         try:
             self._request_count += 1
             self._last_request_time = time.time()
-            encoded_tools = self._process_tools(auto_tool, tools)
-            return await self._achat_completion_impl(
-                messages, model, stream, encoded_tools, **kwargs
+
+            # Process tools
+            final_tools = tools
+            if not final_tools and auto_tool and self.supports_tools():
+                final_tools = self.tool_manager.get_all_tools()
+
+            if final_tools and not self.supports_tools():
+                raise ChimericError("This provider does not support tool calling")
+
+            # Normalize inputs
+            normalized_messages = self._normalize_messages(messages)
+            normalized_tools = self._normalize_tools(final_tools) if final_tools else None
+
+            # Convert to provider format
+            provider_messages = self._messages_to_provider_format(normalized_messages)
+            provider_tools = (
+                self._tools_to_provider_format(normalized_tools) if normalized_tools else None
+            )
+
+            # Make API call
+            response = await self._make_async_provider_request(
+                provider_messages, model, stream, provider_tools, **kwargs
+            )
+
+            if stream:
+                # Create StreamProcessor for streaming responses
+                stream_processor = StreamProcessor()
+                return self._process_async_provider_stream(response, stream_processor)
+            # Extract standard components
+            content = self._extract_content_from_response(response)
+            usage = self._extract_usage_from_response(response)
+            tool_calls = self._extract_tool_calls_from_response(response) if final_tools else None
+
+            # Execute tool calls if any
+            tool_results = None
+            if tool_calls:
+                tool_results = self._execute_tool_calls(tool_calls)
+
+            return self._create_completion_response(
+                native_response=response,
+                content=content,
+                usage=usage,
+                model=model,
+                tool_calls=tool_results,
             )
         except Exception:
             self._error_count += 1
             raise
 
-    @abstractmethod
-    def _chat_completion_impl(
-        self,
-        messages: Input,
-        model: str,
-        stream: bool = False,
-        tools: Tools = None,
-        **kwargs: Any,
-    ) -> (
-        ChimericCompletionResponse[CompletionResponseType]
-        | Generator[ChimericStreamChunk[StreamType], None, None]
-    ):
-        """Provider-specific implementation of synchronous chat completion.
-
-        This method contains the actual logic for making API calls to the
-        provider's chat completion endpoint. It should handle both streaming
-        and non-streaming responses.
+    async def upload_file(
+        self, **kwargs: Any
+    ) -> ChimericFileUploadResponse[FileUploadResponseType]:
+        """Uploads a file to the provider.
 
         Args:
-            messages: Input for the completion.
-            model: Model identifier to use.
-            stream: Whether to return a streaming response.
-            tools: Optional list of tools to make available to the model.
-            **kwargs: Provider-specific parameters that have been filtered
-                for this method's signature.
+            **kwargs: Provider-specific file upload parameters
 
         Returns:
-            Either a ChimericCompletionResponse wrapping the provider's native
-            response, or a Generator yielding ChimericStreamChunk objects for
-            streaming responses.
-        """
-
-    @abstractmethod
-    async def _achat_completion_impl(
-        self,
-        messages: Input,
-        model: str,
-        stream: bool = False,
-        tools: Tools = None,
-        **kwargs: Any,
-    ) -> (
-        ChimericCompletionResponse[CompletionResponseType]
-        | AsyncGenerator[ChimericStreamChunk[StreamType], None]
-    ):
-        """Provider-specific implementation of asynchronous chat completion.
-
-        Async version of _chat_completion_impl with the same responsibilities
-        but using async/await patterns.
-
-        Args:
-            messages: Input for the completion.
-            model: Model identifier to use.
-            tools: Optional list of tools to make available to the model.
-            stream: Whether to return a streaming response.
-            **kwargs: Provider-specific parameters that have been filtered
-                for this method's signature.
-
-        Returns:
-            Either a ChimericCompletionResponse wrapping the provider's native
-            response, or an AsyncGenerator yielding ChimericStreamChunk objects
-            for streaming responses.
-        """
-
-    # ====================================================================
-    # Model information methods
-    # ====================================================================
-
-    def get_model_info(self, model_id: str) -> ModelSummary:
-        """Gets detailed information about a specific model.
-
-        Args:
-            model_id: ID or name of the model to get information for.
-
-        Returns:
-            A ModelSummary object containing detailed information about the model.
-            If the model_id is an alias, returns the alias model info.
+            ChimericFileUploadResponse with native and common formats
 
         Raises:
-            ValueError: If the model is not found or not available from this provider.
-        """
-        models = self.list_models()
-        for model in models:
-            if model.id == model_id or model.name == model_id:
-                return model
-        raise ValueError(f"Model {model_id} not found")
-
-    def upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[FileUploadResponseType]:
-        """Uploads a file to the provider for use in conversations.
-
-        Args:
-            **kwargs: Provider-specific arguments for file upload (e.g.,
-                file path, file object, purpose, etc.).
-
-        Returns:
-            A ChimericFileUploadResponse containing both the provider's native
-            response and standardized file information.
-
-        Raises:
-            NotImplementedError: If the provider does not support file uploads.
-            ProviderError: If there is an error uploading the file.
-            ValueError: If required parameters are missing or invalid.
+            NotImplementedError: If provider doesn't support files
+            ProviderError: If upload fails
         """
         if not self.supports_files():
             raise NotImplementedError("Provider does not support file uploads")
@@ -572,240 +1208,182 @@ class BaseClient(
             self._request_count += 1
             self._last_request_time = time.time()
             return self._upload_file(**kwargs)
-        except ProviderError:
-            # Re-raise ProviderError as-is to preserve status_code and other details
-            self._error_count += 1
-            raise
-        except ValueError:
-            # Re-raise ValueError as-is for invalid parameters
-            self._error_count += 1
-            raise
         except Exception as e:
             self._error_count += 1
+            if isinstance(e, (ProviderError, ValueError, NotImplementedError)):
+                raise
+
             provider_name = getattr(self, "_provider_name", self.__class__.__name__)
             raise ProviderError(
                 provider=provider_name,
                 response_text=f"Failed to upload file: {e!s}",
                 endpoint="file_upload",
-                status_code=e.status_code if hasattr(e, "status_code") else None,
+                status_code=getattr(e, "status_code", None),
             ) from e
 
-    @abstractmethod
-    def _upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[FileUploadResponseType]:
-        """Provider-specific implementation of file upload.
+    def list_models(self) -> list[ModelSummary]:
+        """Lists all available models including aliases."""
+        api_models = self._list_models_impl()
 
-        Subclasses that support file uploads should override this method.
+        # Add aliases
+        aliases = self._get_model_aliases()
+        alias_models = [ModelSummary(id=alias, name=alias) for alias in aliases]
 
-        Args:
-            **kwargs: Provider-specific file upload parameters.
+        return api_models + alias_models
 
-        Returns:
-            A ChimericFileUploadResponse wrapping the provider's native response.
-
-        Raises:
-            NotImplementedError: By default, since this must be implemented
-                by subclasses that support file uploads.
-        """
-        raise NotImplementedError("File upload not implemented")
+    def get_model_info(self, model_id: str) -> ModelSummary:
+        """Gets information about a specific model."""
+        models = self.list_models()
+        for model in models:
+            if model.id == model_id or model.name == model_id:
+                return model
+        raise ValueError(f"Model {model_id} not found")
 
     # ====================================================================
-    # Capability check methods
+    # Capability checks
     # ====================================================================
 
     def supports_multimodal(self) -> bool:
-        """Checks if the provider supports multimodal inputs.
-
-        Returns:
-            True if the provider can handle image, audio, or video inputs
-            in addition to text.
-        """
+        """Whether the provider supports multimodal inputs."""
         return self._capabilities.multimodal
 
     def supports_tools(self) -> bool:
-        """Checks if the provider supports tool/function calling.
-
-        Returns:
-            True if the provider can call external tools or functions
-            during completion generation.
-        """
+        """Whether the provider supports tool/function calling."""
         return self._capabilities.tools
 
     def supports_agents(self) -> bool:
-        """Checks if the provider supports agent creation and management.
-
-        Returns:
-            True if the provider supports creating persistent agents
-            with custom instructions and capabilities.
-        """
+        """Whether the provider supports agent workflows."""
         return self._capabilities.agents
 
     def supports_files(self) -> bool:
-        """Checks if the provider supports file uploads.
-
-        Returns:
-            True if files can be uploaded to the provider for use
-            in conversations or as context.
-        """
+        """Whether the provider supports file uploads."""
         return self._capabilities.files
 
     def supports_streaming(self) -> bool:
-        """Checks if the provider supports streaming responses.
-
-        Returns:
-            True if the provider can return responses as a stream
-            of chunks rather than waiting for the complete response.
-        """
+        """Whether the provider supports streaming responses."""
         return self._capabilities.streaming
 
     # ====================================================================
-    # Utility methods and properties
+    # Properties
+    # ====================================================================
+
+    @property
+    def capabilities(self) -> Capability:
+        """All capabilities of this provider."""
+        return self._capabilities
+
+    @property
+    def async_client(self) -> ClientType:
+        """The underlying asynchronous client."""
+        return self._async_client
+
+    @property
+    def request_count(self) -> int:
+        """Total number of API requests made."""
+        return self._request_count
+
+    @property
+    def error_count(self) -> int:
+        """Total number of errors encountered."""
+        return self._error_count
+
+    @property
+    def last_request_time(self) -> float | None:
+        """Unix timestamp of the last request."""
+        return self._last_request_time
+
+    @property
+    def client_age(self) -> float:
+        """Age of this client in seconds."""
+        return (datetime.now() - self.created_at).total_seconds()
+
+    # ====================================================================
+    # Utility methods
     # ====================================================================
 
     @staticmethod
+    def _filter_client_kwargs(client_type: type, kwargs: dict[str, Any]) -> dict[str, Any]:
+        """Filters kwargs to only include valid parameters for a client type."""
+        if client_type is object:
+            return kwargs.copy()
+
+        try:
+            init_method = getattr(client_type, "__init__", None)
+            if init_method is None:
+                return kwargs.copy()
+
+            sig = inspect.signature(init_method)
+            param_names = {
+                name
+                for name, param in sig.parameters.items()
+                if name != "self" and param.kind != inspect.Parameter.POSITIONAL_ONLY
+            }
+
+            has_var_kwargs = any(
+                param.kind == inspect.Parameter.VAR_KEYWORD for param in sig.parameters.values()
+            )
+
+            if has_var_kwargs:
+                return kwargs.copy()
+
+            return {k: v for k, v in kwargs.items() if k in param_names}
+
+        except (ValueError, TypeError, AttributeError):
+            return kwargs.copy()
+
+    @staticmethod
     def _filter_kwargs(func: Any, kwargs: dict[str, Any]) -> dict[str, Any]:
-        """Filters kwargs to only include those valid for a specific function.
-
-        This helper ensures only relevant arguments are passed to provider
-        SDK methods by inspecting the function signature and filtering out
-        unsupported parameters.
-
-        Args:
-            func: The function whose signature will be used for filtering.
-            kwargs: Original keyword arguments to filter.
-
-        Returns:
-            A filtered dictionary containing only the kwargs that are valid
-            for the specified function's signature.
-        """
+        """Filters kwargs to only include valid parameters for a function."""
         try:
             sig = inspect.signature(func)
-            # Get parameter names that aren't positional-only.
             param_names = {
                 name
                 for name, param in sig.parameters.items()
                 if param.kind != inspect.Parameter.POSITIONAL_ONLY
             }
 
-            # Check if function accepts **kwargs.
             has_var_kwargs = any(
                 param.kind == inspect.Parameter.VAR_KEYWORD for param in sig.parameters.values()
             )
 
             if has_var_kwargs:
-                # Function accepts arbitrary kwargs, return all.
                 return kwargs.copy()
 
-            # Filter kwargs to only include those in the function signature.
             return {k: v for k, v in kwargs.items() if k in param_names}
         except (ValueError, TypeError, AttributeError):
-            # If the signature inspection fails, return empty dict to be safe.
             return {}
 
-    @property
-    def capabilities(self) -> Capability:
-        """The supported capabilities and features of this provider."""
-        return self._capabilities
-
-    @property
-    def client(self) -> ClientType:
-        """The underlying provider client instance for synchronous operations."""
-        return self._client
-
-    @property
-    def async_client(self) -> AsyncClientType | None:
-        """The underlying provider async client instance, or None if not available."""
-        return self._async_client
-
-    @property
-    def request_count(self) -> int:
-        """The total number of API requests made through this client instance."""
-        return self._request_count
-
-    @property
-    def error_count(self) -> int:
-        """The total number of errors encountered during API requests."""
-        return self._error_count
-
-    @property
-    def last_request_time(self) -> float | None:
-        """Unix timestamp of the last request, or None if no requests made."""
-        return self._last_request_time
-
-    @property
-    def client_age(self) -> float:
-        """The age of this client instance in seconds."""
-        return (datetime.now() - self.created_at).total_seconds()
-
     # ====================================================================
-    # Context manager methods
+    # Context managers
     # ====================================================================
 
-    def __enter__(
-        self,
-    ) -> "BaseClient[ClientType, AsyncClientType, CompletionResponseType, StreamType, FileUploadResponseType]":
-        """Context manager entry.
-
-        Returns:
-            Self for use in with statements.
-        """
-        return self
-
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        """Exits the synchronous context manager.
-
-        Ensures proper cleanup of synchronous client resources.
-
-        Args:
-            exc_type: Exception type if an exception was raised.
-            exc_val: Exception value if an exception was raised.
-            exc_tb: Exception traceback if an exception was raised.
-        """
-        if hasattr(self._client, "close"):
-            self._client.close()
-
-    async def __aenter__(
-        self,
-    ) -> "BaseClient[ClientType, AsyncClientType, CompletionResponseType, StreamType, FileUploadResponseType]":
-        """Async context manager entry.
-
-        Returns:
-            Self for use in async with statements.
-        """
+    async def __aenter__(self):
+        """Enters the async context manager."""
         return self
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        """Exits the asynchronous context manager.
-
-        Ensures proper cleanup of async client resources, trying both
-        async and sync close methods as fallbacks.
-
-        Args:
-            exc_type: Exception type if an exception was raised.
-            exc_val: Exception value if an exception was raised.
-            exc_tb: Exception traceback if an exception was raised.
-        """
+        """Exits the async context manager, closing the async client."""
         if self._async_client is not None:
-            # Try async close first if available.
+            # Try async close first
             aclose_method = getattr(self._async_client, "aclose", None)
             if callable(aclose_method):
                 with contextlib.suppress(Exception):
                     result = aclose_method()
-                    # Await if the result is a coroutine.
                     if inspect.iscoroutine(result):
                         await result
 
-            # Fallback to synchronous close.
+            # Fallback to sync close
             close_method = getattr(self._async_client, "close", None)
             if callable(close_method):
                 with contextlib.suppress(Exception):
                     close_method()
 
     # ====================================================================
-    # String representation
+    # String representations
     # ====================================================================
 
     def __repr__(self) -> str:
-        """Returns a detailed string representation of the client."""
+        """Returns a detailed string representation."""
         return (
             f"{self.__class__.__name__}("
             f"capabilities={self._capabilities}, "
@@ -814,7 +1392,7 @@ class BaseClient(
         )
 
     def __str__(self) -> str:
-        """Returns a human-readable string representation of the client."""
+        """Returns a human-readable string representation."""
         return (
             f"{self.__class__.__name__} Client\n"
             f"- Created: {self.created_at}\n"
