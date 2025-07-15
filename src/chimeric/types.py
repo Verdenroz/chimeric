@@ -20,6 +20,7 @@ __all__ = [
     "JSONSchemaObject",
     "JSONSchemaString",
     "JSONSchemaType",
+    "Message",
     "Metadata",
     "ModelCapabilities",
     "ModelSummary",
@@ -31,6 +32,7 @@ __all__ = [
     "Tool",
     "ToolCall",
     "ToolCallChunk",
+    "ToolExecutionResult",
     "ToolParameters",
     "Tools",
     "Usage",
@@ -45,6 +47,29 @@ NativeFileUploadType = TypeVar("NativeFileUploadType")
 Input: TypeAlias = str | list[Any]
 Tools: TypeAlias = Iterable[Any] | None
 Metadata: TypeAlias = dict[str, Any]
+
+
+###################
+# MESSAGE TYPES
+###################
+
+
+class Message(BaseModel):
+    """Standardized message format for cross-provider compatibility.
+
+    Attributes:
+        role: The role of the message sender ("system", "user", "assistant", "tool").
+        content: The message content, either as a string or list of content parts.
+        name: Optional name identifier for the message sender.
+        tool_calls: Optional list of tool calls made by the assistant.
+        tool_call_id: Optional ID linking this message to a specific tool call.
+    """
+
+    role: str
+    content: str | list[Any]
+    name: str | None = None
+    tool_calls: list["ToolCall"] | None = None
+    tool_call_id: str | None = None
 
 
 ###################
@@ -298,6 +323,27 @@ class Tool(BaseModel):
     def __str__(self) -> str:
         """Return a string representation of the tool."""
         return f"Tool({self.name}: {self.description[:50]}...)"
+
+
+class ToolExecutionResult(BaseModel):
+    """Result of executing a tool.
+
+    Attributes:
+        call_id: The ID of the tool call that was executed.
+        name: The name of the tool that was executed.
+        arguments: The arguments that were passed to the tool.
+        result: The result of the tool execution, if successful.
+        error: The error message, if execution failed.
+        is_error: Boolean indicating if execution resulted in an error.
+    """
+
+    call_id: str
+    name: str
+    arguments: str
+
+    result: str | None = None
+    error: str | None = None
+    is_error: bool = False
 
 
 ###################
