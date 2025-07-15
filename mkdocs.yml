@@ -12,6 +12,8 @@ site_author: Harvey Tseng
 # Theme configuration
 theme:
   name: material
+  logo: assets/images/chimeric.png
+  favicon: assets/favicon.ico
   palette:
     # Use system preference for light/dark mode
     - media: "(prefers-color-scheme: light)"
@@ -40,6 +42,10 @@ theme:
     - content.code.annotate
   icon:
     repo: fontawesome/brands/github
+
+# Custom CSS
+extra_css:
+  - stylesheets/extra.css
 
 # Extensions
 markdown_extensions:
@@ -82,12 +88,11 @@ nav:
     - Overview: providers/index.md
     - OpenAI: providers/openai.md
     - Anthropic: providers/anthropic.md
-    - Google Gemini: providers/google.md
+    - Google: providers/google.md
     - Cohere: providers/cohere.md
-    - AWS: providers/aws.md
     - Groq: providers/groq.md
-    - Replicate: providers/replicate.md
-    - HuggingFace: providers/huggingface.md
+    - Cerebras: providers/cerebras.md
+    - Grok: providers/grok.md
   - API Reference:
     - Core: api/core.md
     - Providers: api/providers.md
