@@ -17,7 +17,7 @@ from chimeric.types import (
     ToolExecutionResult,
     Usage,
 )
-from chimeric.utils import StreamProcessor
+from chimeric.utils import StreamProcessor, create_stream_chunk
 
 
 class OpenAIClient(ChimericClient[OpenAI, Response, ResponseStreamEvent, FileObject]):
@@ -123,7 +123,7 @@ class OpenAIClient(ChimericClient[OpenAI, Response, ResponseStreamEvent, FileObj
         # Handle text content deltas
         if event_type == "response.output_text.delta":
             delta = getattr(event, "delta", "") or ""
-            return self._create_stream_chunk(
+            return create_stream_chunk(
                 native_event=event, processor=processor, content_delta=delta
             )
 
@@ -131,9 +131,10 @@ class OpenAIClient(ChimericClient[OpenAI, Response, ResponseStreamEvent, FileObj
         if event_type == "response.output_item.added":
             item = getattr(event, "item", None)
             if item and hasattr(item, "type") and item.type == "function_call":
-                tool_call_id = getattr(item, "id", None)
+                tool_call_id = getattr(item, "id", None)  # fc_xxx ID
+                call_id = getattr(item, "call_id", None)  # call_xxx ID for outputs
                 if tool_call_id:
-                    processor.process_tool_call_start(tool_call_id, getattr(item, "name", ""))
+                    processor.process_tool_call_start(tool_call_id, getattr(item, "name", ""), call_id)
             return None
 
         if event_type == "response.function_call_arguments.delta":
@@ -154,7 +155,7 @@ class OpenAIClient(ChimericClient[OpenAI, Response, ResponseStreamEvent, FileObj
             response = getattr(event, "response", None)
             finish_reason = getattr(response, "status", None) if response else None
 
-            return self._create_stream_chunk(
+            return create_stream_chunk(
                 native_event=event, processor=processor, finish_reason=finish_reason
             )
 
@@ -208,9 +209,24 @@ class OpenAIClient(ChimericClient[OpenAI, Response, ResponseStreamEvent, FileObj
 
         # Add the original function calls from the assistant response
         if hasattr(assistant_response, "output") and assistant_response.output:
+            # Non-streaming response - add function calls from response output
             for output_item in assistant_response.output:
                 if hasattr(output_item, "type") and output_item.type == "function_call":
                     updated_messages.append(output_item)
+        else:
+            # Streaming response - reconstruct function call objects with correct IDs
+            for tool_call in tool_calls:
+                # Get the original fc_xxx ID from metadata (this is what we use as the primary tracking ID)
+                original_id = tool_call.metadata.get("original_id") if tool_call.metadata else None
+                if original_id:
+                    function_call_obj = {
+                        "type": "function_call",
+                        "id": original_id,  # Original fc_xxx ID from streaming
+                        "call_id": tool_call.call_id,  # call_xxx ID for output matching
+                        "name": tool_call.name,  # Function name
+                        "arguments": tool_call.arguments,  # Function arguments
+                    }
+                    updated_messages.append(function_call_obj)
 
         # Add the function call results to the message history
         for result in tool_results:
@@ -356,7 +372,7 @@ class OpenAIAsyncClient(
         # Handle text content deltas
         if event_type == "response.output_text.delta":
             delta = getattr(event, "delta", "") or ""
-            return self._create_stream_chunk(
+            return create_stream_chunk(
                 native_event=event, processor=processor, content_delta=delta
             )
 
@@ -364,9 +380,10 @@ class OpenAIAsyncClient(
         if event_type == "response.output_item.added":
             item = getattr(event, "item", None)
             if item and hasattr(item, "type") and item.type == "function_call":
-                tool_call_id = getattr(item, "id", None)
+                tool_call_id = getattr(item, "id", None)  # fc_xxx ID
+                call_id = getattr(item, "call_id", None)  # call_xxx ID for outputs
                 if tool_call_id:
-                    processor.process_tool_call_start(tool_call_id, getattr(item, "name", ""))
+                    processor.process_tool_call_start(tool_call_id, getattr(item, "name", ""), call_id)
             return None
 
         if event_type == "response.function_call_arguments.delta":
@@ -387,7 +404,7 @@ class OpenAIAsyncClient(
             response = getattr(event, "response", None)
             finish_reason = getattr(response, "status", None) if response else None
 
-            return self._create_stream_chunk(
+            return create_stream_chunk(
                 native_event=event, processor=processor, finish_reason=finish_reason
             )
 
@@ -438,9 +455,24 @@ class OpenAIAsyncClient(
 
         # Add the original function calls from the assistant response
         if hasattr(assistant_response, "output") and assistant_response.output:
+            # Non-streaming response - add function calls from response output
             for output_item in assistant_response.output:
                 if hasattr(output_item, "type") and output_item.type == "function_call":
                     updated_messages.append(output_item)
+        else:
+            # Streaming response - reconstruct function call objects with correct IDs
+            for tool_call in tool_calls:
+                # Get the original fc_xxx ID from metadata (this is what we use as the primary tracking ID)
+                original_id = tool_call.metadata.get("original_id") if tool_call.metadata else None
+                if original_id:
+                    function_call_obj = {
+                        "type": "function_call",
+                        "id": original_id,  # Original fc_xxx ID from streaming
+                        "call_id": tool_call.call_id,  # call_xxx ID for output matching
+                        "name": tool_call.name,  # Function name
+                        "arguments": tool_call.arguments,  # Function arguments
+                    }
+                    updated_messages.append(function_call_obj)
 
         # Add the function call results to the message history
         for result in tool_results:
