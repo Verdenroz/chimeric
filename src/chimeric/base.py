@@ -1,15 +1,13 @@
-from abc import ABC, abstractmethod
 import asyncio
-from collections.abc import AsyncGenerator, Generator
 import concurrent.futures
 import contextlib
-from datetime import datetime
 import inspect
 import json
 import time
+from abc import ABC, abstractmethod
+from collections.abc import AsyncGenerator, Generator
+from datetime import datetime
 from typing import Any, Generic, TypeVar
-
-from pydantic import BaseModel, Field
 
 from .exceptions import (
     ChimericError,
@@ -22,17 +20,21 @@ from .types import (
     ChimericCompletionResponse,
     ChimericFileUploadResponse,
     ChimericStreamChunk,
-    CompletionResponse,
     Input,
     Message,
     ModelSummary,
-    StreamChunk,
     Tool,
     ToolCall,
-    ToolCallChunk,
     ToolExecutionResult,
     Tools,
     Usage,
+)
+from .utils import (
+    StreamProcessor,
+    create_completion_response,
+    create_stream_chunk,
+    normalize_messages,
+    normalize_tools,
 )
 
 __all__ = [
@@ -40,66 +42,8 @@ __all__ = [
     "ChimericClient",
     "CompletionResponseType",
     "FileUploadResponseType",
-    "StreamProcessor",
     "StreamType",
 ]
-
-
-class StreamState(BaseModel):
-    """Maintains state during streaming.
-
-    Attributes:
-        accumulated_content: The accumulated text content so far.
-        tool_calls: Dictionary of tool calls being streamed, keyed by call ID.
-        metadata: Additional metadata accumulated during streaming.
-    """
-
-    accumulated_content: str = ""
-    tool_calls: dict[str, ToolCallChunk] = Field(default_factory=dict)
-    metadata: dict[str, Any] = Field(default_factory=dict)
-
-
-class StreamProcessor:
-    """Standardized stream processing logic for all providers."""
-
-    def __init__(self):
-        self.state = StreamState()
-
-    def process_content_delta(self, delta: str) -> StreamChunk:
-        """Processes a text content delta."""
-        self.state.accumulated_content += delta
-        return StreamChunk(
-            content=self.state.accumulated_content,
-            delta=delta,
-        )
-
-    def process_tool_call_start(self, call_id: str, name: str) -> None:
-        """Processes the start of a tool call."""
-        self.state.tool_calls[call_id] = ToolCallChunk(
-            id=call_id,
-            call_id=call_id,
-            name=name,
-            arguments="",
-            status="started",
-        )
-
-    def process_tool_call_delta(self, call_id: str, arguments_delta: str) -> None:
-        """Processes a tool call arguments delta."""
-        if call_id in self.state.tool_calls:
-            self.state.tool_calls[call_id].arguments += arguments_delta
-            self.state.tool_calls[call_id].arguments_delta = arguments_delta
-            self.state.tool_calls[call_id].status = "arguments_streaming"
-
-    def process_tool_call_complete(self, call_id: str) -> None:
-        """Marks a tool call as complete."""
-        if call_id in self.state.tool_calls:
-            self.state.tool_calls[call_id].status = "completed"
-            self.state.tool_calls[call_id].arguments_delta = None
-
-    def get_completed_tool_calls(self) -> list[ToolCallChunk]:
-        """Returns all completed tool calls."""
-        return [tc for tc in self.state.tool_calls.values() if tc.status == "completed"]
-
 
 # Type variables for provider-specific types
 ClientType = TypeVar("ClientType")
@@ -125,12 +69,18 @@ class ChimericClient(
     """
 
     def __init__(
-        self,
-        api_key: str,
-        tool_manager: ToolManager,
-        **kwargs: Any,
+            self,
+            api_key: str,
+            tool_manager: ToolManager,
+            **kwargs: Any,
     ) -> None:
-        """Initializes the base client with common settings."""
+        """Initializes the base client with common settings.
+
+        Args:
+            api_key: The API key for the provider.
+            tool_manager: The tool manager instance.
+            **kwargs: Additional provider-specific keyword arguments.
+        """
         self.api_key = api_key
         self.tool_manager = tool_manager
         self.created_at = datetime.now()
@@ -138,12 +88,11 @@ class ChimericClient(
         self._last_request_time: float | None = None
         self._error_count = 0
 
-        # Get client type and filter kwargs
+        # Get client type and initialize client
         client_type = self._get_client_type()
-        sync_kwargs = self._filter_client_kwargs(client_type, kwargs)
 
         # Initialize client
-        self._client: ClientType = self._init_client(client_type, **sync_kwargs)
+        self._client: ClientType = self._init_client(client_type, **kwargs)
         self._capabilities = self._get_capabilities()
 
     # ====================================================================
@@ -154,55 +103,110 @@ class ChimericClient(
     def _get_client_type(self) -> type:
         """Returns the actual client type used by the provider.
 
+        This abstract method must be implemented by subclasses to specify the
+        synchronous client class from the provider's library.
+
         Example:
             return openai.Client
+
+        Returns:
+            The provider's client class.
         """
         pass
 
     @abstractmethod
     def _init_client(self, client_type: type, **kwargs: Any) -> ClientType:
-        """Initializes the provider's synchronous client."""
+        """Initializes the provider's synchronous client.
+
+        Args:
+            client_type: The client class to initialize.
+            **kwargs: Provider-specific arguments for client initialization.
+
+        Returns:
+            An instance of the provider's synchronous client.
+        """
         pass
 
     @abstractmethod
     def _get_capabilities(self) -> Capability:
-        """Returns the capabilities supported by this provider."""
+        """Returns the capabilities supported by this provider.
+
+        Returns:
+            A Capability object detailing supported features.
+        """
         pass
 
     @abstractmethod
     def _list_models_impl(self) -> list[ModelSummary]:
-        """Lists available models from the provider's API."""
+        """Lists available models from the provider's API.
+
+        Returns:
+            A list of ModelSummary objects.
+        """
         pass
 
     @abstractmethod
     def _messages_to_provider_format(self, messages: list[Message]) -> Any:
-        """Converts standardized messages to provider-specific format."""
+        """Converts standardized messages to provider-specific format.
+
+        Args:
+            messages: A list of standardized Message objects.
+
+        Returns:
+            Messages in the format required by the provider's API.
+        """
         pass
 
     @abstractmethod
     def _tools_to_provider_format(self, tools: list[Tool]) -> Any:
-        """Converts standardized tools to provider-specific format."""
+        """Converts standardized tools to provider-specific format.
+
+        Args:
+            tools: A list of standardized Tool objects.
+
+        Returns:
+            Tools in the format required by the provider's API.
+        """
         pass
 
     @abstractmethod
     def _make_provider_request(
-        self,
-        messages: Any,
-        model: str,
-        stream: bool,
-        tools: Any = None,
-        **kwargs: Any,
+            self,
+            messages: Any,
+            model: str,
+            stream: bool,
+            tools: Any = None,
+            **kwargs: Any,
     ) -> Any:
-        """Makes the actual API request to the provider."""
+        """Makes the actual API request to the provider.
+
+        Args:
+            messages: Provider-formatted messages.
+            model: The model to use for the request.
+            stream: Whether to stream the response.
+            tools: Provider-formatted tools, if any.
+            **kwargs: Additional provider-specific parameters.
+
+        Returns:
+            The raw response from the provider's API.
+        """
         pass
 
     @abstractmethod
     def _process_provider_stream_event(
-        self, event: Any, processor: StreamProcessor
-    ) -> ChimericStreamChunk | None:
+            self, event: Any, processor: StreamProcessor
+    ) -> ChimericStreamChunk[StreamType] | None:
         """Processes a provider-specific stream event.
 
         Providers should use _create_stream_chunk() to create standardized chunks.
+
+        Args:
+            event: The native stream event from the provider.
+            processor: The stream processor to manage stream state.
+
+        Returns:
+            A standardized ChimericStreamChunk or None if the event is to be
+            skipped.
 
         Example:
             # For content delta
@@ -225,127 +229,93 @@ class ChimericClient(
 
     @abstractmethod
     def _extract_usage_from_response(self, response: Any) -> Usage:
-        """Extracts usage information from provider response."""
+        """Extracts usage information from provider response.
+
+        Args:
+            response: The native response from the provider.
+
+        Returns:
+            A standardized Usage object.
+        """
         pass
 
     @abstractmethod
     def _extract_content_from_response(self, response: Any) -> str | list[Any]:
-        """Extracts content from provider response."""
+        """Extracts content from provider response.
+
+        Args:
+            response: The native response from the provider.
+
+        Returns:
+            The string content or list of content parts from the response.
+        """
         pass
 
     @abstractmethod
     def _extract_tool_calls_from_response(self, response: Any) -> list[ToolCall] | None:
-        """Extracts tool calls from provider response."""
+        """Extracts tool calls from provider response.
+
+        Args:
+            response: The native response from the provider.
+
+        Returns:
+            A list of ToolCall objects or None if no tool calls are present.
+        """
         pass
-
-    def _process_provider_stream(
-        self, stream: Any, processor: StreamProcessor
-    ) -> Generator[ChimericStreamChunk[StreamType], None, None]:
-        """Processes a provider stream using the processor."""
-        for event in stream:
-            chunk = self._process_provider_stream_event(event, processor)
-            if chunk:
-                yield chunk
-
-        # Execute any accumulated tool calls
-        if processor.state.tool_calls:
-            tool_results = self._execute_accumulated_tool_calls(processor.state.tool_calls)
-            if tool_results:
-                # Yield final chunk with tool results
-                final_chunk = StreamChunk(
-                    content=processor.state.accumulated_content,
-                    finish_reason="tool_calls",
-                    metadata={"tool_results": [tr.model_dump() for tr in tool_results]},
-                )
-                yield ChimericStreamChunk(native=None, common=final_chunk)
 
     # ====================================================================
     # Optional methods - Override based on capabilities
     # ====================================================================
 
-    @staticmethod
-    def _get_model_aliases() -> list[str]:
-        """Return model aliases to include in model listings."""
+    def _get_model_aliases(self) -> list[str]:
+        """Return model aliases to include in model listings.
+
+        Returns:
+            A list of string aliases for models.
+        """
         return []
 
     def _upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[FileUploadResponseType]:
         """Provider-specific file upload implementation.
 
         Only implement if supports_files() returns True.
+
+        Args:
+            **kwargs: Provider-specific arguments for file upload.
+
+        Returns:
+            A ChimericFileUploadResponse containing the upload result.
+
+        Raises:
+            NotImplementedError: If the provider does not support file uploads.
         """
         raise NotImplementedError(
             f"Provider {self.__class__.__name__} does not support file uploads"
         )
 
     # ====================================================================
-    # Message and tool normalization
-    # ====================================================================
-
-    @staticmethod
-    def _normalize_messages(messages: Input) -> list[Message]:
-        """Converts various input formats to standardized Message objects."""
-        if isinstance(messages, str):
-            return [Message(role="user", content=messages)]
-
-        if isinstance(messages, Message):
-            return [messages]
-
-        if isinstance(messages, dict):
-            return [Message(**messages)]
-
-        if isinstance(messages, list):
-            normalized = []
-            for msg in messages:
-                if isinstance(msg, str):
-                    normalized.append(Message(role="user", content=msg))
-                elif isinstance(msg, Message):
-                    normalized.append(msg)
-                elif isinstance(msg, dict):
-                    normalized.append(Message(**msg))
-                else:
-                    normalized.append(Message(role="user", content=str(msg)))
-            return normalized
-
-        return [Message(role="user", content=str(messages))]
-
-    @staticmethod
-    def _normalize_tools(tools: Tools) -> list[Tool]:
-        """Converts various tool formats to standardized Tool objects."""
-        if not tools:
-            return []
-
-        normalized = []
-        for tool in tools:
-            if isinstance(tool, Tool):
-                normalized.append(tool)
-            elif isinstance(tool, dict):
-                # Convert dict to a Tool object
-                normalized.append(Tool(**tool))
-            else:
-                # Try to extract from object attributes
-                normalized.append(
-                    Tool(
-                        name=getattr(tool, "name", "unknown"),
-                        description=getattr(tool, "description", ""),
-                        parameters=getattr(tool, "parameters", {}),
-                        function=getattr(tool, "function", None),
-                    )
-                )
-        return normalized
-
-    # ====================================================================
     # Tool execution
     # ====================================================================
 
     def _execute_tool_call(self, call: ToolCall) -> ToolExecutionResult:
-        """Executes a single tool call with standardized error handling."""
+        """Executes a single tool call with standardized error handling.
+
+        Args:
+            call: The ToolCall object to execute.
+
+        Returns:
+            A ToolExecutionResult object with the outcome.
+
+        Raises:
+            ToolRegistrationError: If the tool is not found or not callable.
+        """
         result = ToolExecutionResult(call_id=call.call_id, name=call.name, arguments=call.arguments)
 
-        try:
-            tool = self.tool_manager.get_tool(call.name)
-            if not tool or not callable(tool.function):
-                raise ToolRegistrationError(f"Tool '{call.name}' is not callable")
+        tool = self.tool_manager.get_tool(call.name)
+        if not tool or not callable(tool.function):
+            raise ToolRegistrationError(f"Tool '{call.name}' is not callable")
 
+        try:
             args = json.loads(call.arguments) if call.arguments else {}
             execution_result = tool.function(**args)
             result.result = str(execution_result)
@@ -363,7 +333,14 @@ class ChimericClient(
         return result
 
     def _execute_tool_calls(self, calls: list[ToolCall]) -> list[ToolExecutionResult]:
-        """Executes multiple tool calls in parallel."""
+        """Executes multiple tool calls in parallel.
+
+        Args:
+            calls: A list of ToolCall objects to execute.
+
+        Returns:
+            A list of ToolExecutionResult objects.
+        """
         if not calls:
             return []
 
@@ -389,106 +366,275 @@ class ChimericClient(
                     )
         return results
 
-    def _execute_accumulated_tool_calls(
-        self, tool_calls: dict[str, ToolCallChunk]
-    ) -> list[ToolExecutionResult]:
-        """Executes accumulated tool calls from streaming.
+    def _handle_tool_calling_completion(
+            self, messages: Any, model: str, tools: Any, **kwargs: Any
+    ) -> ChimericCompletionResponse[CompletionResponseType]:
+        """Handles tool calling with iterative approach until completion.
 
-        Converts ToolCallChunk objects to ToolCall and executes them.
+        This method follows the elegant pattern of making requests, executing tools,
+        and continuing until no more tool calls are needed.
+
+        Args:
+            messages: The initial provider-formatted messages.
+            model: The model to use for the requests.
+            tools: The provider-formatted tools.
+            **kwargs: Additional provider-specific parameters.
+
+        Returns:
+            The final ChimericCompletionResponse after all tool calls are resolved.
         """
-        calls = []
-        for tool_call in tool_calls.values():
-            if tool_call.status == "completed":
-                calls.append(
-                    ToolCall(
-                        call_id=tool_call.call_id or tool_call.id,
-                        name=tool_call.name,
-                        arguments=tool_call.arguments,
-                    )
-                )
+        current_messages = list(messages) if isinstance(messages, list) else [messages]
+        all_tool_results = []
+        total_usage = Usage()
 
-        return self._execute_tool_calls(calls)
+        # Continue until no more tool calls
+        while True:
+            # Make API request
+            response = self._make_provider_request(current_messages, model, False, tools, **kwargs)
+
+            # Accumulate usage
+            response_usage = self._extract_usage_from_response(response)
+            if response_usage:
+                total_usage.prompt_tokens += response_usage.prompt_tokens or 0
+                total_usage.completion_tokens += response_usage.completion_tokens or 0
+                total_usage.total_tokens += response_usage.total_tokens or 0
+
+            # Check for tool calls
+            tool_calls = self._extract_tool_calls_from_response(response)
+
+            if not tool_calls:
+                # No more tool calls, this is our final response
+                final_response = response
+                break
+
+            # Execute tool calls
+            tool_results = self._execute_tool_calls(tool_calls)
+            all_tool_results.extend(tool_results)
+
+            # Update messages for next iteration
+            current_messages = self._update_messages_with_tool_calls(
+                current_messages, response, tool_calls, tool_results
+            )
+
+        # Extract final content
+        content = self._extract_content_from_response(final_response)
+
+        return self._create_completion_response(
+            native_response=final_response,
+            content=content,
+            usage=total_usage,
+            model=model,
+            tool_calls=all_tool_results if all_tool_results else None,
+        )
+
+    def _update_messages_with_tool_calls(
+            self,
+            messages: list[Any],
+            assistant_response: Any,
+            tool_calls: list[ToolCall],
+            tool_results: list[ToolExecutionResult],
+    ) -> list[Any]:
+        """Updates message history with assistant response and tool results.
+
+        This method should be overridden by providers to handle their specific
+        message format for tool calls.
+
+        Args:
+            messages: The current list of provider-formatted messages.
+            assistant_response: The native response from the assistant that
+                contained the tool calls.
+            tool_calls: The list of tool calls made by the assistant.
+            tool_results: The results of executing the tool calls.
+
+        Returns:
+            An updated list of provider-formatted messages.
+
+        Raises:
+            NotImplementedError: If the provider supports tools but has not
+                implemented this method.
+        """
+        # Default implementation - providers should override this if they support tool calling
+        raise NotImplementedError(
+            f"Provider {self.__class__.__name__} must implement _update_messages_with_tool_calls"
+        )
+
+    # ====================================================================
+    # Streaming with tool support
+    # ====================================================================
+
+    def _process_provider_stream(
+            self, stream: Any, processor: StreamProcessor
+    ) -> Generator[ChimericStreamChunk[StreamType], None, None]:
+        """Processes a provider stream using the processor.
+
+        Args:
+            stream: The native stream object from the provider.
+            processor: The stream processor to manage stream state.
+
+        Yields:
+            Standardized ChimericStreamChunk objects.
+        """
+        for event in stream:
+            chunk = self._process_provider_stream_event(event, processor)
+            if chunk:
+                yield chunk
+
+    def _handle_streaming_tool_calls(
+            self,
+            stream: Any,
+            processor: StreamProcessor,
+            messages: Any,
+            model: str,
+            tools: Any,
+            **kwargs: Any,
+    ) -> Generator[ChimericStreamChunk[StreamType], None, None]:
+        """Handles streaming with tool call support.
+
+        Args:
+            stream: The initial native stream from the provider.
+            processor: The stream processor for the initial stream.
+            messages: The initial provider-formatted messages.
+            model: The model to use for requests.
+            tools: The provider-formatted tools.
+            **kwargs: Additional provider-specific parameters.
+
+        Yields:
+            ChimericStreamChunk objects from all sequential API calls.
+        """
+        # First, yield all chunks from the initial stream
+        final_event = None
+        for event in stream:
+            final_event = event
+            chunk = self._process_provider_stream_event(event, processor)
+            if chunk:
+                yield chunk
+
+        # Check if we accumulated any tool calls
+        completed_tool_calls = processor.get_completed_tool_calls()
+        if completed_tool_calls:
+            # Convert to ToolCall objects
+            tool_calls = [
+                ToolCall(call_id=tc.call_id or tc.id, name=tc.name, arguments=tc.arguments)
+                for tc in completed_tool_calls
+            ]
+            # Execute tools
+            tool_results = self._execute_tool_calls(tool_calls)
+            # Update messages with tool results
+            current_messages = self._update_messages_with_tool_calls(
+                messages, final_event, tool_calls, tool_results
+            )
+
+            # Make another request and stream it
+            continuation_response = self._make_provider_request(
+                current_messages, model, True, tools, **kwargs
+            )
+
+            # Create new processor for continuation
+            continuation_processor = StreamProcessor()
+            yield from self._handle_streaming_tool_calls(
+                continuation_response,
+                continuation_processor,
+                current_messages,
+                model,
+                tools,
+                **kwargs,
+            )
 
     # ====================================================================
     # Response creation helpers
     # ====================================================================
 
-    @staticmethod
     def _create_completion_response(
-        native_response: CompletionResponseType,
-        content: str | list[Any],
-        usage: Usage | None = None,
-        model: str | None = None,
-        tool_calls: list[ToolExecutionResult] | None = None,
-        metadata: dict[str, Any] | None = None,
+            self,
+            native_response: CompletionResponseType,
+            content: str | list[Any],
+            usage: Usage | None = None,
+            model: str | None = None,
+            tool_calls: list[ToolExecutionResult] | None = None,
+            metadata: dict[str, Any] | None = None,
     ) -> ChimericCompletionResponse[CompletionResponseType]:
-        """Creates a standardized completion response."""
-        response_metadata = metadata or {}
-        if tool_calls:
-            response_metadata["tool_calls"] = [tc.model_dump() for tc in tool_calls]
+        """Creates a standardized completion response.
 
-        return ChimericCompletionResponse(
-            native=native_response,
-            common=CompletionResponse(
-                content=content, usage=usage or Usage(), model=model, metadata=response_metadata
-            ),
+        Args:
+            native_response: The raw response object from the provider.
+            content: The extracted content from the response.
+            usage: The extracted usage data.
+            model: The model identifier used for the request.
+            tool_calls: A list of executed tool call results.
+            metadata: Any additional metadata to include.
+
+        Returns:
+            A standardized ChimericCompletionResponse object.
+        """
+        return create_completion_response(
+            native_response, content, usage, model, tool_calls, metadata
         )
 
-    @staticmethod
     def _create_stream_chunk(
-        native_event: StreamType,
-        processor: StreamProcessor,
-        content_delta: str | None = None,
-        finish_reason: str | None = None,
-        metadata: dict[str, Any] | None = None,
+            self,
+            native_event: StreamType,
+            processor: StreamProcessor,
+            content_delta: str | None = None,
+            finish_reason: str | None = None,
+            metadata: dict[str, Any] | None = None,
     ) -> ChimericStreamChunk[StreamType]:
-        """Creates a standardized stream chunk."""
-        if content_delta is not None:
-            chunk = processor.process_content_delta(content_delta)
-        else:
-            chunk = StreamChunk(
-                content=processor.state.accumulated_content,
-                finish_reason=finish_reason,
-                metadata=metadata or processor.state.metadata,
-            )
+        """Creates a standardized stream chunk.
 
-        return ChimericStreamChunk(native=native_event, common=chunk)
+        Args:
+            native_event: The raw stream event from the provider.
+            processor: The stream processor managing the stream state.
+            content_delta: The content delta for this chunk.
+            finish_reason: The finish reason if the stream is ending.
+            metadata: Any additional metadata to include.
+
+        Returns:
+            A standardized ChimericStreamChunk object.
+        """
+        return create_stream_chunk(native_event, processor, content_delta, finish_reason, metadata)
 
     # ====================================================================
     # Public API
     # ====================================================================
 
     def chat_completion(
-        self,
-        messages: Input,
-        model: str,
-        stream: bool = False,
-        tools: Tools = None,
-        auto_tool: bool = True,
-        **kwargs: Any,
+            self,
+            messages: Input,
+            model: str,
+            stream: bool = False,
+            tools: Tools = None,
+            auto_tool: bool = True,
+            **kwargs: Any,
     ) -> (
-        ChimericCompletionResponse[CompletionResponseType]
-        | Generator[ChimericStreamChunk[StreamType], None, None]
+            ChimericCompletionResponse[CompletionResponseType]
+            | Generator[ChimericStreamChunk[StreamType], None, None]
     ):
         """Generates a synchronous chat completion.
 
         Args:
-            messages: Input messages (string, list, or Message objects)
-            model: Model identifier to use
-            stream: Whether to stream the response
-            tools: Optional list of tools to make available
-            auto_tool: If True, automatically includes all registered tools
-            **kwargs: Provider-specific parameters
+            messages: Input messages, which can be a string, a list of strings,
+                or a list of Message objects.
+            model: The identifier of the model to use for the completion.
+            stream: If True, the response will be streamed as a generator of
+                ChimericStreamChunk objects. Defaults to False.
+            tools: A list of tools to make available to the model.
+            auto_tool: If True and no tools are provided, all tools registered
+                with the ToolManager will be used. Defaults to True.
+            **kwargs: Additional provider-specific parameters to pass to the API.
 
         Returns:
-            ChimericCompletionResponse or Generator of ChimericStreamChunk
+            If stream is False, a ChimericCompletionResponse object.
+            If stream is True, a generator of ChimericStreamChunk objects.
 
         Raises:
-            ChimericError: If requested capability is not supported
-            ProviderError: If the provider API returns an error
+            ChimericError: If a requested capability (e.g., streaming or tools)
+                is not supported by the provider.
+            ProviderError: If the provider's API returns an error.
         """
         if stream and not self.supports_streaming():
             raise ChimericError("This provider does not support streaming responses")
+
+        if tools and not self.supports_tools():
+            raise ChimericError("This provider does not support tool calling")
 
         try:
             self._request_count += 1
@@ -499,12 +645,9 @@ class ChimericClient(
             if not final_tools and auto_tool and self.supports_tools():
                 final_tools = self.tool_manager.get_all_tools()
 
-            if final_tools and not self.supports_tools():
-                raise ChimericError("This provider does not support tool calling")
-
             # Normalize inputs
-            normalized_messages = self._normalize_messages(messages)
-            normalized_tools = self._normalize_tools(final_tools) if final_tools else None
+            normalized_messages = normalize_messages(messages)
+            normalized_tools = normalize_tools(final_tools) if final_tools else None
 
             # Convert to provider format
             provider_messages = self._messages_to_provider_format(normalized_messages)
@@ -512,31 +655,34 @@ class ChimericClient(
                 self._tools_to_provider_format(normalized_tools) if normalized_tools else None
             )
 
-            # Make API call
-            response = self._make_provider_request(
-                provider_messages, model, stream, provider_tools, **kwargs
-            )
-
             if stream:
-                # Create StreamProcessor for streaming responses
-                stream_processor = StreamProcessor()
-                return self._process_provider_stream(response, stream_processor)
-            # Extract standard components
+                # Streaming with tool support
+                response = self._make_provider_request(
+                    provider_messages, model, True, provider_tools, **kwargs
+                )
+                processor = StreamProcessor()
+
+                if provider_tools:
+                    return self._handle_streaming_tool_calls(
+                        response, processor, provider_messages, model, provider_tools, **kwargs
+                    )
+                return self._process_provider_stream(response, processor)
+
+            # Non-streaming
+            if provider_tools:
+                return self._handle_tool_calling_completion(
+                    provider_messages, model, provider_tools, **kwargs
+                )
+            # Simple completion without tools
+            response = self._make_provider_request(provider_messages, model, False, None, **kwargs)
             content = self._extract_content_from_response(response)
             usage = self._extract_usage_from_response(response)
-            tool_calls = self._extract_tool_calls_from_response(response) if final_tools else None
-
-            # Execute tool calls if any
-            tool_results = None
-            if tool_calls:
-                tool_results = self._execute_tool_calls(tool_calls)
 
             return self._create_completion_response(
                 native_response=response,
                 content=content,
                 usage=usage,
                 model=model,
-                tool_calls=tool_results,
             )
         except Exception:
             self._error_count += 1
@@ -545,15 +691,19 @@ class ChimericClient(
     def upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[FileUploadResponseType]:
         """Uploads a file to the provider.
 
+        This method is a wrapper around the provider-specific `_upload_file`
+        implementation, adding request tracking and standardized error handling.
+
         Args:
-            **kwargs: Provider-specific file upload parameters
+            **kwargs: Provider-specific file upload parameters.
 
         Returns:
-            ChimericFileUploadResponse with native and common formats
+            A ChimericFileUploadResponse containing both the native response and
+            standardized file information.
 
         Raises:
-            NotImplementedError: If provider doesn't support files
-            ProviderError: If upload fails
+            NotImplementedError: If the provider does not support file uploads.
+            ProviderError: If the upload fails for any reason.
         """
         if not self.supports_files():
             raise NotImplementedError("Provider does not support file uploads")
@@ -564,7 +714,7 @@ class ChimericClient(
             return self._upload_file(**kwargs)
         except Exception as e:
             self._error_count += 1
-            if isinstance(e, (ProviderError, ValueError, NotImplementedError)):
+            if isinstance(e, ProviderError | ValueError | NotImplementedError):
                 raise
 
             provider_name = getattr(self, "_provider_name", self.__class__.__name__)
@@ -576,7 +726,11 @@ class ChimericClient(
             ) from e
 
     def list_models(self) -> list[ModelSummary]:
-        """Lists all available models including aliases."""
+        """Lists all available models including aliases.
+
+        Returns:
+            A list of ModelSummary objects for all available models.
+        """
         api_models = self._list_models_impl()
 
         # Add aliases
@@ -586,7 +740,17 @@ class ChimericClient(
         return api_models + alias_models
 
     def get_model_info(self, model_id: str) -> ModelSummary:
-        """Gets information about a specific model."""
+        """Gets information about a specific model.
+
+        Args:
+            model_id: The ID or name of the model to look up.
+
+        Returns:
+            A ModelSummary object for the specified model.
+
+        Raises:
+            ValueError: If the model is not found.
+        """
         models = self.list_models()
         for model in models:
             if model.id == model_id or model.name == model_id:
@@ -598,23 +762,43 @@ class ChimericClient(
     # ====================================================================
 
     def supports_multimodal(self) -> bool:
-        """Whether the provider supports multimodal inputs."""
+        """Checks if the provider supports multimodal inputs.
+
+        Returns:
+            True if multimodal inputs are supported, False otherwise.
+        """
         return self._capabilities.multimodal
 
     def supports_tools(self) -> bool:
-        """Whether the provider supports tool/function calling."""
+        """Checks if the provider supports tool/function calling.
+
+        Returns:
+            True if tool calling is supported, False otherwise.
+        """
         return self._capabilities.tools
 
     def supports_agents(self) -> bool:
-        """Whether the provider supports agent workflows."""
+        """Checks if the provider supports agent workflows.
+
+        Returns:
+            True if agent workflows are supported, False otherwise.
+        """
         return self._capabilities.agents
 
     def supports_files(self) -> bool:
-        """Whether the provider supports file uploads."""
+        """Checks if the provider supports file uploads.
+
+        Returns:
+            True if file uploads are supported, False otherwise.
+        """
         return self._capabilities.files
 
     def supports_streaming(self) -> bool:
-        """Whether the provider supports streaming responses."""
+        """Checks if the provider supports streaming responses.
+
+        Returns:
+            True if streaming is supported, False otherwise.
+        """
         return self._capabilities.streaming
 
     # ====================================================================
@@ -623,100 +807,78 @@ class ChimericClient(
 
     @property
     def capabilities(self) -> Capability:
-        """All capabilities of this provider."""
+        """All capabilities of this provider.
+
+        Returns:
+            A Capability object.
+        """
         return self._capabilities
 
     @property
     def client(self) -> ClientType:
-        """The underlying synchronous client."""
+        """The underlying synchronous client instance.
+
+        Returns:
+            The provider-specific synchronous client.
+        """
         return self._client
 
     @property
     def request_count(self) -> int:
-        """Total number of API requests made."""
+        """Total number of API requests made.
+
+        Returns:
+            The total number of requests.
+        """
         return self._request_count
 
     @property
     def error_count(self) -> int:
-        """Total number of errors encountered."""
+        """Total number of errors encountered.
+
+        Returns:
+            The total number of errors.
+        """
         return self._error_count
 
     @property
     def last_request_time(self) -> float | None:
-        """Unix timestamp of the last request."""
+        """Unix timestamp of the last request.
+
+        Returns:
+            The timestamp of the last request, or None if no requests have been made.
+        """
         return self._last_request_time
 
     @property
     def client_age(self) -> float:
-        """Age of this client in seconds."""
+        """Age of this client instance in seconds.
+
+        Returns:
+            The age of the client in seconds.
+        """
         return (datetime.now() - self.created_at).total_seconds()
-
-    # ====================================================================
-    # Utility methods
-    # ====================================================================
-
-    @staticmethod
-    def _filter_client_kwargs(client_type: type, kwargs: dict[str, Any]) -> dict[str, Any]:
-        """Filters kwargs to only include valid parameters for a client type."""
-        if client_type is object:
-            return kwargs.copy()
-
-        try:
-            init_method = getattr(client_type, "__init__", None)
-            if init_method is None:
-                return kwargs.copy()
-
-            sig = inspect.signature(init_method)
-            param_names = {
-                name
-                for name, param in sig.parameters.items()
-                if name != "self" and param.kind != inspect.Parameter.POSITIONAL_ONLY
-            }
-
-            has_var_kwargs = any(
-                param.kind == inspect.Parameter.VAR_KEYWORD for param in sig.parameters.values()
-            )
-
-            if has_var_kwargs:
-                return kwargs.copy()
-
-            return {k: v for k, v in kwargs.items() if k in param_names}
-
-        except (ValueError, TypeError, AttributeError):
-            return kwargs.copy()
-
-    @staticmethod
-    def _filter_kwargs(func: Any, kwargs: dict[str, Any]) -> dict[str, Any]:
-        """Filters kwargs to only include valid parameters for a function."""
-        try:
-            sig = inspect.signature(func)
-            param_names = {
-                name
-                for name, param in sig.parameters.items()
-                if param.kind != inspect.Parameter.POSITIONAL_ONLY
-            }
-
-            has_var_kwargs = any(
-                param.kind == inspect.Parameter.VAR_KEYWORD for param in sig.parameters.values()
-            )
-
-            if has_var_kwargs:
-                return kwargs.copy()
-
-            return {k: v for k, v in kwargs.items() if k in param_names}
-        except (ValueError, TypeError, AttributeError):
-            return {}
 
     # ====================================================================
     # Context managers
     # ====================================================================
 
     def __enter__(self):
-        """Enters the context manager."""
+        """Enters the context manager.
+
+        Returns:
+            The client instance.
+        """
         return self
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        """Exits the context manager, closing the client."""
+        """Exits the context manager, closing the client if possible.
+
+        Args:
+            exc_type: The exception type.
+            exc_val: The exception value.
+            exc_tb: The exception traceback.
+        """
         if hasattr(self._client, "close"):
             self._client.close()
 
@@ -725,7 +887,11 @@ class ChimericClient(
     # ====================================================================
 
     def __repr__(self) -> str:
-        """Returns a detailed string representation."""
+        """Returns a detailed string representation of the client.
+
+        Returns:
+            A string representation.
+        """
         return (
             f"{self.__class__.__name__}("
             f"capabilities={self._capabilities}, "
@@ -734,7 +900,11 @@ class ChimericClient(
         )
 
     def __str__(self) -> str:
-        """Returns a human-readable string representation."""
+        """Returns a human-readable string representation of the client.
+
+        Returns:
+            A human-readable string.
+        """
         return (
             f"{self.__class__.__name__} Client\n"
             f"- Created: {self.created_at}\n"
@@ -761,12 +931,18 @@ class ChimericAsyncClient(
     """
 
     def __init__(
-        self,
-        api_key: str,
-        tool_manager: ToolManager,
-        **kwargs: Any,
+            self,
+            api_key: str,
+            tool_manager: ToolManager,
+            **kwargs: Any,
     ) -> None:
-        """Initializes the base async client with common settings."""
+        """Initializes the base async client with common settings.
+
+        Args:
+            api_key: The API key for the provider.
+            tool_manager: The tool manager instance.
+            **kwargs: Additional provider-specific keyword arguments.
+        """
         self.api_key = api_key
         self.tool_manager = tool_manager
         self.created_at = datetime.now()
@@ -774,12 +950,11 @@ class ChimericAsyncClient(
         self._last_request_time: float | None = None
         self._error_count = 0
 
-        # Get client type and filter kwargs
+        # Get client type and initialize client
         client_type = self._get_async_client_type()
-        async_kwargs = self._filter_client_kwargs(client_type, kwargs)
 
         # Initialize client
-        self._async_client: ClientType = self._init_async_client(client_type, **async_kwargs)
+        self._async_client: ClientType = self._init_async_client(client_type, **kwargs)
         self._capabilities = self._get_capabilities()
 
     # ====================================================================
@@ -790,55 +965,110 @@ class ChimericAsyncClient(
     def _get_async_client_type(self) -> type:
         """Returns the actual async client type used by the provider.
 
+        This abstract method must be implemented by subclasses to specify the
+        asynchronous client class from the provider's library.
+
         Example:
             return openai.AsyncClient
+
+        Returns:
+            The provider's async client class.
         """
         pass
 
     @abstractmethod
     def _init_async_client(self, async_client_type: type, **kwargs: Any) -> ClientType:
-        """Initializes the provider's asynchronous client."""
+        """Initializes the provider's asynchronous client.
+
+        Args:
+            async_client_type: The async client class to initialize.
+            **kwargs: Provider-specific arguments for client initialization.
+
+        Returns:
+            An instance of the provider's asynchronous client.
+        """
         pass
 
     @abstractmethod
     def _get_capabilities(self) -> Capability:
-        """Returns the capabilities supported by this provider."""
+        """Returns the capabilities supported by this provider.
+
+        Returns:
+            A Capability object detailing supported features.
+        """
         pass
 
     @abstractmethod
-    def _list_models_impl(self) -> list[ModelSummary]:
-        """Lists available models from the provider's API."""
+    async def _list_models_impl(self) -> list[ModelSummary]:
+        """Lists available models from the provider's API asynchronously.
+
+        Returns:
+            A list of ModelSummary objects.
+        """
         pass
 
     @abstractmethod
     def _messages_to_provider_format(self, messages: list[Message]) -> Any:
-        """Converts standardized messages to provider-specific format."""
+        """Converts standardized messages to provider-specific format.
+
+        Args:
+            messages: A list of standardized Message objects.
+
+        Returns:
+            Messages in the format required by the provider's API.
+        """
         pass
 
     @abstractmethod
     def _tools_to_provider_format(self, tools: list[Tool]) -> Any:
-        """Converts standardized tools to provider-specific format."""
+        """Converts standardized tools to provider-specific format.
+
+        Args:
+            tools: A list of standardized Tool objects.
+
+        Returns:
+            Tools in the format required by the provider's API.
+        """
         pass
 
     @abstractmethod
     async def _make_async_provider_request(
-        self,
-        messages: Any,
-        model: str,
-        stream: bool,
-        tools: Any = None,
-        **kwargs: Any,
+            self,
+            messages: Any,
+            model: str,
+            stream: bool,
+            tools: Any = None,
+            **kwargs: Any,
     ) -> Any:
-        """Makes the actual async API request to the provider."""
+        """Makes the actual async API request to the provider.
+
+        Args:
+            messages: Provider-formatted messages.
+            model: The model to use for the request.
+            stream: Whether to stream the response.
+            tools: Provider-formatted tools, if any.
+            **kwargs: Additional provider-specific parameters.
+
+        Returns:
+            The raw response from the provider's API.
+        """
         pass
 
     @abstractmethod
     def _process_provider_stream_event(
-        self, event: Any, processor: StreamProcessor
-    ) -> ChimericStreamChunk | None:
+            self, event: Any, processor: StreamProcessor
+    ) -> ChimericStreamChunk[StreamType] | None:
         """Processes a provider-specific stream event.
 
         Providers should use _create_stream_chunk() to create standardized chunks.
+
+        Args:
+            event: The native stream event from the provider.
+            processor: The stream processor to manage stream state.
+
+        Returns:
+            A standardized ChimericStreamChunk or None if the event is to be
+            skipped.
 
         Example:
             # For content delta
@@ -861,127 +1091,97 @@ class ChimericAsyncClient(
 
     @abstractmethod
     def _extract_usage_from_response(self, response: Any) -> Usage:
-        """Extracts usage information from provider response."""
+        """Extracts usage information from provider response.
+
+        Args:
+            response: The native response from the provider.
+
+        Returns:
+            A standardized Usage object.
+        """
         pass
 
     @abstractmethod
     def _extract_content_from_response(self, response: Any) -> str | list[Any]:
-        """Extracts content from provider response."""
+        """Extracts content from provider response.
+
+        Args:
+            response: The native response from the provider.
+
+        Returns:
+            The string content or list of content parts from the response.
+        """
         pass
 
     @abstractmethod
     def _extract_tool_calls_from_response(self, response: Any) -> list[ToolCall] | None:
-        """Extracts tool calls from provider response."""
+        """Extracts tool calls from provider response.
+
+        Args:
+            response: The native response from the provider.
+
+        Returns:
+            A list of ToolCall objects or None if no tool calls are present.
+        """
         pass
-
-    async def _process_async_provider_stream(
-        self, stream: Any, processor: StreamProcessor
-    ) -> AsyncGenerator[ChimericStreamChunk[StreamType], None]:
-        """Processes an async provider stream using the processor."""
-        async for event in stream:
-            chunk = self._process_provider_stream_event(event, processor)
-            if chunk:
-                yield chunk
-
-        # Execute any accumulated tool calls
-        if processor.state.tool_calls:
-            tool_results = await self._execute_accumulated_tool_calls(processor.state.tool_calls)
-            if tool_results:
-                # Yield final chunk with tool results
-                final_chunk = StreamChunk(
-                    content=processor.state.accumulated_content,
-                    finish_reason="tool_calls",
-                    metadata={"tool_results": [tr.model_dump() for tr in tool_results]},
-                )
-                yield ChimericStreamChunk(native=None, common=final_chunk)
 
     # ====================================================================
     # Optional methods - Override based on capabilities
     # ====================================================================
 
-    @staticmethod
-    def _get_model_aliases() -> list[str]:
-        """Return model aliases to include in model listings."""
+    def _get_model_aliases(self) -> list[str]:
+        """Return model aliases to include in model listings.
+
+        Returns:
+            A list of string aliases for models.
+        """
         return []
 
-    def _upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[FileUploadResponseType]:
-        """Provider-specific file upload implementation.
+    async def _upload_file(
+            self, **kwargs: Any
+    ) -> ChimericFileUploadResponse[FileUploadResponseType]:
+        """Provider-specific async file upload implementation.
 
         Only implement if supports_files() returns True.
+
+        Args:
+            **kwargs: Provider-specific arguments for file upload.
+
+        Returns:
+            A ChimericFileUploadResponse containing the upload result.
+
+        Raises:
+            NotImplementedError: If the provider does not support file uploads.
         """
         raise NotImplementedError(
             f"Provider {self.__class__.__name__} does not support file uploads"
         )
 
     # ====================================================================
-    # Message and tool normalization
-    # ====================================================================
-
-    @staticmethod
-    def _normalize_messages(messages: Input) -> list[Message]:
-        """Converts various input formats to standardized Message objects."""
-        if isinstance(messages, str):
-            return [Message(role="user", content=messages)]
-
-        if isinstance(messages, Message):
-            return [messages]
-
-        if isinstance(messages, dict):
-            return [Message(**messages)]
-
-        if isinstance(messages, list):
-            normalized = []
-            for msg in messages:
-                if isinstance(msg, str):
-                    normalized.append(Message(role="user", content=msg))
-                elif isinstance(msg, Message):
-                    normalized.append(msg)
-                elif isinstance(msg, dict):
-                    normalized.append(Message(**msg))
-                else:
-                    normalized.append(Message(role="user", content=str(msg)))
-            return normalized
-
-        return [Message(role="user", content=str(messages))]
-
-    @staticmethod
-    def _normalize_tools(tools: Tools) -> list[Tool]:
-        """Converts various tool formats to standardized Tool objects."""
-        if not tools:
-            return []
-
-        normalized = []
-        for tool in tools:
-            if isinstance(tool, Tool):
-                normalized.append(tool)
-            elif isinstance(tool, dict):
-                # Convert dict to a Tool object
-                normalized.append(Tool(**tool))
-            else:
-                # Try to extract from object attributes
-                normalized.append(
-                    Tool(
-                        name=getattr(tool, "name", "unknown"),
-                        description=getattr(tool, "description", ""),
-                        parameters=getattr(tool, "parameters", {}),
-                        function=getattr(tool, "function", None),
-                    )
-                )
-        return normalized
-
-    # ====================================================================
     # Tool execution
     # ====================================================================
 
     async def _execute_tool_call(self, call: ToolCall) -> ToolExecutionResult:
-        """Executes a single tool call with standardized error handling."""
+        """Executes a single tool call asynchronously.
+
+        Handles both sync and async tool functions.
+
+        Args:
+            call: The ToolCall object to execute.
+
+        Returns:
+            A ToolExecutionResult object with the outcome.
+
+        Raises:
+            ToolRegistrationError: If the tool is not found or not callable.
+        """
         result = ToolExecutionResult(call_id=call.call_id, name=call.name, arguments=call.arguments)
 
-        try:
-            tool = self.tool_manager.get_tool(call.name)
-            if not tool or not callable(tool.function):
-                raise ToolRegistrationError(f"Tool '{call.name}' is not callable")
+        tool = self.tool_manager.get_tool(call.name)
+        if not tool or not callable(tool.function):
+            raise ToolRegistrationError(f"Tool '{call.name}' is not callable")
 
+        try:
             args = json.loads(call.arguments) if call.arguments else {}
 
             # Check if the tool function is async
@@ -1005,7 +1205,14 @@ class ChimericAsyncClient(
         return result
 
     async def _execute_tool_calls(self, calls: list[ToolCall]) -> list[ToolExecutionResult]:
-        """Executes multiple tool calls in parallel using asyncio."""
+        """Executes multiple tool calls in parallel using asyncio.
+
+        Args:
+            calls: A list of ToolCall objects to execute.
+
+        Returns:
+            A list of ToolExecutionResult objects.
+        """
         if not calls:
             return []
 
@@ -1033,106 +1240,278 @@ class ChimericAsyncClient(
 
         return final_results
 
-    async def _execute_accumulated_tool_calls(
-        self, tool_calls: dict[str, ToolCallChunk]
-    ) -> list[ToolExecutionResult]:
-        """Executes accumulated tool calls from streaming.
+    async def _handle_tool_calling_completion(
+            self, messages: Any, model: str, tools: Any, **kwargs: Any
+    ) -> ChimericCompletionResponse[CompletionResponseType]:
+        """Handles tool calling with iterative approach until completion (async).
 
-        Converts ToolCallChunk objects to ToolCall and executes them.
+        Args:
+            messages: The initial provider-formatted messages.
+            model: The model to use for the requests.
+            tools: The provider-formatted tools.
+            **kwargs: Additional provider-specific parameters.
+
+        Returns:
+            The final ChimericCompletionResponse after all tool calls are resolved.
         """
-        calls = []
-        for tool_call in tool_calls.values():
-            if tool_call.status == "completed":
-                calls.append(
-                    ToolCall(
-                        call_id=tool_call.call_id or tool_call.id,
-                        name=tool_call.name,
-                        arguments=tool_call.arguments,
-                    )
-                )
+        current_messages = list(messages) if isinstance(messages, list) else [messages]
+        all_tool_results = []
+        total_usage = Usage()
+        final_response = None
 
-        return await self._execute_tool_calls(calls)
+        # Continue until no more tool calls
+        while True:
+            # Make API request
+            response = await self._make_async_provider_request(
+                current_messages, model, False, tools, **kwargs
+            )
+
+            # Accumulate usage
+            response_usage = self._extract_usage_from_response(response)
+            if response_usage:
+                total_usage.prompt_tokens += response_usage.prompt_tokens or 0
+                total_usage.completion_tokens += response_usage.completion_tokens or 0
+                total_usage.total_tokens += response_usage.total_tokens or 0
+
+            # Check for tool calls
+            tool_calls = self._extract_tool_calls_from_response(response)
+
+            if not tool_calls:
+                # No more tool calls, this is our final response
+                final_response = response
+                break
+
+            # Execute tool calls
+            tool_results = await self._execute_tool_calls(tool_calls)
+            all_tool_results.extend(tool_results)
+
+            # Update messages for next iteration
+            current_messages = self._update_messages_with_tool_calls(
+                current_messages, response, tool_calls, tool_results
+            )
+
+        # Extract final content
+        content = self._extract_content_from_response(final_response)
+
+        return self._create_completion_response(
+            native_response=final_response,
+            content=content,
+            usage=total_usage,
+            model=model,
+            tool_calls=all_tool_results if all_tool_results else None,
+        )
+
+    def _update_messages_with_tool_calls(
+            self,
+            messages: list[Any],
+            assistant_response: Any,
+            tool_calls: list[ToolCall],
+            tool_results: list[ToolExecutionResult],
+    ) -> list[Any]:
+        """Updates message history with assistant response and tool results.
+
+        This method should be overridden by providers to handle their specific
+        message format for tool calls.
+
+        Args:
+            messages: The current list of provider-formatted messages.
+            assistant_response: The native response from the assistant that
+                contained the tool calls.
+            tool_calls: The list of tool calls made by the assistant.
+            tool_results: The results of executing the tool calls.
+
+        Returns:
+            An updated list of provider-formatted messages.
+
+        Raises:
+            NotImplementedError: If the provider supports tools but has not
+                implemented this method.
+        """
+        # Default implementation - providers should override this if they support tool calling
+        raise NotImplementedError(
+            f"Provider {self.__class__.__name__} must implement _update_messages_with_tool_calls"
+        )
+
+    # ====================================================================
+    # Streaming with tool support (Async)
+    # ====================================================================
+
+    async def _process_async_provider_stream(
+            self, stream: Any, processor: StreamProcessor
+    ) -> AsyncGenerator[ChimericStreamChunk[StreamType], None]:
+        """Processes an async provider stream using the processor.
+
+        Args:
+            stream: The native async stream object from the provider.
+            processor: The stream processor to manage stream state.
+
+        Yields:
+            Standardized ChimericStreamChunk objects.
+        """
+        async for event in stream:
+            chunk = self._process_provider_stream_event(event, processor)
+            if chunk:
+                yield chunk
+
+    async def _handle_streaming_tool_calls(
+            self,
+            stream: Any,
+            processor: StreamProcessor,
+            messages: Any,
+            model: str,
+            tools: Any,
+            **kwargs: Any,
+    ) -> AsyncGenerator[ChimericStreamChunk[StreamType], None]:
+        """Handles streaming with tool call support (async).
+
+        Args:
+            stream: The initial native async stream from the provider.
+            processor: The stream processor for the initial stream.
+            messages: The initial provider-formatted messages.
+            model: The model to use for requests.
+            tools: The provider-formatted tools.
+            **kwargs: Additional provider-specific parameters.
+
+        Yields:
+            ChimericStreamChunk objects from all sequential API calls.
+        """
+        # First, yield all chunks from the initial stream
+        final_event = None
+        async for event in stream:
+            final_event = event
+            chunk = self._process_provider_stream_event(event, processor)
+            if chunk:
+                yield chunk
+
+        # Check if we accumulated any tool calls
+        completed_tool_calls = processor.get_completed_tool_calls()
+        if completed_tool_calls:
+            # Convert to ToolCall objects
+            tool_calls = [
+                ToolCall(call_id=tc.call_id or tc.id, name=tc.name, arguments=tc.arguments)
+                for tc in completed_tool_calls
+            ]
+
+            # Execute tools
+            tool_results = await self._execute_tool_calls(tool_calls)
+
+            # Update messages with tool results
+            current_messages = self._update_messages_with_tool_calls(
+                messages, final_event, tool_calls, tool_results
+            )
+
+            # Make another request and stream it
+            continuation_response = await self._make_async_provider_request(
+                current_messages, model, True, tools, **kwargs
+            )
+
+            # Create new processor for continuation
+            continuation_processor = StreamProcessor()
+            async for chunk in self._handle_streaming_tool_calls(
+                    continuation_response,
+                    continuation_processor,
+                    current_messages,
+                    model,
+                    tools,
+                    **kwargs,
+            ):
+                yield chunk
 
     # ====================================================================
     # Response creation helpers
     # ====================================================================
 
-    @staticmethod
     def _create_completion_response(
-        native_response: CompletionResponseType,
-        content: str | list[Any],
-        usage: Usage | None = None,
-        model: str | None = None,
-        tool_calls: list[ToolExecutionResult] | None = None,
-        metadata: dict[str, Any] | None = None,
+            self,
+            native_response: CompletionResponseType,
+            content: str | list[Any],
+            usage: Usage | None = None,
+            model: str | None = None,
+            tool_calls: list[ToolExecutionResult] | None = None,
+            metadata: dict[str, Any] | None = None,
     ) -> ChimericCompletionResponse[CompletionResponseType]:
-        """Creates a standardized completion response."""
-        response_metadata = metadata or {}
-        if tool_calls:
-            response_metadata["tool_calls"] = [tc.model_dump() for tc in tool_calls]
+        """Creates a standardized completion response.
 
-        return ChimericCompletionResponse(
-            native=native_response,
-            common=CompletionResponse(
-                content=content, usage=usage or Usage(), model=model, metadata=response_metadata
-            ),
+        Args:
+            native_response: The raw response object from the provider.
+            content: The extracted content from the response.
+            usage: The extracted usage data.
+            model: The model identifier used for the request.
+            tool_calls: A list of executed tool call results.
+            metadata: Any additional metadata to include.
+
+        Returns:
+            A standardized ChimericCompletionResponse object.
+        """
+        return create_completion_response(
+            native_response, content, usage, model, tool_calls, metadata
         )
 
-    @staticmethod
     def _create_stream_chunk(
-        native_event: StreamType,
-        processor: StreamProcessor,
-        content_delta: str | None = None,
-        finish_reason: str | None = None,
-        metadata: dict[str, Any] | None = None,
+            self,
+            native_event: StreamType,
+            processor: StreamProcessor,
+            content_delta: str | None = None,
+            finish_reason: str | None = None,
+            metadata: dict[str, Any] | None = None,
     ) -> ChimericStreamChunk[StreamType]:
-        """Creates a standardized stream chunk."""
-        if content_delta is not None:
-            chunk = processor.process_content_delta(content_delta)
-        else:
-            chunk = StreamChunk(
-                content=processor.state.accumulated_content,
-                finish_reason=finish_reason,
-                metadata=metadata or processor.state.metadata,
-            )
+        """Creates a standardized stream chunk.
 
-        return ChimericStreamChunk(native=native_event, common=chunk)
+        Args:
+            native_event: The raw stream event from the provider.
+            processor: The stream processor managing the stream state.
+            content_delta: The content delta for this chunk.
+            finish_reason: The finish reason if the stream is ending.
+            metadata: Any additional metadata to include.
+
+        Returns:
+            A standardized ChimericStreamChunk object.
+        """
+        return create_stream_chunk(native_event, processor, content_delta, finish_reason, metadata)
 
     # ====================================================================
     # Public API
     # ====================================================================
 
     async def chat_completion(
-        self,
-        messages: Input,
-        model: str,
-        stream: bool = False,
-        tools: Tools = None,
-        auto_tool: bool = True,
-        **kwargs: Any,
+            self,
+            messages: Input,
+            model: str,
+            stream: bool = False,
+            tools: Tools = None,
+            auto_tool: bool = True,
+            **kwargs: Any,
     ) -> (
-        ChimericCompletionResponse[CompletionResponseType]
-        | AsyncGenerator[ChimericStreamChunk[StreamType], None]
+            ChimericCompletionResponse[CompletionResponseType]
+            | AsyncGenerator[ChimericStreamChunk[StreamType], None]
     ):
         """Generates an asynchronous chat completion.
 
         Args:
-            messages: Input messages (string, list, or Message objects)
-            model: Model identifier to use
-            stream: Whether to stream the response
-            tools: Optional list of tools to make available
-            auto_tool: If True, automatically includes all registered tools
-            **kwargs: Provider-specific parameters
+            messages: Input messages, which can be a string, a list of strings,
+                or a list of Message objects.
+            model: The identifier of the model to use for the completion.
+            stream: If True, the response will be streamed as an async generator
+                of ChimericStreamChunk objects. Defaults to False.
+            tools: A list of tools to make available to the model.
+            auto_tool: If True and no tools are provided, all tools registered
+                with the ToolManager will be used. Defaults to True.
+            **kwargs: Additional provider-specific parameters to pass to the API.
 
         Returns:
-            ChimericCompletionResponse or AsyncGenerator of ChimericStreamChunk
+            If stream is False, a ChimericCompletionResponse object.
+            If stream is True, an async generator of ChimericStreamChunk objects.
 
         Raises:
-            ChimericError: If requested capability is not supported
-            ProviderError: If the provider API returns an error
+            ChimericError: If a requested capability (e.g., streaming or tools)
+                is not supported by the provider.
+            ProviderError: If the provider's API returns an error.
         """
         if stream and not self.supports_streaming():
             raise ChimericError("This provider does not support streaming responses")
+
+        if tools and not self.supports_tools():
+            raise ChimericError("This provider does not support tool calling")
 
         try:
             self._request_count += 1
@@ -1143,12 +1522,9 @@ class ChimericAsyncClient(
             if not final_tools and auto_tool and self.supports_tools():
                 final_tools = self.tool_manager.get_all_tools()
 
-            if final_tools and not self.supports_tools():
-                raise ChimericError("This provider does not support tool calling")
-
             # Normalize inputs
-            normalized_messages = self._normalize_messages(messages)
-            normalized_tools = self._normalize_tools(final_tools) if final_tools else None
+            normalized_messages = normalize_messages(messages)
+            normalized_tools = normalize_tools(final_tools) if final_tools else None
 
             # Convert to provider format
             provider_messages = self._messages_to_provider_format(normalized_messages)
@@ -1156,50 +1532,59 @@ class ChimericAsyncClient(
                 self._tools_to_provider_format(normalized_tools) if normalized_tools else None
             )
 
-            # Make API call
-            response = await self._make_async_provider_request(
-                provider_messages, model, stream, provider_tools, **kwargs
-            )
-
             if stream:
-                # Create StreamProcessor for streaming responses
-                stream_processor = StreamProcessor()
-                return self._process_async_provider_stream(response, stream_processor)
-            # Extract standard components
+                # Streaming with tool support
+                response = await self._make_async_provider_request(
+                    provider_messages, model, True, provider_tools, **kwargs
+                )
+                processor = StreamProcessor()
+
+                if provider_tools:
+                    return self._handle_streaming_tool_calls(
+                        response, processor, provider_messages, model, provider_tools, **kwargs
+                    )
+                return self._process_async_provider_stream(response, processor)
+
+            # Non-streaming
+            if provider_tools:
+                return await self._handle_tool_calling_completion(
+                    provider_messages, model, provider_tools, **kwargs
+                )
+            # Simple completion without tools
+            response = await self._make_async_provider_request(
+                provider_messages, model, False, None, **kwargs
+            )
             content = self._extract_content_from_response(response)
             usage = self._extract_usage_from_response(response)
-            tool_calls = self._extract_tool_calls_from_response(response) if final_tools else None
-
-            # Execute tool calls if any
-            tool_results = None
-            if tool_calls:
-                tool_results = self._execute_tool_calls(tool_calls)
 
             return self._create_completion_response(
                 native_response=response,
                 content=content,
                 usage=usage,
                 model=model,
-                tool_calls=tool_results,
             )
         except Exception:
             self._error_count += 1
             raise
 
     async def upload_file(
-        self, **kwargs: Any
+            self, **kwargs: Any
     ) -> ChimericFileUploadResponse[FileUploadResponseType]:
-        """Uploads a file to the provider.
+        """Uploads a file to the provider asynchronously.
+
+        This method is a wrapper around the provider-specific `_upload_file`
+        implementation, adding request tracking and standardized error handling.
 
         Args:
-            **kwargs: Provider-specific file upload parameters
+            **kwargs: Provider-specific file upload parameters.
 
         Returns:
-            ChimericFileUploadResponse with native and common formats
+            A ChimericFileUploadResponse containing both the native response and
+            standardized file information.
 
         Raises:
-            NotImplementedError: If provider doesn't support files
-            ProviderError: If upload fails
+            NotImplementedError: If the provider does not support file uploads.
+            ProviderError: If the upload fails for any reason.
         """
         if not self.supports_files():
             raise NotImplementedError("Provider does not support file uploads")
@@ -1207,10 +1592,10 @@ class ChimericAsyncClient(
         try:
             self._request_count += 1
             self._last_request_time = time.time()
-            return self._upload_file(**kwargs)
+            return await self._upload_file(**kwargs)
         except Exception as e:
             self._error_count += 1
-            if isinstance(e, (ProviderError, ValueError, NotImplementedError)):
+            if isinstance(e, ProviderError | ValueError | NotImplementedError):
                 raise
 
             provider_name = getattr(self, "_provider_name", self.__class__.__name__)
@@ -1221,9 +1606,13 @@ class ChimericAsyncClient(
                 status_code=getattr(e, "status_code", None),
             ) from e
 
-    def list_models(self) -> list[ModelSummary]:
-        """Lists all available models including aliases."""
-        api_models = self._list_models_impl()
+    async def list_models(self) -> list[ModelSummary]:
+        """Lists all available models including aliases asynchronously.
+
+        Returns:
+            A list of ModelSummary objects for all available models.
+        """
+        api_models = await self._list_models_impl()
 
         # Add aliases
         aliases = self._get_model_aliases()
@@ -1231,9 +1620,19 @@ class ChimericAsyncClient(
 
         return api_models + alias_models
 
-    def get_model_info(self, model_id: str) -> ModelSummary:
-        """Gets information about a specific model."""
-        models = self.list_models()
+    async def get_model_info(self, model_id: str) -> ModelSummary:
+        """Gets information about a specific model asynchronously.
+
+        Args:
+            model_id: The ID or name of the model to look up.
+
+        Returns:
+            A ModelSummary object for the specified model.
+
+        Raises:
+            ValueError: If the model is not found.
+        """
+        models = await self.list_models()
         for model in models:
             if model.id == model_id or model.name == model_id:
                 return model
@@ -1244,23 +1643,43 @@ class ChimericAsyncClient(
     # ====================================================================
 
     def supports_multimodal(self) -> bool:
-        """Whether the provider supports multimodal inputs."""
+        """Checks if the provider supports multimodal inputs.
+
+        Returns:
+            True if multimodal inputs are supported, False otherwise.
+        """
         return self._capabilities.multimodal
 
     def supports_tools(self) -> bool:
-        """Whether the provider supports tool/function calling."""
+        """Checks if the provider supports tool/function calling.
+
+        Returns:
+            True if tool calling is supported, False otherwise.
+        """
         return self._capabilities.tools
 
     def supports_agents(self) -> bool:
-        """Whether the provider supports agent workflows."""
+        """Checks if the provider supports agent workflows.
+
+        Returns:
+            True if agent workflows are supported, False otherwise.
+        """
         return self._capabilities.agents
 
     def supports_files(self) -> bool:
-        """Whether the provider supports file uploads."""
+        """Checks if the provider supports file uploads.
+
+        Returns:
+            True if file uploads are supported, False otherwise.
+        """
         return self._capabilities.files
 
     def supports_streaming(self) -> bool:
-        """Whether the provider supports streaming responses."""
+        """Checks if the provider supports streaming responses.
+
+        Returns:
+            True if streaming is supported, False otherwise.
+        """
         return self._capabilities.streaming
 
     # ====================================================================
@@ -1269,100 +1688,78 @@ class ChimericAsyncClient(
 
     @property
     def capabilities(self) -> Capability:
-        """All capabilities of this provider."""
+        """All capabilities of this provider.
+
+        Returns:
+            A Capability object.
+        """
         return self._capabilities
 
     @property
     def async_client(self) -> ClientType:
-        """The underlying asynchronous client."""
+        """The underlying asynchronous client instance.
+
+        Returns:
+            The provider-specific asynchronous client.
+        """
         return self._async_client
 
     @property
     def request_count(self) -> int:
-        """Total number of API requests made."""
+        """Total number of API requests made.
+
+        Returns:
+            The total number of requests.
+        """
         return self._request_count
 
     @property
     def error_count(self) -> int:
-        """Total number of errors encountered."""
+        """Total number of errors encountered.
+
+        Returns:
+            The total number of errors.
+        """
         return self._error_count
 
     @property
     def last_request_time(self) -> float | None:
-        """Unix timestamp of the last request."""
+        """Unix timestamp of the last request.
+
+        Returns:
+            The timestamp of the last request, or None if no requests have been made.
+        """
         return self._last_request_time
 
     @property
     def client_age(self) -> float:
-        """Age of this client in seconds."""
+        """Age of this client instance in seconds.
+
+        Returns:
+            The age of the client in seconds.
+        """
         return (datetime.now() - self.created_at).total_seconds()
-
-    # ====================================================================
-    # Utility methods
-    # ====================================================================
-
-    @staticmethod
-    def _filter_client_kwargs(client_type: type, kwargs: dict[str, Any]) -> dict[str, Any]:
-        """Filters kwargs to only include valid parameters for a client type."""
-        if client_type is object:
-            return kwargs.copy()
-
-        try:
-            init_method = getattr(client_type, "__init__", None)
-            if init_method is None:
-                return kwargs.copy()
-
-            sig = inspect.signature(init_method)
-            param_names = {
-                name
-                for name, param in sig.parameters.items()
-                if name != "self" and param.kind != inspect.Parameter.POSITIONAL_ONLY
-            }
-
-            has_var_kwargs = any(
-                param.kind == inspect.Parameter.VAR_KEYWORD for param in sig.parameters.values()
-            )
-
-            if has_var_kwargs:
-                return kwargs.copy()
-
-            return {k: v for k, v in kwargs.items() if k in param_names}
-
-        except (ValueError, TypeError, AttributeError):
-            return kwargs.copy()
-
-    @staticmethod
-    def _filter_kwargs(func: Any, kwargs: dict[str, Any]) -> dict[str, Any]:
-        """Filters kwargs to only include valid parameters for a function."""
-        try:
-            sig = inspect.signature(func)
-            param_names = {
-                name
-                for name, param in sig.parameters.items()
-                if param.kind != inspect.Parameter.POSITIONAL_ONLY
-            }
-
-            has_var_kwargs = any(
-                param.kind == inspect.Parameter.VAR_KEYWORD for param in sig.parameters.values()
-            )
-
-            if has_var_kwargs:
-                return kwargs.copy()
-
-            return {k: v for k, v in kwargs.items() if k in param_names}
-        except (ValueError, TypeError, AttributeError):
-            return {}
 
     # ====================================================================
     # Context managers
     # ====================================================================
 
     async def __aenter__(self):
-        """Enters the async context manager."""
+        """Enters the async context manager.
+
+        Returns:
+            The async client instance.
+        """
         return self
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        """Exits the async context manager, closing the async client."""
+        """Exits the async context manager, closing the async client.
+
+        Args:
+            exc_type: The exception type.
+            exc_val: The exception value.
+            exc_tb: The exception traceback.
+        """
         if self._async_client is not None:
             # Try async close first
             aclose_method = getattr(self._async_client, "aclose", None)
@@ -1383,7 +1780,11 @@ class ChimericAsyncClient(
     # ====================================================================
 
     def __repr__(self) -> str:
-        """Returns a detailed string representation."""
+        """Returns a detailed string representation of the async client.
+
+        Returns:
+            A string representation.
+        """
         return (
             f"{self.__class__.__name__}("
             f"capabilities={self._capabilities}, "
@@ -1392,7 +1793,11 @@ class ChimericAsyncClient(
         )
 
     def __str__(self) -> str:
-        """Returns a human-readable string representation."""
+        """Returns a human-readable string representation of the async client.
+
+        Returns:
+            A human-readable string.
+        """
         return (
             f"{self.__class__.__name__} Client\n"
             f"- Created: {self.created_at}\n"
