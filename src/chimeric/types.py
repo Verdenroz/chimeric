@@ -211,11 +211,13 @@ class ToolCall(BaseModel):
         call_id: Provider-specific call identifier.
         name: Name of the tool being called.
         arguments: Arguments JSON string for the tool call.
+        metadata: Optional dictionary for provider-specific metadata.
     """
 
     call_id: str
     name: str
     arguments: str
+    metadata: Metadata | None = None
 
 
 class ToolCallChunk(BaseModel):
