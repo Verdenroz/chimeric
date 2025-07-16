@@ -32,7 +32,6 @@ from .types import (
 from .utils import (
     StreamProcessor,
     create_completion_response,
-    create_stream_chunk,
     normalize_messages,
     normalize_tools,
 )
@@ -198,7 +197,7 @@ class ChimericClient(
     ) -> ChimericStreamChunk[StreamType] | None:
         """Processes a provider-specific stream event.
 
-        Providers should use _create_stream_chunk() to create standardized chunks.
+        Providers should use create_stream_chunk() to create standardized chunks.
 
         Args:
             event: The native stream event from the provider.
@@ -211,7 +210,7 @@ class ChimericClient(
         Example:
             # For content delta
             if hasattr(event, 'delta'):
-                return self._create_stream_chunk(
+                return create_stream_chunk(
                     native_event=event,
                     processor=processor,
                     content_delta=event.delta
@@ -219,7 +218,7 @@ class ChimericClient(
 
             # For finish event
             if event.finish_reason:
-                return self._create_stream_chunk(
+                return create_stream_chunk(
                     native_event=event,
                     processor=processor,
                     finish_reason=event.finish_reason
@@ -419,7 +418,7 @@ class ChimericClient(
         # Extract final content
         content = self._extract_content_from_response(final_response)
 
-        return self._create_completion_response(
+        return create_completion_response(
             native_response=final_response,
             content=content,
             usage=total_usage,
@@ -540,57 +539,6 @@ class ChimericClient(
                 **kwargs,
             )
 
-    # ====================================================================
-    # Response creation helpers
-    # ====================================================================
-
-    def _create_completion_response(
-            self,
-            native_response: CompletionResponseType,
-            content: str | list[Any],
-            usage: Usage | None = None,
-            model: str | None = None,
-            tool_calls: list[ToolExecutionResult] | None = None,
-            metadata: dict[str, Any] | None = None,
-    ) -> ChimericCompletionResponse[CompletionResponseType]:
-        """Creates a standardized completion response.
-
-        Args:
-            native_response: The raw response object from the provider.
-            content: The extracted content from the response.
-            usage: The extracted usage data.
-            model: The model identifier used for the request.
-            tool_calls: A list of executed tool call results.
-            metadata: Any additional metadata to include.
-
-        Returns:
-            A standardized ChimericCompletionResponse object.
-        """
-        return create_completion_response(
-            native_response, content, usage, model, tool_calls, metadata
-        )
-
-    def _create_stream_chunk(
-            self,
-            native_event: StreamType,
-            processor: StreamProcessor,
-            content_delta: str | None = None,
-            finish_reason: str | None = None,
-            metadata: dict[str, Any] | None = None,
-    ) -> ChimericStreamChunk[StreamType]:
-        """Creates a standardized stream chunk.
-
-        Args:
-            native_event: The raw stream event from the provider.
-            processor: The stream processor managing the stream state.
-            content_delta: The content delta for this chunk.
-            finish_reason: The finish reason if the stream is ending.
-            metadata: Any additional metadata to include.
-
-        Returns:
-            A standardized ChimericStreamChunk object.
-        """
-        return create_stream_chunk(native_event, processor, content_delta, finish_reason, metadata)
 
     # ====================================================================
     # Public API
@@ -678,7 +626,7 @@ class ChimericClient(
             content = self._extract_content_from_response(response)
             usage = self._extract_usage_from_response(response)
 
-            return self._create_completion_response(
+            return create_completion_response(
                 native_response=response,
                 content=content,
                 usage=usage,
@@ -1060,7 +1008,7 @@ class ChimericAsyncClient(
     ) -> ChimericStreamChunk[StreamType] | None:
         """Processes a provider-specific stream event.
 
-        Providers should use _create_stream_chunk() to create standardized chunks.
+        Providers should use create_stream_chunk() to create standardized chunks.
 
         Args:
             event: The native stream event from the provider.
@@ -1073,7 +1021,7 @@ class ChimericAsyncClient(
         Example:
             # For content delta
             if hasattr(event, 'delta'):
-                return self._create_stream_chunk(
+                return create_stream_chunk(
                     native_event=event,
                     processor=processor,
                     content_delta=event.delta
@@ -1081,7 +1029,7 @@ class ChimericAsyncClient(
 
             # For finish event
             if event.finish_reason:
-                return self._create_stream_chunk(
+                return create_stream_chunk(
                     native_event=event,
                     processor=processor,
                     finish_reason=event.finish_reason
@@ -1293,7 +1241,7 @@ class ChimericAsyncClient(
         # Extract final content
         content = self._extract_content_from_response(final_response)
 
-        return self._create_completion_response(
+        return create_completion_response(
             native_response=final_response,
             content=content,
             usage=total_usage,
@@ -1417,57 +1365,6 @@ class ChimericAsyncClient(
             ):
                 yield chunk
 
-    # ====================================================================
-    # Response creation helpers
-    # ====================================================================
-
-    def _create_completion_response(
-            self,
-            native_response: CompletionResponseType,
-            content: str | list[Any],
-            usage: Usage | None = None,
-            model: str | None = None,
-            tool_calls: list[ToolExecutionResult] | None = None,
-            metadata: dict[str, Any] | None = None,
-    ) -> ChimericCompletionResponse[CompletionResponseType]:
-        """Creates a standardized completion response.
-
-        Args:
-            native_response: The raw response object from the provider.
-            content: The extracted content from the response.
-            usage: The extracted usage data.
-            model: The model identifier used for the request.
-            tool_calls: A list of executed tool call results.
-            metadata: Any additional metadata to include.
-
-        Returns:
-            A standardized ChimericCompletionResponse object.
-        """
-        return create_completion_response(
-            native_response, content, usage, model, tool_calls, metadata
-        )
-
-    def _create_stream_chunk(
-            self,
-            native_event: StreamType,
-            processor: StreamProcessor,
-            content_delta: str | None = None,
-            finish_reason: str | None = None,
-            metadata: dict[str, Any] | None = None,
-    ) -> ChimericStreamChunk[StreamType]:
-        """Creates a standardized stream chunk.
-
-        Args:
-            native_event: The raw stream event from the provider.
-            processor: The stream processor managing the stream state.
-            content_delta: The content delta for this chunk.
-            finish_reason: The finish reason if the stream is ending.
-            metadata: Any additional metadata to include.
-
-        Returns:
-            A standardized ChimericStreamChunk object.
-        """
-        return create_stream_chunk(native_event, processor, content_delta, finish_reason, metadata)
 
     # ====================================================================
     # Public API
@@ -1557,7 +1454,7 @@ class ChimericAsyncClient(
             content = self._extract_content_from_response(response)
             usage = self._extract_usage_from_response(response)
 
-            return self._create_completion_response(
+            return create_completion_response(
                 native_response=response,
                 content=content,
                 usage=usage,
