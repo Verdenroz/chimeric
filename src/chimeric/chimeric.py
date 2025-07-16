@@ -2,15 +2,15 @@ from collections.abc import AsyncGenerator, Callable, Generator
 import os
 from typing import Any
 
-from .base import BaseClient
+from .base import ChimericAsyncClient, ChimericClient
 from .exceptions import ChimericError, ProviderError, ProviderNotFoundError
-from .providers.anthropic.client import AnthropicClient
-from .providers.cerebras.client import CerebrasClient
-from .providers.cohere.client import CohereClient
-from .providers.google.client import GoogleClient
-from .providers.grok.client import GrokClient
-from .providers.groq.client import GroqClient
-from .providers.openai.client import OpenAIClient
+from .providers.anthropic.client import AnthropicAsyncClient, AnthropicClient
+from .providers.cerebras.client import CerebrasAsyncClient, CerebrasClient
+from .providers.cohere.client import CohereAsyncClient, CohereClient
+from .providers.google.client import GoogleAsyncClient, GoogleClient
+from .providers.grok.client import GrokAsyncClient, GrokClient
+from .providers.groq.client import GroqAsyncClient, GroqClient
+from .providers.openai.client import OpenAIAsyncClient, OpenAIClient
 from .tools import ToolManager
 from .types import (
     Capability,
@@ -25,12 +25,13 @@ from .types import (
 )
 
 __all__ = [
+    "ASYNC_PROVIDER_CLIENTS",
     "PROVIDER_CLIENTS",
     "Chimeric",
 ]
 
 # Mapping of provider enums to their corresponding client classes.
-PROVIDER_CLIENTS: dict[Provider, type[BaseClient[Any, Any, Any, Any, Any]]] = {
+PROVIDER_CLIENTS: dict[Provider, type[ChimericClient[Any, Any, Any, Any]]] = {
     Provider.OPENAI: OpenAIClient,
     Provider.ANTHROPIC: AnthropicClient,
     Provider.GOOGLE: GoogleClient,
@@ -38,6 +39,17 @@ PROVIDER_CLIENTS: dict[Provider, type[BaseClient[Any, Any, Any, Any, Any]]] = {
     Provider.COHERE: CohereClient,
     Provider.GROK: GrokClient,
     Provider.GROQ: GroqClient,
+}
+
+# Mapping of provider enums to their corresponding async client classes.
+ASYNC_PROVIDER_CLIENTS: dict[Provider, type[ChimericAsyncClient[Any, Any, Any, Any]]] = {
+    Provider.OPENAI: OpenAIAsyncClient,
+    Provider.ANTHROPIC: AnthropicAsyncClient,
+    Provider.GOOGLE: GoogleAsyncClient,
+    Provider.CEREBRAS: CerebrasAsyncClient,
+    Provider.COHERE: CohereAsyncClient,
+    Provider.GROK: GrokAsyncClient,
+    Provider.GROQ: GroqAsyncClient,
 }
 
 
@@ -108,7 +120,8 @@ class Chimeric:
             groq_api_key: Groq API key for authentication.
             **kwargs: Additional provider-specific configuration options.
         """
-        self.providers: dict[Provider, BaseClient[Any, Any, Any, Any, Any]] = {}
+        self.providers: dict[Provider, ChimericClient[Any, Any, Any, Any]] = {}
+        self.async_providers: dict[Provider, ChimericAsyncClient[Any, Any, Any, Any]] = {}
         self.primary_provider: Provider | None = None
 
         # Initialize the tool management system.
@@ -166,6 +179,7 @@ class Chimeric:
         for provider, api_key in provider_configs:
             if api_key is not None:
                 self._add_provider(provider, api_key=api_key, tool_manager=self._tool_manager)
+                self._add_async_provider(provider, api_key=api_key, tool_manager=self._tool_manager)
 
     def _detect_providers_from_environment(self, kwargs: dict[str, Any]) -> None:
         """Auto-detects available providers from environment variables.
@@ -199,6 +213,9 @@ class Chimeric:
                     self._add_provider(
                         provider, api_key=env_value, tool_manager=self._tool_manager, **clean_kwargs
                     )
+                    self._add_async_provider(
+                        provider, api_key=env_value, tool_manager=self._tool_manager, **clean_kwargs
+                    )
                     break
 
     def _add_provider(self, provider: Provider, **kwargs: Any) -> None:
@@ -227,6 +244,29 @@ class Chimeric:
 
         except (ImportError, ModuleNotFoundError, ValueError) as e:
             raise ChimericError(f"Failed to initialize provider {provider.value}: {e}") from e
+
+    def _add_async_provider(self, provider: Provider, **kwargs: Any) -> None:
+        """Adds an async provider client to the available async providers.
+
+        Args:
+            provider: The provider enum to add.
+            **kwargs: Configuration options for the async provider client.
+
+        Raises:
+            ProviderNotFoundError: If the provider is not supported.
+            ChimericError: If provider initialization fails.
+        """
+        if provider not in ASYNC_PROVIDER_CLIENTS:
+            raise ProviderNotFoundError(f"Async provider {provider.value} not supported")
+
+        try:
+            async_client_class = ASYNC_PROVIDER_CLIENTS[provider]
+            async_client = async_client_class(**kwargs)
+
+            self.async_providers[provider] = async_client
+
+        except (ImportError, ModuleNotFoundError, ValueError) as e:
+            raise ChimericError(f"Failed to initialize async provider {provider.value}: {e}") from e
 
     @staticmethod
     def _transform_stream(
@@ -321,10 +361,10 @@ class Chimeric:
         Raises:
             ProviderNotFoundError: If no suitable provider is found or the specified provider is not configured.
         """
-        target_provider = self._select_provider(model, provider)
-        client = self.providers[target_provider]
+        target_provider = self._select_async_provider(model, provider)
+        async_client = self.async_providers[target_provider]
 
-        chimeric_completion = await client.achat_completion(
+        chimeric_completion = await async_client.chat_completion(
             model=model,
             messages=messages,
             stream=stream,
@@ -365,6 +405,35 @@ class Chimeric:
             return provider_enum
 
         # Auto-detect provider by model
+        return self._select_provider_by_model(model)
+
+    def _select_async_provider(self, model: str, provider: str | None = None) -> Provider:
+        """Selects the appropriate async provider based on explicit provider or model availability.
+
+        Args:
+            model: The name of the model to use.
+            provider: Optional provider name to force using a specific provider.
+
+        Returns:
+            The provider enum to use for this model.
+
+        Raises:
+            ProviderNotFoundError: If the specified provider is not configured or
+                                 if no provider supports the requested model.
+        """
+        if provider:
+            # Use explicitly specified provider
+            try:
+                provider_enum = Provider(provider.lower())
+            except ValueError as e:
+                raise ProviderNotFoundError(f"Unknown provider: {provider}") from e
+
+            if provider_enum not in self.async_providers:
+                raise ProviderNotFoundError(f"Async provider {provider} not configured")
+
+            return provider_enum
+
+        # Auto-detect provider by model (use sync providers for model detection, same cache)
         return self._select_provider_by_model(model)
 
     def _select_provider_by_model(self, model: str) -> Provider:
@@ -520,7 +589,7 @@ class Chimeric:
         # Create a new instance with the merged values
         return Capability(**merged_values)
 
-    def get_provider_client(self, provider: str) -> BaseClient[Any, Any, Any, Any, Any]:
+    def get_provider_client(self, provider: str) -> ChimericClient[Any, Any, Any, Any]:
         """Gets direct access to a provider's client instance.
 
         Args:
