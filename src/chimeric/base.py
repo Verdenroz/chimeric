@@ -1,12 +1,12 @@
+from abc import ABC, abstractmethod
 import asyncio
+from collections.abc import AsyncGenerator, Generator
 import concurrent.futures
 import contextlib
+from datetime import datetime
 import inspect
 import json
 import time
-from abc import ABC, abstractmethod
-from collections.abc import AsyncGenerator, Generator
-from datetime import datetime
 from typing import Any, Generic, TypeVar
 
 from .exceptions import (
@@ -68,10 +68,10 @@ class ChimericClient(
     """
 
     def __init__(
-            self,
-            api_key: str,
-            tool_manager: ToolManager,
-            **kwargs: Any,
+        self,
+        api_key: str,
+        tool_manager: ToolManager,
+        **kwargs: Any,
     ) -> None:
         """Initializes the base client with common settings.
 
@@ -170,12 +170,12 @@ class ChimericClient(
 
     @abstractmethod
     def _make_provider_request(
-            self,
-            messages: Any,
-            model: str,
-            stream: bool,
-            tools: Any = None,
-            **kwargs: Any,
+        self,
+        messages: Any,
+        model: str,
+        stream: bool,
+        tools: Any = None,
+        **kwargs: Any,
     ) -> Any:
         """Makes the actual API request to the provider.
 
@@ -193,7 +193,7 @@ class ChimericClient(
 
     @abstractmethod
     def _process_provider_stream_event(
-            self, event: Any, processor: StreamProcessor
+        self, event: Any, processor: StreamProcessor
     ) -> ChimericStreamChunk[StreamType] | None:
         """Processes a provider-specific stream event.
 
@@ -366,7 +366,7 @@ class ChimericClient(
         return results
 
     def _handle_tool_calling_completion(
-            self, messages: Any, model: str, tools: Any, **kwargs: Any
+        self, messages: Any, model: str, tools: Any, **kwargs: Any
     ) -> ChimericCompletionResponse[CompletionResponseType]:
         """Handles tool calling with iterative approach until completion.
 
@@ -427,11 +427,11 @@ class ChimericClient(
         )
 
     def _update_messages_with_tool_calls(
-            self,
-            messages: list[Any],
-            assistant_response: Any,
-            tool_calls: list[ToolCall],
-            tool_results: list[ToolExecutionResult],
+        self,
+        messages: list[Any],
+        assistant_response: Any,
+        tool_calls: list[ToolCall],
+        tool_results: list[ToolExecutionResult],
     ) -> list[Any]:
         """Updates message history with assistant response and tool results.
 
@@ -462,7 +462,7 @@ class ChimericClient(
     # ====================================================================
 
     def _process_provider_stream(
-            self, stream: Any, processor: StreamProcessor
+        self, stream: Any, processor: StreamProcessor
     ) -> Generator[ChimericStreamChunk[StreamType], None, None]:
         """Processes a provider stream using the processor.
 
@@ -479,13 +479,13 @@ class ChimericClient(
                 yield chunk
 
     def _handle_streaming_tool_calls(
-            self,
-            stream: Any,
-            processor: StreamProcessor,
-            messages: Any,
-            model: str,
-            tools: Any,
-            **kwargs: Any,
+        self,
+        stream: Any,
+        processor: StreamProcessor,
+        messages: Any,
+        model: str,
+        tools: Any,
+        **kwargs: Any,
     ) -> Generator[ChimericStreamChunk[StreamType], None, None]:
         """Handles streaming with tool call support.
 
@@ -513,7 +513,12 @@ class ChimericClient(
         if completed_tool_calls:
             # Convert to ToolCall objects
             tool_calls = [
-                ToolCall(call_id=tc.call_id or tc.id, name=tc.name, arguments=tc.arguments)
+                ToolCall(
+                    call_id=tc.call_id or tc.id,
+                    name=tc.name,
+                    arguments=tc.arguments,
+                    metadata={"original_id": tc.id} if tc.id != (tc.call_id or tc.id) else None,
+                )
                 for tc in completed_tool_calls
             ]
             # Execute tools
@@ -539,22 +544,21 @@ class ChimericClient(
                 **kwargs,
             )
 
-
     # ====================================================================
     # Public API
     # ====================================================================
 
     def chat_completion(
-            self,
-            messages: Input,
-            model: str,
-            stream: bool = False,
-            tools: Tools = None,
-            auto_tool: bool = True,
-            **kwargs: Any,
+        self,
+        messages: Input,
+        model: str,
+        stream: bool = False,
+        tools: Tools = None,
+        auto_tool: bool = True,
+        **kwargs: Any,
     ) -> (
-            ChimericCompletionResponse[CompletionResponseType]
-            | Generator[ChimericStreamChunk[StreamType], None, None]
+        ChimericCompletionResponse[CompletionResponseType]
+        | Generator[ChimericStreamChunk[StreamType], None, None]
     ):
         """Generates a synchronous chat completion.
 
@@ -879,10 +883,10 @@ class ChimericAsyncClient(
     """
 
     def __init__(
-            self,
-            api_key: str,
-            tool_manager: ToolManager,
-            **kwargs: Any,
+        self,
+        api_key: str,
+        tool_manager: ToolManager,
+        **kwargs: Any,
     ) -> None:
         """Initializes the base async client with common settings.
 
@@ -981,12 +985,12 @@ class ChimericAsyncClient(
 
     @abstractmethod
     async def _make_async_provider_request(
-            self,
-            messages: Any,
-            model: str,
-            stream: bool,
-            tools: Any = None,
-            **kwargs: Any,
+        self,
+        messages: Any,
+        model: str,
+        stream: bool,
+        tools: Any = None,
+        **kwargs: Any,
     ) -> Any:
         """Makes the actual async API request to the provider.
 
@@ -1004,7 +1008,7 @@ class ChimericAsyncClient(
 
     @abstractmethod
     def _process_provider_stream_event(
-            self, event: Any, processor: StreamProcessor
+        self, event: Any, processor: StreamProcessor
     ) -> ChimericStreamChunk[StreamType] | None:
         """Processes a provider-specific stream event.
 
@@ -1086,7 +1090,7 @@ class ChimericAsyncClient(
         return []
 
     async def _upload_file(
-            self, **kwargs: Any
+        self, **kwargs: Any
     ) -> ChimericFileUploadResponse[FileUploadResponseType]:
         """Provider-specific async file upload implementation.
 
@@ -1189,7 +1193,7 @@ class ChimericAsyncClient(
         return final_results
 
     async def _handle_tool_calling_completion(
-            self, messages: Any, model: str, tools: Any, **kwargs: Any
+        self, messages: Any, model: str, tools: Any, **kwargs: Any
     ) -> ChimericCompletionResponse[CompletionResponseType]:
         """Handles tool calling with iterative approach until completion (async).
 
@@ -1250,11 +1254,11 @@ class ChimericAsyncClient(
         )
 
     def _update_messages_with_tool_calls(
-            self,
-            messages: list[Any],
-            assistant_response: Any,
-            tool_calls: list[ToolCall],
-            tool_results: list[ToolExecutionResult],
+        self,
+        messages: list[Any],
+        assistant_response: Any,
+        tool_calls: list[ToolCall],
+        tool_results: list[ToolExecutionResult],
     ) -> list[Any]:
         """Updates message history with assistant response and tool results.
 
@@ -1285,7 +1289,7 @@ class ChimericAsyncClient(
     # ====================================================================
 
     async def _process_async_provider_stream(
-            self, stream: Any, processor: StreamProcessor
+        self, stream: Any, processor: StreamProcessor
     ) -> AsyncGenerator[ChimericStreamChunk[StreamType], None]:
         """Processes an async provider stream using the processor.
 
@@ -1302,13 +1306,13 @@ class ChimericAsyncClient(
                 yield chunk
 
     async def _handle_streaming_tool_calls(
-            self,
-            stream: Any,
-            processor: StreamProcessor,
-            messages: Any,
-            model: str,
-            tools: Any,
-            **kwargs: Any,
+        self,
+        stream: Any,
+        processor: StreamProcessor,
+        messages: Any,
+        model: str,
+        tools: Any,
+        **kwargs: Any,
     ) -> AsyncGenerator[ChimericStreamChunk[StreamType], None]:
         """Handles streaming with tool call support (async).
 
@@ -1336,7 +1340,12 @@ class ChimericAsyncClient(
         if completed_tool_calls:
             # Convert to ToolCall objects
             tool_calls = [
-                ToolCall(call_id=tc.call_id or tc.id, name=tc.name, arguments=tc.arguments)
+                ToolCall(
+                    call_id=tc.call_id or tc.id,
+                    name=tc.name,
+                    arguments=tc.arguments,
+                    metadata={"original_id": tc.id} if tc.id != (tc.call_id or tc.id) else None,
+                )
                 for tc in completed_tool_calls
             ]
 
@@ -1356,31 +1365,30 @@ class ChimericAsyncClient(
             # Create new processor for continuation
             continuation_processor = StreamProcessor()
             async for chunk in self._handle_streaming_tool_calls(
-                    continuation_response,
-                    continuation_processor,
-                    current_messages,
-                    model,
-                    tools,
-                    **kwargs,
+                continuation_response,
+                continuation_processor,
+                current_messages,
+                model,
+                tools,
+                **kwargs,
             ):
                 yield chunk
-
 
     # ====================================================================
     # Public API
     # ====================================================================
 
     async def chat_completion(
-            self,
-            messages: Input,
-            model: str,
-            stream: bool = False,
-            tools: Tools = None,
-            auto_tool: bool = True,
-            **kwargs: Any,
+        self,
+        messages: Input,
+        model: str,
+        stream: bool = False,
+        tools: Tools = None,
+        auto_tool: bool = True,
+        **kwargs: Any,
     ) -> (
-            ChimericCompletionResponse[CompletionResponseType]
-            | AsyncGenerator[ChimericStreamChunk[StreamType], None]
+        ChimericCompletionResponse[CompletionResponseType]
+        | AsyncGenerator[ChimericStreamChunk[StreamType], None]
     ):
         """Generates an asynchronous chat completion.
 
@@ -1465,7 +1473,7 @@ class ChimericAsyncClient(
             raise
 
     async def upload_file(
-            self, **kwargs: Any
+        self, **kwargs: Any
     ) -> ChimericFileUploadResponse[FileUploadResponseType]:
         """Uploads a file to the provider asynchronously.
 

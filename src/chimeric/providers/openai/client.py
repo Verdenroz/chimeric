@@ -42,7 +42,13 @@ class OpenAIClient(ChimericClient[OpenAI, Response, ResponseStreamEvent, FileObj
 
     def _get_capabilities(self) -> Capability:
         """Gets OpenAI provider capabilities."""
-        return Capability(multimodal=True, streaming=True, tools=True, agents=True, files=True)
+        return Capability(
+            multimodal=True,
+            streaming=True,
+            tools=True,
+            agents=True,
+            files=True
+        )
 
     def _list_models_impl(self) -> list[ModelSummary]:
         """Lists available models from the OpenAI API."""
@@ -116,16 +122,14 @@ class OpenAIClient(ChimericClient[OpenAI, Response, ResponseStreamEvent, FileObj
 
     def _process_provider_stream_event(
         self, event: ResponseStreamEvent, processor: StreamProcessor
-    ) -> ChimericStreamChunk | None:
+    ) -> ChimericStreamChunk[ResponseStreamEvent] | None:
         """Processes an OpenAI stream event using the standardized processor."""
         event_type = getattr(event, "type", None)
 
         # Handle text content deltas
         if event_type == "response.output_text.delta":
             delta = getattr(event, "delta", "") or ""
-            return create_stream_chunk(
-                native_event=event, processor=processor, content_delta=delta
-            )
+            return create_stream_chunk(native_event=event, processor=processor, content_delta=delta)
 
         # Handle tool call events
         if event_type == "response.output_item.added":
@@ -134,7 +138,9 @@ class OpenAIClient(ChimericClient[OpenAI, Response, ResponseStreamEvent, FileObj
                 tool_call_id = getattr(item, "id", None)  # fc_xxx ID
                 call_id = getattr(item, "call_id", None)  # call_xxx ID for outputs
                 if tool_call_id:
-                    processor.process_tool_call_start(tool_call_id, getattr(item, "name", ""), call_id)
+                    processor.process_tool_call_start(
+                        tool_call_id, getattr(item, "name", ""), call_id
+                    )
             return None
 
         if event_type == "response.function_call_arguments.delta":
@@ -361,7 +367,7 @@ class OpenAIAsyncClient(
 
     def _process_provider_stream_event(
         self, event: ResponseStreamEvent, processor: StreamProcessor
-    ) -> ChimericStreamChunk | None:
+    ) -> ChimericStreamChunk[ResponseStreamEvent] | None:
         """Processes an OpenAI stream event using the standardized processor.
 
         This is the same implementation as the sync client since event processing
@@ -372,9 +378,7 @@ class OpenAIAsyncClient(
         # Handle text content deltas
         if event_type == "response.output_text.delta":
             delta = getattr(event, "delta", "") or ""
-            return create_stream_chunk(
-                native_event=event, processor=processor, content_delta=delta
-            )
+            return create_stream_chunk(native_event=event, processor=processor, content_delta=delta)
 
         # Handle tool call events
         if event_type == "response.output_item.added":
@@ -383,7 +387,9 @@ class OpenAIAsyncClient(
                 tool_call_id = getattr(item, "id", None)  # fc_xxx ID
                 call_id = getattr(item, "call_id", None)  # call_xxx ID for outputs
                 if tool_call_id:
-                    processor.process_tool_call_start(tool_call_id, getattr(item, "name", ""), call_id)
+                    processor.process_tool_call_start(
+                        tool_call_id, getattr(item, "name", ""), call_id
+                    )
             return None
 
         if event_type == "response.function_call_arguments.delta":

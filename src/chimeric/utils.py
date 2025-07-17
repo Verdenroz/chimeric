@@ -44,9 +44,11 @@ class StreamProcessor:
             delta=delta,
         )
 
-    def process_tool_call_start(self, call_id: str, name: str, provider_call_id: str | None = None) -> None:
+    def process_tool_call_start(
+        self, call_id: str, name: str, provider_call_id: str | None = None
+    ) -> None:
         """Processes the start of a tool call.
-        
+
         Args:
             call_id: Primary identifier for tracking this tool call (usually provider's id field)
             name: Name of the function being called
@@ -80,29 +82,27 @@ class StreamProcessor:
 
 def normalize_messages(messages: Input) -> list[Message]:
     """Converts various input formats to standardized Message objects."""
-    if isinstance(messages, str):
-        return [Message(role="user", content=messages)]
-
     if isinstance(messages, Message):
         return [messages]
+
+    if isinstance(messages, str):
+        return [Message(role="user", content=messages)]
 
     if isinstance(messages, dict):
         return [Message(**messages)]
 
-    if isinstance(messages, list):
-        normalized = []
-        for msg in messages:
-            if isinstance(msg, str):
-                normalized.append(Message(role="user", content=msg))
-            elif isinstance(msg, Message):
-                normalized.append(msg)
-            elif isinstance(msg, dict):
-                normalized.append(Message(**msg))
-            else:
-                normalized.append(Message(role="user", content=str(msg)))
-        return normalized
-
-    return [Message(role="user", content=str(messages))]
+    # Messages must be a list here
+    normalized = []
+    for msg in messages:
+        if isinstance(msg, str):
+            normalized.append(Message(role="user", content=msg))
+        elif isinstance(msg, Message):
+            normalized.append(msg)
+        elif isinstance(msg, dict):
+            normalized.append(Message(**msg))
+        else:
+            normalized.append(Message(role="user", content=str(msg)))
+    return normalized
 
 
 def normalize_tools(tools: Tools) -> list[Tool]:
@@ -123,7 +123,7 @@ def normalize_tools(tools: Tools) -> list[Tool]:
                 Tool(
                     name=getattr(tool, "name", "unknown"),
                     description=getattr(tool, "description", ""),
-                    parameters=getattr(tool, "parameters", {}),
+                    parameters=getattr(tool, "parameters", None),
                     function=getattr(tool, "function", None),
                 )
             )
@@ -169,5 +169,3 @@ def create_stream_chunk(
         )
 
     return ChimericStreamChunk(native=native_event, common=chunk)
-
-

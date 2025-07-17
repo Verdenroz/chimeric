@@ -44,7 +44,7 @@ NativeStreamType = TypeVar("NativeStreamType")
 NativeFileUploadType = TypeVar("NativeFileUploadType")
 
 # Generic type aliases
-Input: TypeAlias = str | list[Any]
+Input: TypeAlias = str | dict[str, Any] | list[Any]
 Tools: TypeAlias = Iterable[Any] | None
 Metadata: TypeAlias = dict[str, Any]
 

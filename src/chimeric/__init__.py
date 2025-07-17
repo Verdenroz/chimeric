@@ -1,9 +1,9 @@
 from .base import (
-    AsyncClientType,
-    BaseClient,
-    ClientType,
+    ChimericAsyncClient,
+    ChimericClient,
     CompletionResponseType,
     FileUploadResponseType,
+    StreamProcessor,
     StreamType,
 )
 from .chimeric import PROVIDER_CLIENTS, Chimeric
@@ -43,16 +43,15 @@ from .types import (
 
 __all__ = [
     "PROVIDER_CLIENTS",
-    "AsyncClientType",
     "AuthenticationError",
-    "BaseClient",
     "Capability",
     "Chimeric",
+    "ChimericAsyncClient",
+    "ChimericClient",
     "ChimericCompletionResponse",
     "ChimericError",
     "ChimericFileUploadResponse",
     "ChimericStreamChunk",
-    "ClientType",
     "CompletionResponse",
     "CompletionResponseType",
     "ConfigurationError",
@@ -71,6 +70,7 @@ __all__ = [
     "ProviderNotFoundError",
     "RateLimitError",
     "StreamChunk",
+    "StreamProcessor",
     "StreamType",
     "Tool",
     "ToolManager",
