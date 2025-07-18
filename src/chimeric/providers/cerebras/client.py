@@ -1,100 +1,137 @@
-from collections.abc import AsyncGenerator, Generator
-import json
-from typing import Any, cast
+from typing import Any
 
 from cerebras.cloud.sdk import AsyncCerebras, Cerebras
 from cerebras.cloud.sdk.types.chat.chat_completion import (
     ChatChunkResponse,
     ChatCompletionResponse,
-    ChatCompletionResponseChoiceMessageToolCall,
 )
 
-from chimeric.base import BaseClient
-from chimeric.exceptions import ToolRegistrationError
+from chimeric.base import ChimericAsyncClient, ChimericClient
 from chimeric.types import (
     Capability,
-    ChimericCompletionResponse,
-    ChimericFileUploadResponse,
     ChimericStreamChunk,
-    CompletionResponse,
-    Input,
+    Message,
     ModelSummary,
-    StreamChunk,
     Tool,
+    ToolCall,
+    ToolExecutionResult,
     ToolParameters,
-    Tools,
     Usage,
 )
+from chimeric.utils import StreamProcessor, create_stream_chunk
 
 
-class CerebrasClient(
-    BaseClient[Cerebras, AsyncCerebras, ChatCompletionResponse, ChatChunkResponse, None]
-):
-    """Cerebras Client for interacting with Cerebras Cloud API.
+class CerebrasClient(ChimericClient[Cerebras, ChatCompletionResponse, ChatChunkResponse, None]):
+    """Synchronous Cerebras Client for interacting with Cerebras Cloud API.
 
-    This client provides a unified interface for synchronous and asynchronous
-    interactions with Cerebras's API via the `cerebras-cloud-sdk` library. It returns
-    `chimeric` response objects that wrap the native Cerebras responses.
+    This client provides a unified interface for synchronous interactions with
+    Cerebras's high-performance inference API via the `cerebras-cloud-sdk` library.
+    It returns `chimeric` response objects that wrap the native Cerebras responses
+    and provides comprehensive tool calling support for both streaming and
+    non-streaming operations.
+
+    The client supports:
+        - Ultra-fast text generation with Cerebras's optimized models
+        - Function/tool calling with automatic execution
+        - Streaming responses with real-time tool call handling
+        - High-performance inference with specialized hardware acceleration
+        - Model listing and metadata retrieval
+
+    Note:
+        Cerebras specializes in high-speed inference and currently supports text-only
+        models. File uploads and multimodal capabilities are not available.
+
+    Example:
+        ```python
+        from chimeric.providers.cerebras import CerebrasClient
+        from chimeric.tools import ToolManager
+
+        tool_manager = ToolManager()
+        client = CerebrasClient(api_key="your-api-key", tool_manager=tool_manager)
+
+        response = client.chat_completion(
+            messages="What's the fastest way to process this data?",
+            model="llama3.1-8b"
+        )
+        print(response.common.content)
+        ```
+
+    Attributes:
+        api_key (str): The Cerebras API key for authentication.
+        tool_manager (ToolManager): Manager for handling tool registration and execution.
     """
 
-    def __init__(self, api_key: str, **kwargs: Any) -> None:
-        """Initializes the Cerebras client.
+    def __init__(self, api_key: str, tool_manager, **kwargs: Any) -> None:
+        """Initialize the synchronous Cerebras client.
 
         Args:
             api_key: The Cerebras API key for authentication.
-            **kwargs: Additional keyword arguments to pass to the Cerebras client constructor.
+            tool_manager: The tool manager instance for handling function calls.
+            **kwargs: Additional keyword arguments to pass to the Cerebras client
+                constructor, such as base_url, timeout, etc.
+
+        Raises:
+            ValueError: If api_key is None or empty.
+            ProviderError: If client initialization fails.
         """
         self._provider_name = "Cerebras"
-        super().__init__(api_key=api_key, **kwargs)
+        super().__init__(api_key=api_key, tool_manager=tool_manager, **kwargs)
 
-    def _get_generic_types(self) -> dict[str, type]:
-        """Returns the concrete Cerebras client types for `kwargs` filtering.
+    def _get_client_type(self) -> type:
+        """Get the synchronous Cerebras client class type.
 
         Returns:
-            A dictionary mapping client type names to their respective classes.
+            The Cerebras client class from the cerebras-cloud-sdk library.
         """
-        return {
-            "sync": Cerebras,
-            "async": AsyncCerebras,
-        }
+        return Cerebras
 
     def _init_client(self, client_type: type, **kwargs: Any) -> Cerebras:
-        """Initializes the synchronous Cerebras client.
+        """Initialize the synchronous Cerebras client instance.
 
         Args:
-            client_type: The Cerebras client class.
-            **kwargs: Additional arguments for the client constructor.
+            client_type: The Cerebras client class to instantiate.
+            **kwargs: Additional keyword arguments for client initialization,
+                such as base_url, timeout, max_retries, etc.
 
         Returns:
-            An instance of the synchronous Cerebras client.
+            Configured synchronous Cerebras client instance.
+
+        Raises:
+            ProviderError: If client initialization fails due to invalid
+                credentials or configuration.
         """
         return Cerebras(api_key=self.api_key, **kwargs)
 
-    def _init_async_client(self, async_client_type: type, **kwargs: Any) -> AsyncCerebras:
-        """Initializes the asynchronous Cerebras client.
-
-        Args:
-            async_client_type: The AsyncCerebras client class.
-            **kwargs: Additional arguments for the client constructor.
-
-        Returns:
-            An instance of the asynchronous Cerebras client.
-        """
-        return AsyncCerebras(api_key=self.api_key, **kwargs)
-
     def _get_capabilities(self) -> Capability:
-        """Gets Cerebras provider capabilities.
+        """Get supported features for the Cerebras provider.
 
         Returns:
-            A Capability object indicating supported features.
+            Capability object indicating which features are supported:
+                - multimodal: False (text-only models, no image/video support)
+                - streaming: True (supports real-time streaming responses)
+                - tools: True (supports function calling)
+                - agents: False (agent workflows not currently supported)
+                - files: False (no file upload support)
+
+        Note:
+            Cerebras focuses on high-performance text inference and does not
+            currently support multimodal inputs or file operations.
         """
         return Capability(multimodal=False, streaming=True, tools=True, agents=False, files=False)
 
     def _list_models_impl(self) -> list[ModelSummary]:
-        """Lists available models from the Cerebras API.
+        """List available models from the Cerebras API.
 
         Returns:
-            A list of ModelSummary objects for all available models from the API.
+            List of ModelSummary objects containing model metadata from the API.
+            Each summary includes id, name, owner, and creation timestamp.
+
+        Raises:
+            ProviderError: If the API request fails or returns invalid data.
+
+        Note:
+            Cerebras provides high-performance versions of popular open-source
+            models optimized for their specialized hardware.
         """
         models = self.client.models.list()
         return [
@@ -107,717 +144,697 @@ class CerebrasClient(
             for model in models.data
         ]
 
-    @staticmethod
-    def _create_chimeric_response(
-        response: ChatCompletionResponse, tool_calls: list[dict[str, Any]]
-    ) -> ChimericCompletionResponse[ChatCompletionResponse]:
-        """Creates a ChimericCompletionResponse from a native Cerebras ChatCompletion.
+    def _messages_to_provider_format(self, messages: list[Message]) -> Any:
+        """Convert standardized messages to Cerebras's format.
 
         Args:
-            response: The Cerebras response object from `client.chat.completions.create`.
-            tool_calls: A list of tool calls made and executed during the request.
+            messages: List of standardized Message objects with role and content.
 
         Returns:
-            A ChimericCompletionResponse wrapping the native response.
+            List of message dictionaries formatted for the Cerebras API. Each message
+            contains 'role' and 'content' fields compatible with Cerebras's chat format.
+
+        Note:
+            Cerebras uses the OpenAI-compatible message format, so this is a
+            straightforward conversion from Message objects to dictionaries.
         """
-        metadata = response.model_dump()
-        if tool_calls:
-            metadata["tool_calls"] = tool_calls
+        return [msg.model_dump(exclude_none=True) for msg in messages]
 
-        # Extract content from the first choice
-        choice = response.choices[0] if response.choices else None
-        content = choice.message.content if choice and choice.message else ""
-
-        return ChimericCompletionResponse(
-            native=response,
-            common=CompletionResponse(
-                content=content or "",
-                usage=Usage(
-                    prompt_tokens=(response.usage.prompt_tokens if response.usage else 0) or 0,
-                    completion_tokens=(response.usage.completion_tokens if response.usage else 0)
-                    or 0,
-                    total_tokens=(response.usage.total_tokens if response.usage else 0) or 0,
-                ),
-                model=response.model,
-                metadata=metadata,
-            ),
-        )
-
-    def _encode_tools(self, tools: Tools = None) -> Tools:
-        """Encodes a list of Tool objects into the format expected by the Cerebras API.
+    def _tools_to_provider_format(self, tools: list[Tool]) -> Any:
+        """Convert standardized tools to Cerebras's format.
 
         Args:
-            tools: A list of Tool objects or dictionaries.
+            tools: List of standardized Tool objects containing function definitions.
 
         Returns:
-            A list of tool dictionaries formatted for the Cerebras API, or None.
-        """
-        if not tools:
-            return None
+            List of tool dictionaries formatted for the Cerebras API. Each tool follows
+            the OpenAI function calling format with Cerebras-specific optimizations.
 
+        Note:
+            Cerebras requires the 'strict' parameter at the function level rather than
+            in the parameters schema, and expects strict mode to be enabled for
+            optimal performance with their optimized inference.
+
+        Example:
+            Input Tool with name="calculate" becomes:
+            ```json
+            {
+                "type": "function",
+                "function": {
+                    "name": "calculate",
+                    "strict": true,
+                    "description": "Perform calculations",
+                    "parameters": {"type": "object", "properties": {...}}
+                }
+            }
+            ```
+        """
         encoded_tools = []
         for tool in tools:
-            if isinstance(tool, Tool):
-                # Get parameters and remove 'strict' from the parameters schema since
-                # Cerebras expects it only in the function object
-                parameters = (
-                    tool.parameters.model_dump()
-                    if isinstance(tool.parameters, ToolParameters)
-                    else {}
-                )
-                parameters.pop("strict", None)  # Remove strict from parameters
+            # Get parameters and remove 'strict' from the parameters schema since
+            # Cerebras expects it only in the function object
+            parameters = (
+                tool.parameters.model_dump() if isinstance(tool.parameters, ToolParameters) else {}
+            )
+            parameters.pop("strict", None)  # Remove strict from parameters
 
-                encoded_tools.append(
-                    {
-                        "type": "function",
-                        "function": {
-                            "name": tool.name,
-                            "strict": True,
-                            "description": tool.description,
-                            "parameters": parameters,
-                        },
-                    }
-                )
-            else:
-                encoded_tools.append(tool)  # Assumes user already formats tool
+            encoded_tools.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": tool.name,
+                        "strict": True,
+                        "description": tool.description,
+                        "parameters": parameters,
+                    },
+                }
+            )
         return encoded_tools
 
-    def _process_function_call(
-        self, call: ChatCompletionResponseChoiceMessageToolCall
-    ) -> dict[str, Any]:
-        """Executes a function call from the model and returns metadata.
+    def _make_provider_request(
+        self,
+        messages: Any,
+        model: str,
+        stream: bool,
+        tools: Any = None,
+        **kwargs: Any,
+    ) -> Any:
+        """Make the actual API request to Cerebras.
 
         Args:
-            call: The tool call object from the Cerebras response.
+            messages: Messages in Cerebras's format (list of message dictionaries).
+            model: Model identifier (e.g., "llama3.1-8b", "llama3.1-70b").
+            stream: Whether to stream the response token by token.
+            tools: Tools in Cerebras's format, or None to disable function calling.
+            **kwargs: Additional parameters passed to the API request, such as
+                temperature, max_tokens, top_p, etc.
 
         Returns:
-            A dictionary containing the tool call ID, name, arguments, and result.
+            Raw response from Cerebras's API. Either a ChatCompletionResponse object
+            for non-streaming requests or a stream object for streaming requests.
 
         Raises:
-            ToolRegistrationError: If the requested tool is not registered or not callable.
+            ProviderError: If the API request fails due to authentication,
+                rate limiting, model unavailability, or other API errors.
+
+        Note:
+            Cerebras provides ultra-fast inference with their specialized hardware,
+            significantly reducing response times compared to traditional GPU inference.
         """
-        tool_name = call.function.name
-        tool_call_info = {
-            "call_id": call.id,
-            "name": tool_name,
-            "arguments": call.function.arguments,
-        }
-
-        tool = self.tool_manager.get_tool(tool_name)
-        if not callable(tool.function):
-            raise ToolRegistrationError(f"Tool '{tool_name}' is not callable.")
-
-        try:
-            args = json.loads(call.function.arguments)
-            result = tool.function(**args)
-            tool_call_info["result"] = str(result)
-        except Exception as e:
-            tool_call_info["error"] = str(e)
-            tool_call_info["result"] = f"Error: {e!s}"
-
-        return tool_call_info
-
-    @staticmethod
-    def _stream(
-        stream: Generator[ChatChunkResponse, None, None],
-    ) -> Generator[ChimericStreamChunk[ChatChunkResponse], None, None]:
-        """Yields processed chunks from a synchronous Cerebras stream.
-
-        Args:
-            stream: The synchronous stream of response chunks from `client.chat.completions.create`.
-
-        Yields:
-            ChimericStreamChunk containing the processed chunk data.
-        """
-        accumulated = ""
-        for chunk in stream:
-            if chunk.choices and chunk.choices[0].delta.content:
-                delta = chunk.choices[0].delta.content
-                accumulated += delta
-                yield ChimericStreamChunk(
-                    native=chunk,
-                    common=StreamChunk(
-                        content=accumulated,
-                        delta=delta,
-                        finish_reason=chunk.choices[0].finish_reason,
-                        metadata=chunk.model_dump(),
-                    ),
-                )
-
-    @staticmethod
-    async def _astream(
-        stream: AsyncGenerator[ChatChunkResponse, None],
-    ) -> AsyncGenerator[ChimericStreamChunk[ChatChunkResponse], None]:
-        """Yields processed chunks from an asynchronous Cerebras stream.
-
-        Args:
-            stream: The asynchronous stream of response chunks from `async_client.chat.completions.create`.
-
-        Yields:
-            ChimericStreamChunk containing the processed chunk data.
-        """
-        accumulated = ""
-        async for chunk in stream:
-            if chunk.choices and chunk.choices[0].delta.content:
-                delta = chunk.choices[0].delta.content
-                accumulated += delta
-                yield ChimericStreamChunk(
-                    native=chunk,
-                    common=StreamChunk(
-                        content=accumulated,
-                        delta=delta,
-                        finish_reason=chunk.choices[0].finish_reason,
-                        metadata=chunk.model_dump(),
-                    ),
-                )
-
-    def _process_stream_with_tools_sync(
-        self,
-        stream: Generator[ChatChunkResponse, None, None],
-        original_messages: list[dict[str, Any]],
-        original_model: str,
-        original_tools: Tools | None = None,
-        **original_kwargs: Any,
-    ) -> Generator[ChimericStreamChunk[ChatChunkResponse], None, None]:
-        """Processes a synchronous stream with automatic tool execution.
-
-        Args:
-            stream: The synchronous stream from the Cerebras API.
-            original_messages: The initial list of messages.
-            original_model: The model being used.
-            original_tools: The list of available tools.
-            **original_kwargs: Additional arguments for the API call.
-
-        Yields:
-            ChimericStreamChunk objects from the initial and subsequent streams.
-        """
-        accumulated = ""
-        accumulated_tool_calls = []
-
-        for chunk in stream:
-            if chunk.choices and chunk.choices[0].delta.content:
-                delta = chunk.choices[0].delta.content
-                accumulated += delta
-
-            # Check for tool calls in the delta
-            if chunk.choices and chunk.choices[0].delta.tool_calls:
-                accumulated_tool_calls.extend(chunk.choices[0].delta.tool_calls)
-
-            yield ChimericStreamChunk(
-                native=chunk,
-                common=StreamChunk(
-                    content=accumulated,
-                    delta=chunk.choices[0].delta.content if chunk.choices else "",
-                    finish_reason=chunk.choices[0].finish_reason if chunk.choices else None,
-                    metadata=chunk.model_dump(),
-                ),
-            )
-
-            # If the stream is complete, and we have tool calls, execute them
-            if chunk.choices and chunk.choices[0].finish_reason and accumulated_tool_calls:
-                # Execute tools and continue conversation
-                yield from self._handle_stream_tool_execution_sync(
-                    accumulated_tool_calls,
-                    original_messages,
-                    original_model,
-                    original_tools,
-                    accumulated,
-                    **original_kwargs,
-                )
-                return
-
-    async def _process_stream_with_tools_async(
-        self,
-        stream: AsyncGenerator[ChatChunkResponse, None],
-        original_messages: list[dict[str, Any]],
-        original_model: str,
-        original_tools: Tools | None = None,
-        **original_kwargs: Any,
-    ) -> AsyncGenerator[ChimericStreamChunk[ChatChunkResponse], None]:
-        """Processes an asynchronous stream with automatic tool execution.
-
-        Args:
-            stream: The asynchronous stream from the Cerebras API.
-            original_messages: The initial list of messages.
-            original_model: The model being used.
-            original_tools: The list of available tools.
-            **original_kwargs: Additional arguments for the API call.
-
-        Yields:
-            ChimericStreamChunk objects from the initial and subsequent streams.
-        """
-        accumulated = ""
-        accumulated_tool_calls = []
-
-        async for chunk in stream:
-            if chunk.choices and chunk.choices[0].delta.content:
-                delta = chunk.choices[0].delta.content
-                accumulated += delta
-
-            # Check for tool calls in the delta
-            if chunk.choices and chunk.choices[0].delta.tool_calls:
-                accumulated_tool_calls.extend(chunk.choices[0].delta.tool_calls)
-
-            yield ChimericStreamChunk(
-                native=chunk,
-                common=StreamChunk(
-                    content=accumulated,
-                    delta=chunk.choices[0].delta.content if chunk.choices else "",
-                    finish_reason=chunk.choices[0].finish_reason if chunk.choices else None,
-                    metadata=chunk.model_dump(),
-                ),
-            )
-
-            # If the stream is complete, and we have tool calls, execute them
-            if chunk.choices and chunk.choices[0].finish_reason and accumulated_tool_calls:
-                # Execute tools and continue conversation
-                async for tool_chunk in self._handle_stream_tool_execution_async(
-                    accumulated_tool_calls,
-                    original_messages,
-                    original_model,
-                    original_tools,
-                    accumulated,
-                    **original_kwargs,
-                ):
-                    yield tool_chunk
-                return
-
-    def _handle_stream_tool_execution_sync(
-        self,
-        tool_calls: list[Any],
-        messages: list[dict[str, Any]],
-        model: str,
-        tools: Tools | None,
-        accumulated_content: str,
-        **kwargs: Any,
-    ) -> Generator[ChimericStreamChunk[ChatChunkResponse], None, None]:
-        """Executes tools from a stream and continues the conversation.
-
-        Args:
-            tool_calls: Tool calls from the stream.
-            messages: Current message history.
-            model: Model to use.
-            tools: Available tools.
-            accumulated_content: Text content accumulated from the stream.
-            **kwargs: Additional API parameters.
-
-        Yields:
-            ChimericStreamChunk objects from the continuation.
-        """
-        # Build the assistant message with content and tool calls
-        assistant_message = {
-            "role": "assistant",
-            "content": accumulated_content or "",
-            "tool_calls": [
-                {
-                    "id": call.id,
-                    "type": "function",
-                    "function": {
-                        "name": call.function.name,
-                        "arguments": call.function.arguments,
-                    },
-                }
-                for call in tool_calls
-            ],
-        }
-        messages.append(assistant_message)
-
-        # Execute tools and add results
-        for call in tool_calls:
-            tool_call_info = self._process_function_call(call)
-            messages.append(
-                {
-                    "role": "tool",
-                    "tool_call_id": call.id,
-                    "content": tool_call_info["result"],
-                }
-            )
-
-        # Continue conversation
-        filtered_kwargs = self._filter_kwargs(self._client.chat.completions.create, kwargs)
-        continuation = self._client.chat.completions.create(
+        return self.client.chat.completions.create(
             model=model,
             messages=messages,
+            stream=stream,
             tools=tools,
-            stream=True,
-            **filtered_kwargs,
-        )
-
-        yield from self._process_stream_with_tools_sync(
-            cast("Generator[ChatChunkResponse, None, None]", continuation),
-            messages,
-            model,
-            tools,
             **kwargs,
         )
 
-    async def _handle_stream_tool_execution_async(
-        self,
-        tool_calls: list[Any],
-        messages: list[dict[str, Any]],
-        model: str,
-        tools: Tools | None,
-        accumulated_content: str,
-        **kwargs: Any,
-    ) -> AsyncGenerator[ChimericStreamChunk[ChatChunkResponse], None]:
-        """Executes tools from a stream and continues the conversation asynchronously.
+    def _process_provider_stream_event(
+        self, event: ChatChunkResponse, processor: StreamProcessor
+    ) -> ChimericStreamChunk | None:
+        """Process a streaming event from Cerebras API into standardized format.
 
         Args:
-            tool_calls: Tool calls from the stream.
-            messages: Current message history.
-            model: Model to use.
-            tools: Available tools.
-            accumulated_content: Text content accumulated from the stream.
-            **kwargs: Additional API parameters.
+            event: Raw streaming event from the Cerebras API containing delta content,
+                tool calls, or completion signals.
+            processor: StreamProcessor instance that manages streaming state and
+                accumulates content across multiple events.
 
-        Yields:
-            ChimericStreamChunk objects from the continuation.
+        Returns:
+            ChimericStreamChunk object containing processed content delta, tool call
+            information, or completion status. Returns None if the event contains
+            no processable content.
+
+        Note:
+            Cerebras streaming events follow the OpenAI format with delta content
+            and tool_calls arrays. This method handles content accumulation and
+            tool call state management automatically.
         """
-        # Build the assistant message with content and tool calls
-        assistant_message = {
-            "role": "assistant",
-            "content": accumulated_content or "",
-            "tool_calls": [
+        if event.choices and event.choices[0].delta.content:
+            delta = event.choices[0].delta.content
+            return create_stream_chunk(native_event=event, processor=processor, content_delta=delta)
+
+        # Handle tool calls in streaming
+        if event.choices and event.choices[0].delta.tool_calls:
+            for tool_call_delta in event.choices[0].delta.tool_calls:
+                call_id = tool_call_delta.id or f"tool_call_{getattr(tool_call_delta, 'index', 0)}"
+                if tool_call_delta.function and tool_call_delta.function.name:
+                    processor.process_tool_call_start(call_id, tool_call_delta.function.name)
+                if tool_call_delta.function and tool_call_delta.function.arguments:
+                    processor.process_tool_call_delta(call_id, tool_call_delta.function.arguments)
+
+        # Handle completion
+        if event.choices and event.choices[0].finish_reason:
+            # Mark any streaming tool calls as complete
+            for call_id in processor.state.tool_calls:
+                processor.process_tool_call_complete(call_id)
+
+            return create_stream_chunk(
+                native_event=event,
+                processor=processor,
+                finish_reason=event.choices[0].finish_reason,
+            )
+
+        return None
+
+    def _extract_usage_from_response(self, response: ChatCompletionResponse) -> Usage:
+        """Extract token usage statistics from Cerebras API response.
+
+        Args:
+            response: ChatCompletionResponse from Cerebras API containing usage metadata.
+
+        Returns:
+            Usage object with prompt_tokens, completion_tokens, and total_tokens fields.
+            Returns empty Usage object if no usage information is available.
+
+        Note:
+            Cerebras provides detailed token usage information similar to OpenAI,
+            enabling accurate cost tracking and usage monitoring.
+        """
+        if not response.usage:
+            return Usage()
+
+        return Usage(
+            prompt_tokens=response.usage.prompt_tokens or 0,
+            completion_tokens=response.usage.completion_tokens or 0,
+            total_tokens=response.usage.total_tokens or 0,
+        )
+
+    def _extract_content_from_response(self, response: ChatCompletionResponse) -> str | list[Any]:
+        """Extract text content from Cerebras API response.
+
+        Args:
+            response: ChatCompletionResponse from Cerebras API containing message content.
+
+        Returns:
+            String containing the generated text content from the first choice.
+            Returns empty string if no content is available.
+
+        Note:
+            Cerebras responses follow the OpenAI format with choices[0].message.content
+            containing the generated text.
+        """
+        choice = response.choices[0] if response.choices else None
+        return choice.message.content if choice and choice.message else ""
+
+    def _extract_tool_calls_from_response(
+        self, response: ChatCompletionResponse
+    ) -> list[ToolCall] | None:
+        """Extract function tool calls from Cerebras API response.
+
+        Args:
+            response: ChatCompletionResponse from Cerebras API that may contain tool calls.
+
+        Returns:
+            List of ToolCall objects representing functions the model wants to execute,
+            or None if no tool calls are present. Each ToolCall includes call_id,
+            function name, and JSON-encoded arguments.
+
+        Note:
+            Cerebras uses the OpenAI tool calling format with tool_calls arrays
+            containing function specifications and arguments.
+        """
+        choice = response.choices[0] if response.choices else None
+        if not choice or not choice.message.tool_calls:
+            return None
+
+        return [
+            ToolCall(
+                call_id=call.id,
+                name=call.function.name,
+                arguments=call.function.arguments,
+            )
+            for call in choice.message.tool_calls
+        ]
+
+    def _update_messages_with_tool_calls(
+        self,
+        messages: list[Any],
+        assistant_response: Any,
+        tool_calls: list[ToolCall],
+        tool_results: list[ToolExecutionResult],
+    ) -> list[Any]:
+        """Update message history with assistant response and tool results.
+
+        This method formats the conversation history to include the assistant's
+        tool calls and their results, following Cerebras's message format requirements.
+
+        Args:
+            messages: Current list of messages in the conversation.
+            assistant_response: The assistant's response that contained tool calls
+                (not directly used but maintained for interface compatibility).
+            tool_calls: List of ToolCall objects representing functions called
+                by the assistant.
+            tool_results: List of ToolExecutionResult objects containing the
+                results of executing the tool calls.
+
+        Returns:
+            Updated list of messages including:
+                1. Original conversation messages
+                2. Assistant message with tool_calls array
+                3. Tool result messages for each executed function
+
+        Note:
+            Cerebras uses the OpenAI message format where tool calls are represented
+            as an assistant message with a 'tool_calls' field, followed by separate
+            'tool' role messages containing the results.
+        """
+        updated_messages = list(messages)
+
+        # Build assistant message with tool calls
+        assistant_tool_calls = []
+        for tool_call in tool_calls:
+            assistant_tool_calls.append(
                 {
-                    "id": call.id,
+                    "id": tool_call.call_id,
                     "type": "function",
                     "function": {
-                        "name": call.function.name,
-                        "arguments": call.function.arguments,
+                        "name": tool_call.name,
+                        "arguments": tool_call.arguments,
                     },
                 }
-                for call in tool_calls
-            ],
-        }
-        messages.append(assistant_message)
+            )
 
-        # Execute tools and add results
-        for call in tool_calls:
-            tool_call_info = self._process_function_call(call)
-            messages.append(
+        # Add assistant message with tool calls
+        updated_messages.append(
+            {
+                "role": "assistant",
+                "tool_calls": assistant_tool_calls,
+            }
+        )
+
+        # Add tool result messages
+        for result in tool_results:
+            updated_messages.append(
                 {
                     "role": "tool",
-                    "tool_call_id": call.id,
-                    "content": tool_call_info["result"],
+                    "tool_call_id": result.call_id,
+                    "content": result.result if not result.is_error else f"Error: {result.error}",
                 }
             )
 
-        # Continue conversation
-        filtered_kwargs = self._filter_kwargs(self._async_client.chat.completions.create, kwargs)
-        continuation = await self._async_client.chat.completions.create(
-            model=model,
-            messages=messages,
-            tools=tools,
-            stream=True,
-            **filtered_kwargs,
-        )
+        return updated_messages
 
-        async for chunk in self._process_stream_with_tools_async(
-            cast("AsyncGenerator[ChatChunkResponse, None]", continuation),
-            messages,
-            model,
-            tools,
-            **kwargs,
-        ):
-            yield chunk
 
-    def _handle_tool_execution_loop(
-        self,
-        response: ChatCompletionResponse,
-        current_messages: list[dict[str, Any]],
-        model: str,
-        tools: Tools,
-        **kwargs: Any,
-    ) -> tuple[ChatCompletionResponse, list[dict[str, Any]]]:
-        """Handles the tool execution loop for non-streaming responses.
+class CerebrasAsyncClient(
+    ChimericAsyncClient[AsyncCerebras, ChatCompletionResponse, ChatChunkResponse, None]
+):
+    """Asynchronous Cerebras Client for interacting with Cerebras Cloud API.
+
+    This client provides a unified interface for asynchronous interactions with
+    Cerebras's high-performance inference API via the `cerebras-cloud-sdk` library.
+    It returns `chimeric` response objects that wrap the native Cerebras responses
+    and provides comprehensive tool calling support for both streaming and
+    non-streaming operations.
+
+    The async client supports all the same features as the synchronous client:
+        - Asynchronous ultra-fast text generation with Cerebras's optimized models
+        - Asynchronous function/tool calling with automatic execution
+        - Asynchronous streaming responses with real-time tool call handling
+        - High-performance inference with specialized hardware acceleration
+        - Model listing and metadata retrieval
+
+    Note:
+        Cerebras specializes in high-speed inference and currently supports text-only
+        models. File uploads and multimodal capabilities are not available.
+
+    Example:
+        ```python
+        import asyncio
+        from chimeric.providers.cerebras import CerebrasAsyncClient
+        from chimeric.tools import ToolManager
+
+        async def main():
+            tool_manager = ToolManager()
+            client = CerebrasAsyncClient(api_key="your-api-key", tool_manager=tool_manager)
+
+            response = await client.chat_completion(
+                messages="What's the fastest way to process this data?",
+                model="llama3.1-8b"
+            )
+            print(response.common.content)
+
+        asyncio.run(main())
+        ```
+
+    Attributes:
+        api_key (str): The Cerebras API key for authentication.
+        tool_manager (ToolManager): Manager for handling tool registration and execution.
+    """
+
+    def __init__(self, api_key: str, tool_manager, **kwargs: Any) -> None:
+        """Initialize the asynchronous Cerebras client.
 
         Args:
-            response: The initial response from the API.
-            current_messages: The current message history.
-            model: The model being used.
-            tools: The list of available tools.
-            **kwargs: Additional API parameters.
-
-        Returns:
-            A tuple containing the final API response and all tool call metadata.
-        """
-        all_tool_calls = []
-
-        while True:
-            # Check for tool calls in the response
-            choice = response.choices[0] if response.choices else None
-            if not choice or not choice.message.tool_calls:
-                # No tool calls, we're done
-                break
-
-            # Add the assistant's message with tool calls to the conversation
-            assistant_message = {
-                "role": "assistant",
-                "content": choice.message.content or "",
-                "tool_calls": [
-                    {
-                        "id": call.id,
-                        "type": "function",
-                        "function": {
-                            "name": call.function.name,
-                            "arguments": call.function.arguments,
-                        },
-                    }
-                    for call in choice.message.tool_calls
-                ],
-            }
-            current_messages.append(assistant_message)
-
-            # Process each tool call
-            for call in choice.message.tool_calls:
-                tool_call_info = self._process_function_call(call)
-                all_tool_calls.append(tool_call_info)
-
-                # Add the tool result to the conversation
-                current_messages.append(
-                    {
-                        "role": "tool",
-                        "tool_call_id": call.id,
-                        "content": tool_call_info["result"],
-                    }
-                )
-
-            # Continue the conversation
-            filtered_kwargs = self._filter_kwargs(self._client.chat.completions.create, kwargs)
-            response = cast(
-                "ChatCompletionResponse",
-                self._client.chat.completions.create(
-                    model=model,
-                    messages=current_messages,
-                    tools=tools,
-                    **filtered_kwargs,
-                ),
-            )
-
-        return response, all_tool_calls
-
-    async def _handle_async_tool_execution_loop(
-        self,
-        response: ChatCompletionResponse,
-        current_messages: list[dict[str, Any]],
-        model: str,
-        tools: Tools,
-        **kwargs: Any,
-    ) -> tuple[ChatCompletionResponse, list[dict[str, Any]]]:
-        """Handles the asynchronous tool execution loop for non-streaming responses.
-
-        Args:
-            response: The initial response from the API.
-            current_messages: The current message history.
-            model: The model being used.
-            tools: The list of available tools.
-            **kwargs: Additional API parameters.
-
-        Returns:
-            A tuple containing the final API response and all tool call metadata.
-        """
-        all_tool_calls = []
-
-        while True:
-            # Check for tool calls in the response
-            choice = response.choices[0] if response.choices else None
-            if not choice or not choice.message.tool_calls:
-                # No tool calls, we're done
-                break
-
-            # Add the assistant's message with tool calls to the conversation
-            assistant_message = {
-                "role": "assistant",
-                "content": choice.message.content or "",
-                "tool_calls": [
-                    {
-                        "id": call.id,
-                        "type": "function",
-                        "function": {
-                            "name": call.function.name,
-                            "arguments": call.function.arguments,
-                        },
-                    }
-                    for call in choice.message.tool_calls
-                ],
-            }
-            current_messages.append(assistant_message)
-
-            # Process each tool call
-            for call in choice.message.tool_calls:
-                tool_call_info = self._process_function_call(call)
-                all_tool_calls.append(tool_call_info)
-
-                # Add the tool result to the conversation
-                current_messages.append(
-                    {
-                        "role": "tool",
-                        "tool_call_id": call.id,
-                        "content": tool_call_info["result"],
-                    }
-                )
-
-            # Continue the conversation
-            filtered_kwargs = self._filter_kwargs(
-                self._async_client.chat.completions.create, kwargs
-            )
-            response = cast(
-                "ChatCompletionResponse",
-                await self._async_client.chat.completions.create(
-                    model=model,
-                    messages=current_messages,
-                    tools=tools,
-                    **filtered_kwargs,
-                ),
-            )
-
-        return response, all_tool_calls
-
-    def _chat_completion_impl(
-        self,
-        messages: Input,
-        model: str,
-        stream: bool = False,
-        tools: Tools = None,
-        **kwargs: Any,
-    ) -> (
-        ChimericCompletionResponse[ChatCompletionResponse]
-        | Generator[ChimericStreamChunk[ChatChunkResponse], None, None]
-    ):
-        """Sends a synchronous chat completion request to the Cerebras API.
-
-        Args:
-            messages: The input messages for the chat completion.
-            model: The model to use for the completion.
-            stream: Whether to return a streaming response.
-            tools: A list of tools (already encoded for the API).
-            **kwargs: Additional arguments for the `client.chat.completions.create` method.
-
-        Returns:
-            A ChimericCompletionResponse for a single response, or a generator
-            of ChimericStreamChunk for a streaming response.
-        """
-        filtered_kwargs = self._filter_kwargs(self._client.chat.completions.create, kwargs)
-
-        # Convert messages to mutable list of dicts
-        if isinstance(messages, list):
-            current_messages = [
-                cast("dict[str, object]", msg)
-                if isinstance(msg, dict)
-                else cast("dict[str, object]", {"role": "user", "content": str(msg)})
-                for msg in messages
-            ]
-        else:
-            current_messages = [
-                cast("dict[str, object]", {"role": "user", "content": str(messages)})
-            ]
-
-        # Make initial API call
-        response = self._client.chat.completions.create(
-            model=model,
-            messages=current_messages,
-            stream=stream,
-            tools=tools,
-            **filtered_kwargs,
-        )
-
-        if stream:
-            # Handle streaming with tools if needed
-            if tools:
-                return self._process_stream_with_tools_sync(
-                    cast("Generator[ChatChunkResponse, None, None]", response),
-                    current_messages,
-                    model,
-                    tools,
-                    **kwargs,
-                )
-            return self._stream(cast("Generator[ChatChunkResponse, None, None]", response))
-
-        # Handle tool execution if tools are available
-        if tools:
-            final_response, all_tool_calls = self._handle_tool_execution_loop(
-                cast("ChatCompletionResponse", response), current_messages, model, tools, **kwargs
-            )
-            return self._create_chimeric_response(final_response, all_tool_calls)
-
-        return self._create_chimeric_response(cast("ChatCompletionResponse", response), [])
-
-    async def _achat_completion_impl(
-        self,
-        messages: Input,
-        model: str,
-        stream: bool = False,
-        tools: Tools = None,
-        **kwargs: Any,
-    ) -> (
-        ChimericCompletionResponse[ChatCompletionResponse]
-        | AsyncGenerator[ChimericStreamChunk[ChatChunkResponse], None]
-    ):
-        """Sends an asynchronous chat completion request to the Cerebras API.
-
-        Args:
-            messages: The input messages for the chat completion.
-            model: The model to use for the completion.
-            stream: Whether to return a streaming response.
-            tools: A list of tools (already encoded for the API).
-            **kwargs: Additional arguments for the `async_client.chat.completions.create` method.
-
-        Returns:
-            A ChimericCompletionResponse for a single response, or an async
-            generator of ChimericStreamChunk for a streaming response.
-        """
-        filtered_kwargs = self._filter_kwargs(self._async_client.chat.completions.create, kwargs)
-
-        # Convert messages to mutable list of dicts
-        if isinstance(messages, list):
-            current_messages = [
-                cast("dict[str, object]", msg)
-                if isinstance(msg, dict)
-                else cast("dict[str, object]", {"role": "user", "content": str(msg)})
-                for msg in messages
-            ]
-        else:
-            current_messages = [
-                cast("dict[str, object]", {"role": "user", "content": str(messages)})
-            ]
-
-        # Make initial API call
-        response = await self._async_client.chat.completions.create(
-            model=model,
-            messages=current_messages,
-            stream=stream,
-            tools=tools,
-            **filtered_kwargs,
-        )
-
-        if stream:
-            # Handle streaming with tools if needed
-            if tools:
-                return self._process_stream_with_tools_async(
-                    cast("AsyncGenerator[ChatChunkResponse, None]", response),
-                    current_messages,
-                    model,
-                    tools,
-                    **kwargs,
-                )
-            return self._astream(cast("AsyncGenerator[ChatChunkResponse, None]", response))
-
-        # Handle tool execution if tools are available
-        if tools:
-            final_response, all_tool_calls = await self._handle_async_tool_execution_loop(
-                cast("ChatCompletionResponse", response), current_messages, model, tools, **kwargs
-            )
-            return self._create_chimeric_response(final_response, all_tool_calls)
-
-        return self._create_chimeric_response(cast("ChatCompletionResponse", response), [])
-
-    def _upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[None]:
-        """Cerebras does not support file uploads.
-
-        Args:
-            **kwargs: Not used.
+            api_key: The Cerebras API key for authentication.
+            tool_manager: The tool manager instance for handling function calls.
+            **kwargs: Additional keyword arguments to pass to the AsyncCerebras client
+                constructor, such as base_url, timeout, etc.
 
         Raises:
-            NotImplementedError: Cerebras does not support file uploads.
+            ValueError: If api_key is None or empty.
+            ProviderError: If client initialization fails.
         """
-        raise NotImplementedError("Cerebras does not support file uploads")
+        self._provider_name = "Cerebras"
+        super().__init__(api_key=api_key, tool_manager=tool_manager, **kwargs)
+
+    def _get_async_client_type(self) -> type:
+        """Get the asynchronous Cerebras client class type.
+
+        Returns:
+            The AsyncCerebras client class from the cerebras-cloud-sdk library.
+        """
+        return AsyncCerebras
+
+    def _init_async_client(self, async_client_type: type, **kwargs: Any) -> AsyncCerebras:
+        """Initialize the asynchronous Cerebras client instance.
+
+        Args:
+            async_client_type: The AsyncCerebras client class to instantiate.
+            **kwargs: Additional keyword arguments for client initialization,
+                such as base_url, timeout, max_retries, etc.
+
+        Returns:
+            Configured asynchronous Cerebras client instance.
+
+        Raises:
+            ProviderError: If client initialization fails due to invalid
+                credentials or configuration.
+        """
+        return AsyncCerebras(api_key=self.api_key, **kwargs)
+
+    def _get_capabilities(self) -> Capability:
+        """Get supported features for the Cerebras provider.
+
+        Returns:
+            Capability object indicating which features are supported:
+                - multimodal: False (text-only models, no image/video support)
+                - streaming: True (supports real-time streaming responses)
+                - tools: True (supports function calling)
+                - agents: False (agent workflows not currently supported)
+                - files: False (no file upload support)
+
+        Note:
+            Cerebras focuses on high-performance text inference and does not
+            currently support multimodal inputs or file operations.
+        """
+        return Capability(multimodal=False, streaming=True, tools=True, agents=False, files=False)
+
+    async def _list_models_impl(self) -> list[ModelSummary]:
+        """List available models from the Cerebras API asynchronously.
+
+        Returns:
+            List of ModelSummary objects containing model metadata from the API.
+            Each summary includes id, name, owner, and creation timestamp.
+
+        Raises:
+            ProviderError: If the API request fails or returns invalid data.
+
+        Note:
+            Cerebras provides high-performance versions of popular open-source
+            models optimized for their specialized hardware.
+        """
+        models = await self.async_client.models.list()
+        return [
+            ModelSummary(
+                id=model.id,
+                name=model.id,
+                owned_by=getattr(model, "owned_by", "cerebras"),
+                created_at=getattr(model, "created", None),
+            )
+            for model in models.data
+        ]
+
+    def _messages_to_provider_format(self, messages: list[Message]) -> Any:
+        """Convert standardized messages to Cerebras's format.
+
+        Args:
+            messages: List of standardized Message objects with role and content.
+
+        Returns:
+            List of message dictionaries formatted for the Cerebras API. Each message
+            contains 'role' and 'content' fields compatible with Cerebras's chat format.
+
+        Note:
+            Cerebras uses the OpenAI-compatible message format, so this is a
+            straightforward conversion from Message objects to dictionaries.
+        """
+        return [msg.model_dump(exclude_none=True) for msg in messages]
+
+    def _tools_to_provider_format(self, tools: list[Tool]) -> Any:
+        """Convert standardized tools to Cerebras's format.
+
+        Args:
+            tools: List of standardized Tool objects containing function definitions.
+
+        Returns:
+            List of tool dictionaries formatted for the Cerebras API. Each tool follows
+            the OpenAI function calling format with Cerebras-specific optimizations.
+
+        Note:
+            Cerebras requires the 'strict' parameter at the function level rather than
+            in the parameters schema, and expects strict mode to be enabled for
+            optimal performance with their optimized inference.
+
+        Example:
+            Input Tool with name="calculate" becomes:
+            ```json
+            {
+                "type": "function",
+                "function": {
+                    "name": "calculate",
+                    "strict": true,
+                    "description": "Perform calculations",
+                    "parameters": {"type": "object", "properties": {...}}
+                }
+            }
+            ```
+        """
+        encoded_tools = []
+        for tool in tools:
+            # Get parameters and remove 'strict' from the parameters schema since
+            # Cerebras expects it only in the function object
+            parameters = (
+                tool.parameters.model_dump() if isinstance(tool.parameters, ToolParameters) else {}
+            )
+            parameters.pop("strict", None)  # Remove strict from parameters
+
+            encoded_tools.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": tool.name,
+                        "strict": True,
+                        "description": tool.description,
+                        "parameters": parameters,
+                    },
+                }
+            )
+        return encoded_tools
+
+    async def _make_async_provider_request(
+        self,
+        messages: Any,
+        model: str,
+        stream: bool,
+        tools: Any = None,
+        **kwargs: Any,
+    ) -> Any:
+        """Make the actual asynchronous API request to Cerebras.
+
+        Args:
+            messages: Messages in Cerebras's format (list of message dictionaries).
+            model: Model identifier (e.g., "llama3.1-8b", "llama3.1-70b").
+            stream: Whether to stream the response token by token.
+            tools: Tools in Cerebras's format, or None to disable function calling.
+            **kwargs: Additional parameters passed to the API request, such as
+                temperature, max_tokens, top_p, etc.
+
+        Returns:
+            Raw response from Cerebras's async API. Either a ChatCompletionResponse object
+            for non-streaming requests or an async stream object for streaming requests.
+
+        Raises:
+            ProviderError: If the API request fails due to authentication,
+                rate limiting, model unavailability, or other API errors.
+
+        Note:
+            Cerebras provides ultra-fast inference with their specialized hardware,
+            significantly reducing response times compared to traditional GPU inference.
+        """
+        return await self.async_client.chat.completions.create(
+            model=model,
+            messages=messages,
+            stream=stream,
+            tools=tools,
+            **kwargs,
+        )
+
+    def _process_provider_stream_event(
+        self, event: ChatChunkResponse, processor: StreamProcessor
+    ) -> ChimericStreamChunk | None:
+        """Processes a Cerebras stream event using the standardized processor."""
+        if event.choices and event.choices[0].delta.content:
+            delta = event.choices[0].delta.content
+            return create_stream_chunk(native_event=event, processor=processor, content_delta=delta)
+
+        # Handle tool calls in streaming
+        if event.choices and event.choices[0].delta.tool_calls:
+            for tool_call_delta in event.choices[0].delta.tool_calls:
+                call_id = tool_call_delta.id or f"tool_call_{getattr(tool_call_delta, 'index', 0)}"
+                if tool_call_delta.function and tool_call_delta.function.name:
+                    processor.process_tool_call_start(call_id, tool_call_delta.function.name)
+                if tool_call_delta.function and tool_call_delta.function.arguments:
+                    processor.process_tool_call_delta(call_id, tool_call_delta.function.arguments)
+
+        # Handle completion
+        if event.choices and event.choices[0].finish_reason:
+            # Mark any streaming tool calls as complete
+            for call_id in processor.state.tool_calls:
+                processor.process_tool_call_complete(call_id)
+
+            return create_stream_chunk(
+                native_event=event,
+                processor=processor,
+                finish_reason=event.choices[0].finish_reason,
+            )
+
+        return None
+
+    def _extract_usage_from_response(self, response: ChatCompletionResponse) -> Usage:
+        """Extract token usage statistics from Cerebras API response.
+
+        Args:
+            response: ChatCompletionResponse from Cerebras API containing usage metadata.
+
+        Returns:
+            Usage object with prompt_tokens, completion_tokens, and total_tokens fields.
+            Returns empty Usage object if no usage information is available.
+
+        Note:
+            Cerebras provides detailed token usage information similar to OpenAI,
+            enabling accurate cost tracking and usage monitoring.
+        """
+        if not response.usage:
+            return Usage()
+
+        return Usage(
+            prompt_tokens=response.usage.prompt_tokens or 0,
+            completion_tokens=response.usage.completion_tokens or 0,
+            total_tokens=response.usage.total_tokens or 0,
+        )
+
+    def _extract_content_from_response(self, response: ChatCompletionResponse) -> str | list[Any]:
+        """Extract text content from Cerebras API response.
+
+        Args:
+            response: ChatCompletionResponse from Cerebras API containing message content.
+
+        Returns:
+            String containing the generated text content from the first choice.
+            Returns empty string if no content is available.
+
+        Note:
+            Cerebras responses follow the OpenAI format with choices[0].message.content
+            containing the generated text.
+        """
+        choice = response.choices[0] if response.choices else None
+        return choice.message.content if choice and choice.message else ""
+
+    def _extract_tool_calls_from_response(
+        self, response: ChatCompletionResponse
+    ) -> list[ToolCall] | None:
+        """Extract function tool calls from Cerebras API response.
+
+        Args:
+            response: ChatCompletionResponse from Cerebras API that may contain tool calls.
+
+        Returns:
+            List of ToolCall objects representing functions the model wants to execute,
+            or None if no tool calls are present. Each ToolCall includes call_id,
+            function name, and JSON-encoded arguments.
+
+        Note:
+            Cerebras uses the OpenAI tool calling format with tool_calls arrays
+            containing function specifications and arguments.
+        """
+        choice = response.choices[0] if response.choices else None
+        if not choice or not choice.message.tool_calls:
+            return None
+
+        return [
+            ToolCall(
+                call_id=call.id,
+                name=call.function.name,
+                arguments=call.function.arguments,
+            )
+            for call in choice.message.tool_calls
+        ]
+
+    def _update_messages_with_tool_calls(
+        self,
+        messages: list[Any],
+        assistant_response: Any,
+        tool_calls: list[ToolCall],
+        tool_results: list[ToolExecutionResult],
+    ) -> list[Any]:
+        """Update message history with assistant response and tool results.
+
+        This method formats the conversation history to include the assistant's
+        tool calls and their results, following Cerebras's message format requirements.
+
+        Args:
+            messages: Current list of messages in the conversation.
+            assistant_response: The assistant's response that contained tool calls
+                (not directly used but maintained for interface compatibility).
+            tool_calls: List of ToolCall objects representing functions called
+                by the assistant.
+            tool_results: List of ToolExecutionResult objects containing the
+                results of executing the tool calls.
+
+        Returns:
+            Updated list of messages including:
+                1. Original conversation messages
+                2. Assistant message with tool_calls array
+                3. Tool result messages for each executed function
+
+        Note:
+            Cerebras uses the OpenAI message format where tool calls are represented
+            as an assistant message with a 'tool_calls' field, followed by separate
+            'tool' role messages containing the results.
+        """
+        updated_messages = list(messages)
+
+        # Build assistant message with tool calls
+        assistant_tool_calls = []
+        for tool_call in tool_calls:
+            assistant_tool_calls.append(
+                {
+                    "id": tool_call.call_id,
+                    "type": "function",
+                    "function": {
+                        "name": tool_call.name,
+                        "arguments": tool_call.arguments,
+                    },
+                }
+            )
+
+        # Add assistant message with tool calls
+        updated_messages.append(
+            {
+                "role": "assistant",
+                "tool_calls": assistant_tool_calls,
+            }
+        )
+
+        # Add tool result messages
+        for result in tool_results:
+            updated_messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": result.call_id,
+                    "content": result.result if not result.is_error else f"Error: {result.error}",
+                }
+            )
+
+        return updated_messages

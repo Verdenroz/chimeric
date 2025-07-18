@@ -1,3 +1,3 @@
-from .client import CerebrasClient
+from .client import CerebrasAsyncClient, CerebrasClient
 
-__all__ = ["CerebrasClient"]
+__all__ = ["CerebrasAsyncClient", "CerebrasClient"]
