@@ -1,3 +1,3 @@
-from .client import CohereClient
+from .client import CohereAsyncClient, CohereClient
 
-__all__ = ["CohereClient"]
+__all__ = ["CohereAsyncClient", "CohereClient"]
