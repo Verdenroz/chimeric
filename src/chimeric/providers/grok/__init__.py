@@ -1,3 +1,3 @@
-from .client import GrokClient
+from .client import GrokAsyncClient, GrokClient
 
-__all__ = ["GrokClient"]
+__all__ = ["GrokAsyncClient", "GrokClient"]
