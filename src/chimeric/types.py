@@ -22,7 +22,6 @@ __all__ = [
     "JSONSchemaType",
     "Message",
     "Metadata",
-    "ModelCapabilities",
     "ModelSummary",
     "NativeCompletionType",
     "NativeFileUploadType",
@@ -95,22 +94,6 @@ class Provider(Enum):
 ###################
 # MODEL TYPES
 ###################
-
-
-class ModelCapabilities(TypedDict, total=False):
-    """Capabilities advertised by a model.
-
-    Attributes:
-        streaming: Boolean indicating if the model supports streaming responses.
-        function_calling: Boolean indicating if the model supports structured function/tool calling.
-        vision: Boolean indicating if the model can process image inputs.
-        tools: Boolean indicating if the model supports the modern external tool invocation system.
-    """
-
-    streaming: bool
-    function_calling: bool
-    vision: bool
-    tools: bool
 
 
 class Capability(BaseModel):
