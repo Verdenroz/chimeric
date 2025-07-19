@@ -553,7 +553,9 @@ class OpenAIAsyncClient(ChimericAsyncClient[AsyncOpenAI, Response, ResponseStrea
     def _extract_tool_calls_from_response(self, response: Response) -> list[ToolCall] | None:
         """Extracts tool calls from OpenAI response."""
         calls = [
-            output for output in response.output if isinstance(output, ResponseFunctionToolCall)
+            output
+            for output in getattr(response, "output", [])
+            if isinstance(output, ResponseFunctionToolCall)
         ]
         if not calls:
             return None
