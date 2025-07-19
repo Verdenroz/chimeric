@@ -179,6 +179,11 @@ class GrokClient(ChimericClient[Client, Response, Chunk, Any]):
         for msg in messages:
             role = msg.role
             content = msg.content
+
+            # Convert content to string if it's a list
+            if isinstance(content, list):
+                content = str(content)
+
             role_mapping = {
                 "user": user,
                 "system": system,
@@ -240,7 +245,7 @@ class GrokClient(ChimericClient[Client, Response, Chunk, Any]):
         Returns:
             A ChimericStreamChunk or None if no content to process
         """
-        response, chunk = event
+        _, chunk = event
         delta = chunk.content
         if delta:
             return create_stream_chunk(native_event=chunk, processor=processor, content_delta=delta)
@@ -330,9 +335,9 @@ class GrokClient(ChimericClient[Client, Response, Chunk, Any]):
                 for result in tool_results:
                     chat.append(
                         tool_result(
-                            result=result.result
+                            result=result.result or "No result"
                             if not result.is_error
-                            else f"Error: {result.error}"
+                            else f"Error: {result.error or 'Unknown error'}"
                         )
                     )
 
@@ -410,9 +415,9 @@ class GrokClient(ChimericClient[Client, Response, Chunk, Any]):
                 for result in tool_results:
                     chat.append(
                         tool_result(
-                            result=result.result
+                            result=result.result or "No result"
                             if not result.is_error
-                            else f"Error: {result.error}"
+                            else f"Error: {result.error or 'Unknown error'}"
                         )
                     )
 
@@ -552,6 +557,11 @@ class GrokAsyncClient(ChimericAsyncClient[AsyncClient, Response, Chunk, Any]):
         for msg in messages:
             role = msg.role
             content = msg.content
+
+            # Convert content to string if it's a list
+            if isinstance(content, list):
+                content = str(content)
+
             role_mapping = {
                 "user": user,
                 "system": system,
@@ -612,7 +622,7 @@ class GrokAsyncClient(ChimericAsyncClient[AsyncClient, Response, Chunk, Any]):
         Returns:
             A ChimericStreamChunk or None if no content to process
         """
-        response, chunk = event
+        _, chunk = event
         delta = chunk.content
         if delta:
             return create_stream_chunk(native_event=chunk, processor=processor, content_delta=delta)
@@ -702,9 +712,9 @@ class GrokAsyncClient(ChimericAsyncClient[AsyncClient, Response, Chunk, Any]):
                 for result in tool_results:
                     chat.append(
                         tool_result(
-                            result=result.result
+                            result=result.result or "No result"
                             if not result.is_error
-                            else f"Error: {result.error}"
+                            else f"Error: {result.error or 'Unknown error'}"
                         )
                     )
 
@@ -782,9 +792,9 @@ class GrokAsyncClient(ChimericAsyncClient[AsyncClient, Response, Chunk, Any]):
                 for result in tool_results:
                     chat.append(
                         tool_result(
-                            result=result.result
+                            result=result.result or "No result"
                             if not result.is_error
-                            else f"Error: {result.error}"
+                            else f"Error: {result.error or 'Unknown error'}"
                         )
                     )
 

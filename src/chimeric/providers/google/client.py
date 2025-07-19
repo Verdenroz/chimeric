@@ -119,7 +119,7 @@ class GoogleClient(ChimericClient[Client, GenerateContentResponse, GenerateConte
             if isinstance(message.content, str):
                 if message.content.strip():  # Only add non-empty text
                     parts.append(Part.from_text(text=message.content))
-            elif isinstance(message.content, list):
+            elif isinstance(message.content, list):  # type: ignore[reportUnnecessaryIsInstance]
                 for content_item in message.content:
                     if isinstance(content_item, str) and content_item.strip():
                         parts.append(Part.from_text(text=content_item))
@@ -193,7 +193,7 @@ class GoogleClient(ChimericClient[Client, GenerateContentResponse, GenerateConte
 
     def _process_provider_stream_event(
         self, event: GenerateContentResponse, processor: StreamProcessor
-    ) -> ChimericStreamChunk | None:
+    ) -> ChimericStreamChunk[Any] | None:
         """Process a single streaming response chunk.
 
         Args:
@@ -433,7 +433,7 @@ class GoogleAsyncClient(
             if isinstance(message.content, str):
                 if message.content.strip():  # Only add non-empty text
                     parts.append(Part.from_text(text=message.content))
-            elif isinstance(message.content, list):
+            elif isinstance(message.content, list):  # type: ignore[reportUnnecessaryIsInstance]
                 for content_item in message.content:
                     if isinstance(content_item, str) and content_item.strip():
                         parts.append(Part.from_text(text=content_item))
@@ -507,7 +507,7 @@ class GoogleAsyncClient(
 
     def _process_provider_stream_event(
         self, event: GenerateContentResponse, processor: StreamProcessor
-    ) -> ChimericStreamChunk | None:
+    ) -> ChimericStreamChunk[Any] | None:
         """Process a single streaming response chunk.
 
         Args:

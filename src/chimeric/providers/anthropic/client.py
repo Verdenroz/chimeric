@@ -24,10 +24,60 @@ from chimeric.utils import StreamProcessor, create_stream_chunk
 
 
 class AnthropicClient(ChimericClient[Anthropic, Message, MessageStreamEvent, FileMetadata]):
-    """Synchronous Anthropic Client for interacting with the Anthropic API."""
+    """Synchronous Anthropic Client for interacting with Claude models via Anthropic API.
+
+    This client provides a unified interface for synchronous interactions with
+    Anthropic's Claude models via the `anthropic` library. It returns `chimeric`
+    response objects that wrap the native Anthropic responses and provides
+    comprehensive tool calling support for both streaming and non-streaming operations.
+
+    The client supports:
+        - Advanced text generation with Claude's reasoning capabilities
+        - Multimodal inputs including images and documents
+        - Function/tool calling with automatic execution
+        - Streaming responses with real-time tool call handling
+        - File upload and processing capabilities
+        - Extended context lengths for complex tasks
+        - Model listing and metadata retrieval
+
+    Note:
+        Anthropic provides some of the most capable language models with strong
+        reasoning abilities. Claude models excel at complex analysis, coding,
+        and creative tasks while maintaining helpful, harmless, and honest outputs.
+
+    Example:
+        ```python
+        from chimeric.providers.anthropic import AnthropicClient
+        from chimeric.tools import ToolManager
+
+        tool_manager = ToolManager()
+        client = AnthropicClient(api_key="your-api-key", tool_manager=tool_manager)
+
+        response = client.chat_completion(
+            messages="Analyze this complex problem and provide a solution.",
+            model="claude-3-5-sonnet-20241022"
+        )
+        print(response.common.content)
+        ```
+
+    Attributes:
+        api_key (str): The Anthropic API key for authentication.
+        tool_manager (ToolManager): Manager for handling tool registration and execution.
+    """
 
     def __init__(self, api_key: str, tool_manager, **kwargs: Any) -> None:
-        """Initializes the synchronous Anthropic client."""
+        """Initialize the synchronous Anthropic client.
+
+        Args:
+            api_key: The Anthropic API key for authentication.
+            tool_manager: The tool manager instance for handling function calls.
+            **kwargs: Additional keyword arguments to pass to the Anthropic client
+                constructor, such as base_url, timeout, default_headers, etc.
+
+        Raises:
+            ValueError: If api_key is None or empty.
+            ProviderError: If client initialization fails.
+        """
         self._provider_name = "Anthropic"
         super().__init__(api_key=api_key, tool_manager=tool_manager, **kwargs)
 
@@ -36,25 +86,58 @@ class AnthropicClient(ChimericClient[Anthropic, Message, MessageStreamEvent, Fil
     # ====================================================================
 
     def _get_client_type(self) -> type:
-        """Returns the Anthropic client type."""
+        """Get the synchronous Anthropic client class type.
+
+        Returns:
+            The Anthropic client class from the anthropic library.
+        """
         return Anthropic
 
     def _init_client(self, client_type: type, **kwargs: Any) -> Anthropic:
-        """Initializes the synchronous Anthropic client."""
+        """Initialize the synchronous Anthropic client instance.
+
+        Args:
+            client_type: The Anthropic client class to instantiate.
+            **kwargs: Additional keyword arguments for client initialization,
+                such as base_url, timeout, max_retries, default_headers, etc.
+
+        Returns:
+            Configured synchronous Anthropic client instance.
+
+        Raises:
+            ProviderError: If client initialization fails due to invalid
+                credentials or configuration.
+        """
         return Anthropic(api_key=self.api_key, **kwargs)
 
     def _get_capabilities(self) -> Capability:
-        """Gets Anthropic provider capabilities."""
-        return Capability(
-            multimodal=True,
-            streaming=True,
-            tools=True,
-            agents=False,
-            files=True
-        )
+        """Get supported features for the Anthropic provider.
+
+        Returns:
+            Capability object indicating which features are supported:
+                - multimodal: True (supports images, documents, and vision)
+                - streaming: True (supports real-time streaming responses)
+                - tools: True (supports function calling and tool use)
+                - agents: False (agent workflows not currently supported)
+                - files: True (supports file upload and processing)
+
+        Note:
+            Anthropic's Claude models are among the most capable for multimodal
+            understanding and complex reasoning tasks.
+        """
+        return Capability(multimodal=True, streaming=True, tools=True, agents=False, files=True)
 
     def _get_model_aliases(self) -> list[str]:
-        """Gets a list of Anthropic model aliases."""
+        """Return model aliases to include in model listings.
+
+        Returns:
+            List of string aliases for popular Anthropic Claude models,
+            including latest versions and commonly used model names.
+
+        Note:
+            These aliases help users access Claude models with simpler names
+            like 'claude-opus-4-0' instead of full version identifiers.
+        """
         return [
             # Claude 4 Models
             "claude-opus-4-0",
@@ -69,7 +152,20 @@ class AnthropicClient(ChimericClient[Anthropic, Message, MessageStreamEvent, Fil
         ]
 
     def _list_models_impl(self) -> list[ModelSummary]:
-        """Lists available models from the Anthropic API."""
+        """List available models from the Anthropic API.
+
+        Returns:
+            List of ModelSummary objects containing model metadata from the API.
+            Each summary includes id, display name, creation timestamp, and
+            additional model metadata.
+
+        Raises:
+            ProviderError: If the API request fails or returns invalid data.
+
+        Note:
+            Anthropic provides access to various Claude model versions with
+            different capabilities and performance characteristics.
+        """
         models_response = self.client.models.list()
         return [
             ModelSummary(
@@ -104,29 +200,68 @@ class AnthropicClient(ChimericClient[Anthropic, Message, MessageStreamEvent, Fil
         ]
 
     def _make_provider_request(
-            self,
-            messages: Any,
-            model: str,
-            stream: bool,
-            tools: Any = None,
-            **kwargs: Any,
+        self,
+        messages: Any,
+        model: str,
+        stream: bool,
+        tools: Any = None,
+        **kwargs: Any,
     ) -> Any:
-        """Makes the actual API request to Anthropic."""
+        """Make the actual API request to Anthropic.
+
+        Args:
+            messages: Messages in Anthropic's format (list of message dictionaries).
+            model: Model identifier (e.g., "claude-3-5-sonnet-20241022", "claude-3-opus-20240229").
+            stream: Whether to stream the response token by token.
+            tools: Tools in Anthropic's format, or None to disable function calling.
+            **kwargs: Additional parameters passed to the API request, such as
+                temperature, max_tokens, top_p, system, etc.
+
+        Returns:
+            Raw response from Anthropic's API. Either a Message object for non-streaming
+            requests or a stream object for streaming requests.
+
+        Raises:
+            ProviderError: If the API request fails due to authentication,
+                rate limiting, model unavailability, or other API errors.
+
+        Note:
+            Anthropic's Claude models support advanced reasoning and tool use,
+            with excellent performance on complex analysis and coding tasks.
+        """
+        # Build params with only valid Anthropic parameters
         params = {
             "model": model,
             "messages": messages,
             "max_tokens": kwargs.get("max_tokens", 4096),
             "stream": stream,
             "tools": tools if tools else NOT_GIVEN,
-            **kwargs,  # Add all additional kwargs
+            **kwargs,  # Include all other parameters directly
         }
 
-        return self.client.messages.create(**params)
+        return self.client.messages.create(**params)  # type: ignore[reportArgumentType]
 
     def _process_provider_stream_event(
-            self, event: MessageStreamEvent, processor: StreamProcessor
-    ) -> ChimericStreamChunk | None:
-        """Processes an Anthropic stream event using the standardized processor."""
+        self, event: MessageStreamEvent, processor: StreamProcessor
+    ) -> ChimericStreamChunk[Any] | None:
+        """Process a streaming event from Anthropic API into standardized format.
+
+        Args:
+            event: Raw streaming event from the Anthropic API containing delta content,
+                tool calls, or completion signals.
+            processor: StreamProcessor instance that manages streaming state and
+                accumulates content across multiple events.
+
+        Returns:
+            ChimericStreamChunk object containing processed content delta, tool call
+            information, or completion status. Returns None if the event contains
+            no processable content.
+
+        Note:
+            Anthropic streaming events have a unique format with content_block_delta
+            for text and tool_use events for function calls. This method handles
+            the complex event structure and state management automatically.
+        """
         event_type = event.type
 
         # Handle text content deltas
@@ -137,8 +272,8 @@ class AnthropicClient(ChimericClient[Anthropic, Message, MessageStreamEvent, Fil
         # Handle tool call events
         if event_type == "content_block_start":
             if (
-                    hasattr(event, "content_block")
-                    and getattr(event.content_block, "type", None) == "tool_use"
+                hasattr(event, "content_block")
+                and getattr(event.content_block, "type", None) == "tool_use"
             ):
                 block_index = getattr(event, "index", 0)
                 tool_call_id = f"tool_call_{block_index}"
@@ -204,11 +339,11 @@ class AnthropicClient(ChimericClient[Anthropic, Message, MessageStreamEvent, Fil
         ]
 
     def _update_messages_with_tool_calls(
-            self,
-            messages: list[Any],
-            assistant_response: Any,
-            tool_calls: list[ToolCall],
-            tool_results: list[ToolExecutionResult],
+        self,
+        messages: list[Any],
+        assistant_response: Any,
+        tool_calls: list[ToolCall],
+        tool_results: list[ToolExecutionResult],
     ) -> list[Any]:
         """Updates message history with assistant response and tool results.
 
@@ -310,7 +445,50 @@ class AnthropicClient(ChimericClient[Anthropic, Message, MessageStreamEvent, Fil
 class AnthropicAsyncClient(
     ChimericAsyncClient[AsyncAnthropic, Message, MessageStreamEvent, FileMetadata]
 ):
-    """Asynchronous Anthropic Client for interacting with the Anthropic API."""
+    """Asynchronous Anthropic Client for interacting with Claude models via Anthropic API.
+
+    This client provides a unified interface for asynchronous interactions with
+    Anthropic's Claude models via the `anthropic` library. It returns `chimeric`
+    response objects that wrap the native Anthropic responses and provides
+    comprehensive tool calling support for both streaming and non-streaming operations.
+
+    The async client supports all the same features as the synchronous client:
+        - Asynchronous advanced text generation with Claude's reasoning capabilities
+        - Asynchronous multimodal inputs including images and documents
+        - Asynchronous function/tool calling with automatic execution
+        - Asynchronous streaming responses with real-time tool call handling
+        - File upload and processing capabilities
+        - Extended context lengths for complex tasks
+        - Model listing and metadata retrieval
+
+    Note:
+        Anthropic provides some of the most capable language models with strong
+        reasoning abilities. Claude models excel at complex analysis, coding,
+        and creative tasks while maintaining helpful, harmless, and honest outputs.
+
+    Example:
+        ```python
+        import asyncio
+        from chimeric.providers.anthropic import AnthropicAsyncClient
+        from chimeric.tools import ToolManager
+
+        async def main():
+            tool_manager = ToolManager()
+            client = AnthropicAsyncClient(api_key="your-api-key", tool_manager=tool_manager)
+
+            response = await client.chat_completion(
+                messages="Analyze this complex problem and provide a solution.",
+                model="claude-3-5-sonnet-20241022"
+            )
+            print(response.common.content)
+
+        asyncio.run(main())
+        ```
+
+    Attributes:
+        api_key (str): The Anthropic API key for authentication.
+        tool_manager (ToolManager): Manager for handling tool registration and execution.
+    """
 
     def __init__(self, api_key: str, tool_manager, **kwargs: Any) -> None:
         """Initializes the asynchronous Anthropic client."""
@@ -331,13 +509,7 @@ class AnthropicAsyncClient(
 
     def _get_capabilities(self) -> Capability:
         """Gets Anthropic provider capabilities."""
-        return Capability(
-            multimodal=True,
-            streaming=True,
-            tools=True,
-            agents=False,
-            files=True
-        )
+        return Capability(multimodal=True, streaming=True, tools=True, agents=False, files=True)
 
     def _get_model_aliases(self) -> list[str]:
         """Gets a list of Anthropic model aliases."""
@@ -390,28 +562,29 @@ class AnthropicAsyncClient(
         ]
 
     async def _make_async_provider_request(
-            self,
-            messages: Any,
-            model: str,
-            stream: bool,
-            tools: Any = None,
-            **kwargs: Any,
+        self,
+        messages: Any,
+        model: str,
+        stream: bool,
+        tools: Any = None,
+        **kwargs: Any,
     ) -> Any:
         """Makes the actual async API request to Anthropic."""
+        # Build params with only valid Anthropic parameters
         params = {
             "model": model,
             "messages": messages,
             "max_tokens": kwargs.get("max_tokens", 4096),
             "stream": stream,
             "tools": tools if tools else NOT_GIVEN,
-            **kwargs,  # Add all additional kwargs
+            **kwargs,  # Include all other parameters directly
         }
 
-        return await self.async_client.messages.create(**params)
+        return await self.async_client.messages.create(**params)  # type: ignore[reportArgumentType]
 
     def _process_provider_stream_event(
-            self, event: MessageStreamEvent, processor: StreamProcessor
-    ) -> ChimericStreamChunk | None:
+        self, event: MessageStreamEvent, processor: StreamProcessor
+    ) -> ChimericStreamChunk[Any] | None:
         """Processes an Anthropic stream event using the standardized processor."""
         event_type = event.type
 
@@ -423,8 +596,8 @@ class AnthropicAsyncClient(
         # Handle tool call events
         if event_type == "content_block_start":
             if (
-                    hasattr(event, "content_block")
-                    and getattr(event.content_block, "type", None) == "tool_use"
+                hasattr(event, "content_block")
+                and getattr(event.content_block, "type", None) == "tool_use"
             ):
                 block_index = getattr(event, "index", 0)
                 tool_call_id = f"tool_call_{block_index}"
@@ -490,11 +663,11 @@ class AnthropicAsyncClient(
         ]
 
     def _update_messages_with_tool_calls(
-            self,
-            messages: list[Any],
-            assistant_response: Any,
-            tool_calls: list[ToolCall],
-            tool_results: list[ToolExecutionResult],
+        self,
+        messages: list[Any],
+        assistant_response: Any,
+        tool_calls: list[ToolCall],
+        tool_results: list[ToolExecutionResult],
     ) -> list[Any]:
         """Updates message history with assistant response and tool results.
 

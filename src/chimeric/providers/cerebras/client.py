@@ -251,7 +251,7 @@ class CerebrasClient(ChimericClient[Cerebras, ChatCompletionResponse, ChatChunkR
 
     def _process_provider_stream_event(
         self, event: ChatChunkResponse, processor: StreamProcessor
-    ) -> ChimericStreamChunk | None:
+    ) -> ChimericStreamChunk[Any] | None:
         """Process a streaming event from Cerebras API into standardized format.
 
         Args:
@@ -335,7 +335,9 @@ class CerebrasClient(ChimericClient[Cerebras, ChatCompletionResponse, ChatChunkR
             containing the generated text.
         """
         choice = response.choices[0] if response.choices else None
-        return choice.message.content if choice and choice.message else ""
+        return (
+            choice.message.content if choice and choice.message and choice.message.content else ""
+        )
 
     def _extract_tool_calls_from_response(
         self, response: ChatCompletionResponse
@@ -672,7 +674,7 @@ class CerebrasAsyncClient(
 
     def _process_provider_stream_event(
         self, event: ChatChunkResponse, processor: StreamProcessor
-    ) -> ChimericStreamChunk | None:
+    ) -> ChimericStreamChunk[Any] | None:
         """Processes a Cerebras stream event using the standardized processor."""
         if event.choices and event.choices[0].delta.content:
             delta = event.choices[0].delta.content
@@ -739,7 +741,9 @@ class CerebrasAsyncClient(
             containing the generated text.
         """
         choice = response.choices[0] if response.choices else None
-        return choice.message.content if choice and choice.message else ""
+        return (
+            choice.message.content if choice and choice.message and choice.message.content else ""
+        )
 
     def _extract_tool_calls_from_response(
         self, response: ChatCompletionResponse

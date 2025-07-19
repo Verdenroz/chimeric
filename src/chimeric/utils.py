@@ -157,7 +157,7 @@ def create_stream_chunk(
     content_delta: str | None = None,
     finish_reason: str | None = None,
     metadata: dict[str, Any] | None = None,
-) -> Any:
+) -> ChimericStreamChunk[Any]:
     """Creates a standardized stream chunk."""
     if content_delta is not None:
         chunk = processor.process_content_delta(content_delta)

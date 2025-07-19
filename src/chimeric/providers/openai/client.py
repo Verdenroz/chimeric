@@ -21,10 +21,60 @@ from chimeric.utils import StreamProcessor, create_stream_chunk
 
 
 class OpenAIClient(ChimericClient[OpenAI, Response, ResponseStreamEvent, FileObject]):
-    """Synchronous OpenAI Client for interacting with the OpenAI API."""
+    """Synchronous OpenAI Client for interacting with GPT models via OpenAI API.
+
+    This client provides a unified interface for synchronous interactions with
+    OpenAI's GPT models via the `openai` library. It returns `chimeric` response
+    objects that wrap the native OpenAI responses and provides comprehensive
+    tool calling support for both streaming and non-streaming operations.
+
+    The client supports:
+        - Advanced text generation with GPT-4 and other models
+        - Multimodal inputs including images and vision capabilities
+        - Function/tool calling with automatic execution
+        - Streaming responses with real-time tool call handling
+        - Agent workflows and autonomous task completion
+        - File upload and processing capabilities
+        - Model listing and metadata retrieval
+
+    Note:
+        OpenAI provides industry-leading language models including GPT-4 series,
+        with strong capabilities across text generation, reasoning, coding,
+        and multimodal understanding.
+
+    Example:
+        ```python
+        from chimeric.providers.openai import OpenAIClient
+        from chimeric.tools import ToolManager
+
+        tool_manager = ToolManager()
+        client = OpenAIClient(api_key="your-api-key", tool_manager=tool_manager)
+
+        response = client.chat_completion(
+            messages="Analyze this image and describe what you see.",
+            model="gpt-4-vision-preview"
+        )
+        print(response.common.content)
+        ```
+
+    Attributes:
+        api_key (str): The OpenAI API key for authentication.
+        tool_manager (ToolManager): Manager for handling tool registration and execution.
+    """
 
     def __init__(self, api_key: str, tool_manager, **kwargs: Any) -> None:
-        """Initializes the synchronous OpenAI client."""
+        """Initialize the synchronous OpenAI client.
+
+        Args:
+            api_key: The OpenAI API key for authentication.
+            tool_manager: The tool manager instance for handling function calls.
+            **kwargs: Additional keyword arguments to pass to the OpenAI client
+                constructor, such as base_url, timeout, organization, etc.
+
+        Raises:
+            ValueError: If api_key is None or empty.
+            ProviderError: If client initialization fails.
+        """
         self._provider_name = "OpenAI"
         super().__init__(api_key=api_key, tool_manager=tool_manager, **kwargs)
 
@@ -33,7 +83,11 @@ class OpenAIClient(ChimericClient[OpenAI, Response, ResponseStreamEvent, FileObj
     # ====================================================================
 
     def _get_client_type(self) -> type:
-        """Returns the OpenAI client type."""
+        """Get the synchronous OpenAI client class type.
+
+        Returns:
+            The OpenAI client class from the openai library.
+        """
         return OpenAI
 
     def _init_client(self, client_type: type, **kwargs: Any) -> OpenAI:
@@ -42,13 +96,7 @@ class OpenAIClient(ChimericClient[OpenAI, Response, ResponseStreamEvent, FileObj
 
     def _get_capabilities(self) -> Capability:
         """Gets OpenAI provider capabilities."""
-        return Capability(
-            multimodal=True,
-            streaming=True,
-            tools=True,
-            agents=True,
-            files=True
-        )
+        return Capability(multimodal=True, streaming=True, tools=True, agents=True, files=True)
 
     def _list_models_impl(self) -> list[ModelSummary]:
         """Lists available models from the OpenAI API."""
@@ -271,10 +319,65 @@ class OpenAIClient(ChimericClient[OpenAI, Response, ResponseStreamEvent, FileObj
 class OpenAIAsyncClient(
     ChimericAsyncClient[AsyncOpenAI, Response, ResponseStreamEvent, FileObject]
 ):
-    """Asynchronous OpenAI Client for interacting with the OpenAI API."""
+    """Asynchronous OpenAI Client for interacting with GPT models via OpenAI API.
+
+    This client provides a unified interface for asynchronous interactions with
+    OpenAI's GPT models via the `openai` library. It returns `chimeric` response
+    objects that wrap the native OpenAI responses and provides comprehensive
+    tool calling support for both streaming and non-streaming operations.
+
+    The async client supports all the same features as the synchronous client:
+        - Asynchronous advanced text generation with GPT-4 and other models
+        - Asynchronous multimodal inputs including images and vision capabilities
+        - Asynchronous function/tool calling with automatic execution
+        - Asynchronous streaming responses with real-time tool call handling
+        - Agent workflows and autonomous task completion
+        - File upload and processing capabilities
+        - Model listing and metadata retrieval
+
+    Note:
+        OpenAI provides industry-leading language models including GPT-4 series,
+        with strong capabilities across text generation, reasoning, coding,
+        and multimodal understanding. The async client is ideal for high-throughput
+        applications and concurrent request processing.
+
+    Example:
+        ```python
+        import asyncio
+        from chimeric.providers.openai import OpenAIAsyncClient
+        from chimeric.tools import ToolManager
+
+        async def main():
+            tool_manager = ToolManager()
+            client = OpenAIAsyncClient(api_key="your-api-key", tool_manager=tool_manager)
+
+            response = await client.chat_completion(
+                messages="Analyze this image and describe what you see.",
+                model="gpt-4-vision-preview"
+            )
+            print(response.common.content)
+
+        asyncio.run(main())
+        ```
+
+    Attributes:
+        api_key (str): The OpenAI API key for authentication.
+        tool_manager (ToolManager): Manager for handling tool registration and execution.
+    """
 
     def __init__(self, api_key: str, tool_manager, **kwargs: Any) -> None:
-        """Initializes the asynchronous OpenAI client."""
+        """Initialize the asynchronous OpenAI client.
+
+        Args:
+            api_key: The OpenAI API key for authentication.
+            tool_manager: The tool manager instance for handling function calls.
+            **kwargs: Additional keyword arguments to pass to the AsyncOpenAI client
+                constructor, such as base_url, timeout, organization, etc.
+
+        Raises:
+            ValueError: If api_key is None or empty.
+            ProviderError: If client initialization fails.
+        """
         self._provider_name = "OpenAI"
         super().__init__(api_key=api_key, tool_manager=tool_manager, **kwargs)
 
@@ -283,19 +386,61 @@ class OpenAIAsyncClient(
     # ====================================================================
 
     def _get_async_client_type(self) -> type:
-        """Returns the AsyncOpenAI client type."""
+        """Get the asynchronous OpenAI client class type.
+
+        Returns:
+            The AsyncOpenAI client class from the openai library.
+        """
         return AsyncOpenAI
 
     def _init_async_client(self, async_client_type: type, **kwargs: Any) -> AsyncOpenAI:
-        """Initializes the asynchronous OpenAI client."""
+        """Initialize the asynchronous OpenAI client instance.
+
+        Args:
+            async_client_type: The AsyncOpenAI client class to instantiate.
+            **kwargs: Additional keyword arguments for client initialization,
+                such as base_url, timeout, max_retries, organization, etc.
+
+        Returns:
+            Configured asynchronous OpenAI client instance.
+
+        Raises:
+            ProviderError: If client initialization fails due to invalid
+                credentials or configuration.
+        """
         return AsyncOpenAI(api_key=self.api_key, **kwargs)
 
     def _get_capabilities(self) -> Capability:
-        """Gets OpenAI provider capabilities."""
+        """Get supported features for the OpenAI provider.
+
+        Returns:
+            Capability object indicating which features are supported:
+                - multimodal: True (supports images, vision, and DALL-E)
+                - streaming: True (supports real-time streaming responses)
+                - tools: True (supports function calling and tool use)
+                - agents: True (supports agent workflows and autonomous tasks)
+                - files: True (supports file upload and processing)
+
+        Note:
+            OpenAI offers the most comprehensive feature set among all providers,
+            including advanced agent capabilities and multimodal generation.
+        """
         return Capability(multimodal=True, streaming=True, tools=True, agents=True, files=True)
 
     async def _list_models_impl(self) -> list[ModelSummary]:
-        """Lists available models from the OpenAI API."""
+        """List available models from the OpenAI API asynchronously.
+
+        Returns:
+            List of ModelSummary objects containing model metadata from the API.
+            Each summary includes id, name, owner, and creation timestamp.
+
+        Raises:
+            ProviderError: If the API request fails or returns invalid data.
+
+        Note:
+            OpenAI provides access to various GPT model versions, including
+            GPT-4, GPT-3.5, and specialized models for different use cases.
+        """
         models = await self.async_client.models.list()
         return [
             ModelSummary(

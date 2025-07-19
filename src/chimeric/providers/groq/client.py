@@ -1,12 +1,12 @@
 import os
 from typing import Any
 
-import httpx
 from groq import NOT_GIVEN, AsyncGroq, Groq
 from groq.types.chat import (
     ChatCompletion,
     ChatCompletionChunk,
 )
+import httpx
 
 from chimeric.base import ChimericAsyncClient, ChimericClient
 from chimeric.exceptions import ProviderError
@@ -47,7 +47,7 @@ class GroqClient(ChimericClient[Groq, ChatCompletion, ChatCompletionChunk, Any])
 
         tool_manager = ToolManager()
         client = GroqClient(api_key="your-api-key", tool_manager=tool_manager)
-        
+
         response = client.chat_completion(
             messages="Hello, how are you?",
             model="llama3-8b-8192"
@@ -222,7 +222,7 @@ class GroqClient(ChimericClient[Groq, ChatCompletion, ChatCompletionChunk, Any])
 
     def _process_provider_stream_event(
         self, event: ChatCompletionChunk, processor: StreamProcessor
-    ) -> ChimericStreamChunk | None:
+    ) -> ChimericStreamChunk[Any] | None:
         """Processes a Groq stream event using the standardized processor."""
         if not event.choices:
             return None
@@ -333,18 +333,22 @@ class GroqClient(ChimericClient[Groq, ChatCompletion, ChatCompletionChunk, Any])
             )
 
         # Add assistant message with tool calls
-        updated_messages.append({
-            "role": "assistant",
-            "tool_calls": assistant_tool_calls,
-        })
+        updated_messages.append(
+            {
+                "role": "assistant",
+                "tool_calls": assistant_tool_calls,
+            }
+        )
 
         # Add tool result messages
         for result in tool_results:
-            updated_messages.append({
-                "role": "tool",
-                "tool_call_id": result.call_id,
-                "content": result.result if not result.is_error else f"Error: {result.error}",
-            })
+            updated_messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": result.call_id,
+                    "content": result.result if not result.is_error else f"Error: {result.error}",
+                }
+            )
 
         return updated_messages
 
@@ -464,7 +468,7 @@ class GroqAsyncClient(ChimericAsyncClient[AsyncGroq, ChatCompletion, ChatComplet
         async def main():
             tool_manager = ToolManager()
             client = GroqAsyncClient(api_key="your-api-key", tool_manager=tool_manager)
-            
+
             response = await client.chat_completion(
                 messages="Hello, how are you?",
                 model="llama3-8b-8192"
@@ -609,7 +613,7 @@ class GroqAsyncClient(ChimericAsyncClient[AsyncGroq, ChatCompletion, ChatComplet
 
     def _process_provider_stream_event(
         self, event: ChatCompletionChunk, processor: StreamProcessor
-    ) -> ChimericStreamChunk | None:
+    ) -> ChimericStreamChunk[Any] | None:
         """Processes a Groq stream event using the standardized processor."""
         if not event.choices:
             return None
@@ -720,18 +724,22 @@ class GroqAsyncClient(ChimericAsyncClient[AsyncGroq, ChatCompletion, ChatComplet
             )
 
         # Add assistant message with tool calls
-        updated_messages.append({
-            "role": "assistant",
-            "tool_calls": assistant_tool_calls,
-        })
+        updated_messages.append(
+            {
+                "role": "assistant",
+                "tool_calls": assistant_tool_calls,
+            }
+        )
 
         # Add tool result messages
         for result in tool_results:
-            updated_messages.append({
-                "role": "tool",
-                "tool_call_id": result.call_id,
-                "content": result.result if not result.is_error else f"Error: {result.error}",
-            })
+            updated_messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": result.call_id,
+                    "content": result.result if not result.is_error else f"Error: {result.error}",
+                }
+            )
 
         return updated_messages
 
