@@ -1,15 +1,12 @@
 from typing import Any
 
 from openai import NOT_GIVEN, AsyncOpenAI, OpenAI
-from openai.types import FileObject
 from openai.types.responses import Response, ResponseFunctionToolCall, ResponseStreamEvent
 
 from chimeric.base import ChimericAsyncClient, ChimericClient
 from chimeric.types import (
     Capability,
-    ChimericFileUploadResponse,
     ChimericStreamChunk,
-    FileUploadResponse,
     Message,
     ModelSummary,
     Tool,
@@ -20,7 +17,7 @@ from chimeric.types import (
 from chimeric.utils import StreamProcessor, create_stream_chunk
 
 
-class OpenAIClient(ChimericClient[OpenAI, Response, ResponseStreamEvent, FileObject]):
+class OpenAIClient(ChimericClient[OpenAI, Response, ResponseStreamEvent]):
     """Synchronous OpenAI Client for interacting with GPT models via OpenAI API.
 
     This client provides a unified interface for synchronous interactions with
@@ -30,17 +27,13 @@ class OpenAIClient(ChimericClient[OpenAI, Response, ResponseStreamEvent, FileObj
 
     The client supports:
         - Advanced text generation with GPT-4 and other models
-        - Multimodal inputs including images and vision capabilities
         - Function/tool calling with automatic execution
         - Streaming responses with real-time tool call handling
-        - Agent workflows and autonomous task completion
-        - File upload and processing capabilities
         - Model listing and metadata retrieval
 
     Note:
         OpenAI provides industry-leading language models including GPT-4 series,
-        with strong capabilities across text generation, reasoning, coding,
-        and multimodal understanding.
+        with strong capabilities across text generation, reasoning, and coding.
 
     Example:
         ```python
@@ -51,8 +44,8 @@ class OpenAIClient(ChimericClient[OpenAI, Response, ResponseStreamEvent, FileObj
         client = OpenAIClient(api_key="your-api-key", tool_manager=tool_manager)
 
         response = client.chat_completion(
-            messages="Analyze this image and describe what you see.",
-            model="gpt-4-vision-preview"
+            messages="What's the capital of France?",
+            model="gpt-4"
         )
         print(response.common.content)
         ```
@@ -95,8 +88,18 @@ class OpenAIClient(ChimericClient[OpenAI, Response, ResponseStreamEvent, FileObj
         return OpenAI(api_key=self.api_key, **kwargs)
 
     def _get_capabilities(self) -> Capability:
-        """Gets OpenAI provider capabilities."""
-        return Capability(multimodal=True, streaming=True, tools=True, agents=True, files=True)
+        """Get supported features for the OpenAI provider.
+
+        Returns:
+            Capability object indicating which features are supported:
+                - streaming: True (supports real-time streaming responses)
+                - tools: True (supports function calling and tool use)
+
+        Note:
+            OpenAI offers comprehensive text generation capabilities with
+            advanced tool use.
+        """
+        return Capability(streaming=True, tools=True)
 
     def _list_models_impl(self) -> list[ModelSummary]:
         """Lists available models from the OpenAI API."""
@@ -294,31 +297,8 @@ class OpenAIClient(ChimericClient[OpenAI, Response, ResponseStreamEvent, FileObj
 
         return updated_messages
 
-    # ====================================================================
-    # Optional method implementations
-    # ====================================================================
 
-    def _upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[FileObject]:
-        """Uploads a file to OpenAI."""
-        file_object = self.client.files.create(**kwargs)
-
-        return ChimericFileUploadResponse(
-            native=file_object,
-            common=FileUploadResponse(
-                file_id=file_object.id,
-                filename=file_object.filename,
-                bytes=file_object.bytes,
-                purpose=file_object.purpose,
-                created_at=file_object.created_at,
-                status=file_object.status,
-                metadata=file_object.model_dump(),
-            ),
-        )
-
-
-class OpenAIAsyncClient(
-    ChimericAsyncClient[AsyncOpenAI, Response, ResponseStreamEvent, FileObject]
-):
+class OpenAIAsyncClient(ChimericAsyncClient[AsyncOpenAI, Response, ResponseStreamEvent]):
     """Asynchronous OpenAI Client for interacting with GPT models via OpenAI API.
 
     This client provides a unified interface for asynchronous interactions with
@@ -328,18 +308,15 @@ class OpenAIAsyncClient(
 
     The async client supports all the same features as the synchronous client:
         - Asynchronous advanced text generation with GPT-4 and other models
-        - Asynchronous multimodal inputs including images and vision capabilities
         - Asynchronous function/tool calling with automatic execution
         - Asynchronous streaming responses with real-time tool call handling
-        - Agent workflows and autonomous task completion
-        - File upload and processing capabilities
         - Model listing and metadata retrieval
 
     Note:
         OpenAI provides industry-leading language models including GPT-4 series,
-        with strong capabilities across text generation, reasoning, coding,
-        and multimodal understanding. The async client is ideal for high-throughput
-        applications and concurrent request processing.
+        with strong capabilities across text generation, reasoning, and coding.
+        The async client is ideal for high-throughput applications and concurrent
+        request processing.
 
     Example:
         ```python
@@ -352,8 +329,8 @@ class OpenAIAsyncClient(
             client = OpenAIAsyncClient(api_key="your-api-key", tool_manager=tool_manager)
 
             response = await client.chat_completion(
-                messages="Analyze this image and describe what you see.",
-                model="gpt-4-vision-preview"
+                messages="What's the capital of France?",
+                model="gpt-4"
             )
             print(response.common.content)
 
@@ -415,17 +392,14 @@ class OpenAIAsyncClient(
 
         Returns:
             Capability object indicating which features are supported:
-                - multimodal: True (supports images, vision, and DALL-E)
                 - streaming: True (supports real-time streaming responses)
                 - tools: True (supports function calling and tool use)
-                - agents: True (supports agent workflows and autonomous tasks)
-                - files: True (supports file upload and processing)
 
         Note:
-            OpenAI offers the most comprehensive feature set among all providers,
-            including advanced agent capabilities and multimodal generation.
+            OpenAI offers comprehensive text generation capabilities with
+            advanced tool use.
         """
-        return Capability(multimodal=True, streaming=True, tools=True, agents=True, files=True)
+        return Capability(streaming=True, tools=True)
 
     async def _list_models_impl(self) -> list[ModelSummary]:
         """List available models from the OpenAI API asynchronously.
@@ -636,24 +610,3 @@ class OpenAIAsyncClient(
             )
 
         return updated_messages
-
-    # ====================================================================
-    # Optional method implementations
-    # ====================================================================
-
-    async def _upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[FileObject]:
-        """Uploads a file to OpenAI asynchronously."""
-        file_object = await self.async_client.files.create(**kwargs)
-
-        return ChimericFileUploadResponse(
-            native=file_object,
-            common=FileUploadResponse(
-                file_id=file_object.id,
-                filename=file_object.filename,
-                bytes=file_object.bytes,
-                purpose=file_object.purpose,
-                created_at=file_object.created_at,
-                status=file_object.status,
-                metadata=file_object.model_dump(),
-            ),
-        )

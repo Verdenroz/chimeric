@@ -11,14 +11,12 @@ from typing import Any, Generic, TypeVar
 
 from .exceptions import (
     ChimericError,
-    ProviderError,
     ToolRegistrationError,
 )
 from .tools import ToolManager
 from .types import (
     Capability,
     ChimericCompletionResponse,
-    ChimericFileUploadResponse,
     ChimericStreamChunk,
     Input,
     Message,
@@ -39,16 +37,14 @@ from .utils import (
 __all__ = [
     "ChimericAsyncClient",
     "ChimericClient",
+    "ChunkType",
     "CompletionResponseType",
-    "FileUploadResponseType",
-    "StreamType",
 ]
 
 # Type variables for provider-specific types
 ClientType = TypeVar("ClientType")
 CompletionResponseType = TypeVar("CompletionResponseType")
-StreamType = TypeVar("StreamType")
-FileUploadResponseType = TypeVar("FileUploadResponseType")
+ChunkType = TypeVar("ChunkType")
 
 
 class ChimericClient(
@@ -56,8 +52,7 @@ class ChimericClient(
     Generic[
         ClientType,
         CompletionResponseType,
-        StreamType,
-        FileUploadResponseType,
+        ChunkType,
     ],
 ):
     """Abstract base class for synchronous LLM provider clients.
@@ -176,7 +171,7 @@ class ChimericClient(
         stream: bool,
         tools: Any = None,
         **kwargs: Any,
-    ) -> Any:
+    ) -> CompletionResponseType | Any:
         """Makes the actual API request to the provider.
 
         Args:
@@ -194,7 +189,7 @@ class ChimericClient(
     @abstractmethod
     def _process_provider_stream_event(
         self, event: Any, processor: StreamProcessor
-    ) -> ChimericStreamChunk[StreamType] | None:
+    ) -> ChimericStreamChunk[ChunkType] | None:
         """Processes a provider-specific stream event.
 
         Providers should use create_stream_chunk() to create standardized chunks.
@@ -227,7 +222,7 @@ class ChimericClient(
         pass
 
     @abstractmethod
-    def _extract_usage_from_response(self, response: Any) -> Usage:
+    def _extract_usage_from_response(self, response: CompletionResponseType) -> Usage:
         """Extracts usage information from provider response.
 
         Args:
@@ -239,7 +234,7 @@ class ChimericClient(
         pass
 
     @abstractmethod
-    def _extract_content_from_response(self, response: Any) -> str | list[Any]:
+    def _extract_content_from_response(self, response: CompletionResponseType) -> str | list[Any]:
         """Extracts content from provider response.
 
         Args:
@@ -251,7 +246,9 @@ class ChimericClient(
         pass
 
     @abstractmethod
-    def _extract_tool_calls_from_response(self, response: Any) -> list[ToolCall] | None:
+    def _extract_tool_calls_from_response(
+        self, response: CompletionResponseType
+    ) -> list[ToolCall] | None:
         """Extracts tool calls from provider response.
 
         Args:
@@ -273,24 +270,6 @@ class ChimericClient(
             A list of string aliases for models.
         """
         return []
-
-    def _upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[FileUploadResponseType]:
-        """Provider-specific file upload implementation.
-
-        Only implement if supports_files() returns True.
-
-        Args:
-            **kwargs: Provider-specific arguments for file upload.
-
-        Returns:
-            A ChimericFileUploadResponse containing the upload result.
-
-        Raises:
-            NotImplementedError: If the provider does not support file uploads.
-        """
-        raise NotImplementedError(
-            f"Provider {self.__class__.__name__} does not support file uploads"
-        )
 
     # ====================================================================
     # Tool execution
@@ -316,7 +295,13 @@ class ChimericClient(
 
         try:
             args = json.loads(call.arguments) if call.arguments else {}
-            execution_result = tool.function(**args)
+
+            # Check if the tool function is async
+            if inspect.iscoroutinefunction(tool.function):
+                execution_result = asyncio.run(tool.function(**args))
+            else:
+                execution_result = tool.function(**args)
+
             result.result = str(execution_result)
 
         except json.JSONDecodeError as e:
@@ -389,7 +374,9 @@ class ChimericClient(
         # Continue until no more tool calls
         while True:
             # Make API request
-            response = self._make_provider_request(current_messages, model, False, tools, **kwargs)
+            response: CompletionResponseType = self._make_provider_request(
+                current_messages, model, False, tools, **kwargs
+            )
 
             # Accumulate usage
             response_usage = self._extract_usage_from_response(response)
@@ -403,7 +390,7 @@ class ChimericClient(
 
             if not tool_calls:
                 # No more tool calls, this is our final response
-                final_response = response
+                final_response: CompletionResponseType = response
                 break
 
             # Execute tool calls
@@ -429,7 +416,7 @@ class ChimericClient(
     def _update_messages_with_tool_calls(
         self,
         messages: list[Any],
-        assistant_response: Any,
+        assistant_response: CompletionResponseType | ChunkType | Any,
         tool_calls: list[ToolCall],
         tool_results: list[ToolExecutionResult],
     ) -> list[Any]:
@@ -463,7 +450,7 @@ class ChimericClient(
 
     def _process_provider_stream(
         self, stream: Any, processor: StreamProcessor
-    ) -> Generator[ChimericStreamChunk[StreamType], None, None]:
+    ) -> Generator[ChimericStreamChunk[ChunkType], None, None]:
         """Processes a provider stream using the processor.
 
         Args:
@@ -486,7 +473,7 @@ class ChimericClient(
         model: str,
         tools: Any,
         **kwargs: Any,
-    ) -> Generator[ChimericStreamChunk[StreamType], None, None]:
+    ) -> Generator[ChimericStreamChunk[ChunkType], None, None]:
         """Handles streaming with tool call support.
 
         Args:
@@ -501,7 +488,7 @@ class ChimericClient(
             ChimericStreamChunk objects from all sequential API calls.
         """
         # First, yield all chunks from the initial stream
-        final_event = None
+        final_event: ChunkType | None = None
         for event in stream:
             final_event = event
             chunk = self._process_provider_stream_event(event, processor)
@@ -558,7 +545,7 @@ class ChimericClient(
         **kwargs: Any,
     ) -> (
         ChimericCompletionResponse[CompletionResponseType]
-        | Generator[ChimericStreamChunk[StreamType], None, None]
+        | Generator[ChimericStreamChunk[ChunkType], None, None]
     ):
         """Generates a synchronous chat completion.
 
@@ -626,7 +613,9 @@ class ChimericClient(
                     provider_messages, model, provider_tools, **kwargs
                 )
             # Simple completion without tools
-            response = self._make_provider_request(provider_messages, model, False, None, **kwargs)
+            response: CompletionResponseType = self._make_provider_request(
+                provider_messages, model, False, None, **kwargs
+            )
             content = self._extract_content_from_response(response)
             usage = self._extract_usage_from_response(response)
 
@@ -639,43 +628,6 @@ class ChimericClient(
         except Exception:
             self._error_count += 1
             raise
-
-    def upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[FileUploadResponseType]:
-        """Uploads a file to the provider.
-
-        This method is a wrapper around the provider-specific `_upload_file`
-        implementation, adding request tracking and standardized error handling.
-
-        Args:
-            **kwargs: Provider-specific file upload parameters.
-
-        Returns:
-            A ChimericFileUploadResponse containing both the native response and
-            standardized file information.
-
-        Raises:
-            NotImplementedError: If the provider does not support file uploads.
-            ProviderError: If the upload fails for any reason.
-        """
-        if not self.supports_files():
-            raise NotImplementedError("Provider does not support file uploads")
-
-        try:
-            self._request_count += 1
-            self._last_request_time = time.time()
-            return self._upload_file(**kwargs)
-        except Exception as e:
-            self._error_count += 1
-            if isinstance(e, ProviderError | ValueError | NotImplementedError):
-                raise
-
-            provider_name = getattr(self, "_provider_name", self.__class__.__name__)
-            raise ProviderError(
-                provider=provider_name,
-                response_text=f"Failed to upload file: {e!s}",
-                endpoint="file_upload",
-                status_code=getattr(e, "status_code", None),
-            ) from e
 
     def list_models(self) -> list[ModelSummary]:
         """Lists all available models including aliases.
@@ -713,14 +665,6 @@ class ChimericClient(
     # Capability checks
     # ====================================================================
 
-    def supports_multimodal(self) -> bool:
-        """Checks if the provider supports multimodal inputs.
-
-        Returns:
-            True if multimodal inputs are supported, False otherwise.
-        """
-        return self._capabilities.multimodal
-
     def supports_tools(self) -> bool:
         """Checks if the provider supports tool/function calling.
 
@@ -728,22 +672,6 @@ class ChimericClient(
             True if tool calling is supported, False otherwise.
         """
         return self._capabilities.tools
-
-    def supports_agents(self) -> bool:
-        """Checks if the provider supports agent workflows.
-
-        Returns:
-            True if agent workflows are supported, False otherwise.
-        """
-        return self._capabilities.agents
-
-    def supports_files(self) -> bool:
-        """Checks if the provider supports file uploads.
-
-        Returns:
-            True if file uploads are supported, False otherwise.
-        """
-        return self._capabilities.files
 
     def supports_streaming(self) -> bool:
         """Checks if the provider supports streaming responses.
@@ -871,8 +799,7 @@ class ChimericAsyncClient(
     Generic[
         ClientType,
         CompletionResponseType,
-        StreamType,
-        FileUploadResponseType,
+        ChunkType,
     ],
 ):
     """Abstract base class for asynchronous LLM provider clients.
@@ -991,7 +918,7 @@ class ChimericAsyncClient(
         stream: bool,
         tools: Any = None,
         **kwargs: Any,
-    ) -> Any:
+    ) -> CompletionResponseType | Any:
         """Makes the actual async API request to the provider.
 
         Args:
@@ -1009,7 +936,7 @@ class ChimericAsyncClient(
     @abstractmethod
     def _process_provider_stream_event(
         self, event: Any, processor: StreamProcessor
-    ) -> ChimericStreamChunk[StreamType] | None:
+    ) -> ChimericStreamChunk[ChunkType] | None:
         """Processes a provider-specific stream event.
 
         Providers should use create_stream_chunk() to create standardized chunks.
@@ -1042,7 +969,7 @@ class ChimericAsyncClient(
         pass
 
     @abstractmethod
-    def _extract_usage_from_response(self, response: Any) -> Usage:
+    def _extract_usage_from_response(self, response: CompletionResponseType) -> Usage:
         """Extracts usage information from provider response.
 
         Args:
@@ -1054,7 +981,7 @@ class ChimericAsyncClient(
         pass
 
     @abstractmethod
-    def _extract_content_from_response(self, response: Any) -> str | list[Any]:
+    def _extract_content_from_response(self, response: CompletionResponseType) -> str | list[Any]:
         """Extracts content from provider response.
 
         Args:
@@ -1066,7 +993,9 @@ class ChimericAsyncClient(
         pass
 
     @abstractmethod
-    def _extract_tool_calls_from_response(self, response: Any) -> list[ToolCall] | None:
+    def _extract_tool_calls_from_response(
+        self, response: CompletionResponseType
+    ) -> list[ToolCall] | None:
         """Extracts tool calls from provider response.
 
         Args:
@@ -1088,26 +1017,6 @@ class ChimericAsyncClient(
             A list of string aliases for models.
         """
         return []
-
-    async def _upload_file(
-        self, **kwargs: Any
-    ) -> ChimericFileUploadResponse[FileUploadResponseType]:
-        """Provider-specific async file upload implementation.
-
-        Only implement if supports_files() returns True.
-
-        Args:
-            **kwargs: Provider-specific arguments for file upload.
-
-        Returns:
-            A ChimericFileUploadResponse containing the upload result.
-
-        Raises:
-            NotImplementedError: If the provider does not support file uploads.
-        """
-        raise NotImplementedError(
-            f"Provider {self.__class__.__name__} does not support file uploads"
-        )
 
     # ====================================================================
     # Tool execution
@@ -1209,12 +1118,12 @@ class ChimericAsyncClient(
         current_messages = list(messages) if isinstance(messages, list) else [messages]
         all_tool_results = []
         total_usage = Usage()
-        final_response = None
+        final_response: CompletionResponseType | None = None
 
         # Continue until no more tool calls
         while True:
             # Make API request
-            response = await self._make_async_provider_request(
+            response: CompletionResponseType = await self._make_async_provider_request(
                 current_messages, model, False, tools, **kwargs
             )
 
@@ -1256,7 +1165,7 @@ class ChimericAsyncClient(
     def _update_messages_with_tool_calls(
         self,
         messages: list[Any],
-        assistant_response: Any,
+        assistant_response: CompletionResponseType | ChunkType | Any,
         tool_calls: list[ToolCall],
         tool_results: list[ToolExecutionResult],
     ) -> list[Any]:
@@ -1290,7 +1199,7 @@ class ChimericAsyncClient(
 
     async def _process_async_provider_stream(
         self, stream: Any, processor: StreamProcessor
-    ) -> AsyncGenerator[ChimericStreamChunk[StreamType], None]:
+    ) -> AsyncGenerator[ChimericStreamChunk[ChunkType], None]:
         """Processes an async provider stream using the processor.
 
         Args:
@@ -1313,7 +1222,7 @@ class ChimericAsyncClient(
         model: str,
         tools: Any,
         **kwargs: Any,
-    ) -> AsyncGenerator[ChimericStreamChunk[StreamType], None]:
+    ) -> AsyncGenerator[ChimericStreamChunk[ChunkType], None]:
         """Handles streaming with tool call support (async).
 
         Args:
@@ -1328,7 +1237,7 @@ class ChimericAsyncClient(
             ChimericStreamChunk objects from all sequential API calls.
         """
         # First, yield all chunks from the initial stream
-        final_event = None
+        final_event: ChunkType | None = None
         async for event in stream:
             final_event = event
             chunk = self._process_provider_stream_event(event, processor)
@@ -1388,7 +1297,7 @@ class ChimericAsyncClient(
         **kwargs: Any,
     ) -> (
         ChimericCompletionResponse[CompletionResponseType]
-        | AsyncGenerator[ChimericStreamChunk[StreamType], None]
+        | AsyncGenerator[ChimericStreamChunk[ChunkType], None]
     ):
         """Generates an asynchronous chat completion.
 
@@ -1456,7 +1365,7 @@ class ChimericAsyncClient(
                     provider_messages, model, provider_tools, **kwargs
                 )
             # Simple completion without tools
-            response = await self._make_async_provider_request(
+            response: CompletionResponseType = await self._make_async_provider_request(
                 provider_messages, model, False, None, **kwargs
             )
             content = self._extract_content_from_response(response)
@@ -1471,45 +1380,6 @@ class ChimericAsyncClient(
         except Exception:
             self._error_count += 1
             raise
-
-    async def upload_file(
-        self, **kwargs: Any
-    ) -> ChimericFileUploadResponse[FileUploadResponseType]:
-        """Uploads a file to the provider asynchronously.
-
-        This method is a wrapper around the provider-specific `_upload_file`
-        implementation, adding request tracking and standardized error handling.
-
-        Args:
-            **kwargs: Provider-specific file upload parameters.
-
-        Returns:
-            A ChimericFileUploadResponse containing both the native response and
-            standardized file information.
-
-        Raises:
-            NotImplementedError: If the provider does not support file uploads.
-            ProviderError: If the upload fails for any reason.
-        """
-        if not self.supports_files():
-            raise NotImplementedError("Provider does not support file uploads")
-
-        try:
-            self._request_count += 1
-            self._last_request_time = time.time()
-            return await self._upload_file(**kwargs)
-        except Exception as e:
-            self._error_count += 1
-            if isinstance(e, ProviderError | ValueError | NotImplementedError):
-                raise
-
-            provider_name = getattr(self, "_provider_name", self.__class__.__name__)
-            raise ProviderError(
-                provider=provider_name,
-                response_text=f"Failed to upload file: {e!s}",
-                endpoint="file_upload",
-                status_code=getattr(e, "status_code", None),
-            ) from e
 
     async def list_models(self) -> list[ModelSummary]:
         """Lists all available models including aliases asynchronously.
@@ -1547,14 +1417,6 @@ class ChimericAsyncClient(
     # Capability checks
     # ====================================================================
 
-    def supports_multimodal(self) -> bool:
-        """Checks if the provider supports multimodal inputs.
-
-        Returns:
-            True if multimodal inputs are supported, False otherwise.
-        """
-        return self._capabilities.multimodal
-
     def supports_tools(self) -> bool:
         """Checks if the provider supports tool/function calling.
 
@@ -1562,22 +1424,6 @@ class ChimericAsyncClient(
             True if tool calling is supported, False otherwise.
         """
         return self._capabilities.tools
-
-    def supports_agents(self) -> bool:
-        """Checks if the provider supports agent workflows.
-
-        Returns:
-            True if agent workflows are supported, False otherwise.
-        """
-        return self._capabilities.agents
-
-    def supports_files(self) -> bool:
-        """Checks if the provider supports file uploads.
-
-        Returns:
-            True if file uploads are supported, False otherwise.
-        """
-        return self._capabilities.files
 
     def supports_streaming(self) -> bool:
         """Checks if the provider supports streaming responses.

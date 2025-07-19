@@ -8,10 +8,8 @@ from typing_extensions import TypedDict
 __all__ = [
     "Capability",
     "ChimericCompletionResponse",
-    "ChimericFileUploadResponse",
     "ChimericStreamChunk",
     "CompletionResponse",
-    "FileUploadResponse",
     "Input",
     "JSONSchemaArray",
     "JSONSchemaBoolean",
@@ -24,7 +22,6 @@ __all__ = [
     "Metadata",
     "ModelSummary",
     "NativeCompletionType",
-    "NativeFileUploadType",
     "NativeStreamType",
     "Provider",
     "StreamChunk",
@@ -40,7 +37,6 @@ __all__ = [
 # Generic type variables for native responses
 NativeCompletionType = TypeVar("NativeCompletionType")
 NativeStreamType = TypeVar("NativeStreamType")
-NativeFileUploadType = TypeVar("NativeFileUploadType")
 
 # Generic type aliases
 Input: TypeAlias = str | dict[str, Any] | list[Any]
@@ -100,20 +96,14 @@ class Capability(BaseModel):
     """Features supported by an LLM provider or a specific model.
 
     Attributes:
-        multimodal: Indicates if multiple input/output modalities (e.g., text, images) are supported.
         streaming: Indicates if responses can be streamed token-by-token.
         tools: Indicates if function/tool calling capabilities are supported.
-        agents: Indicates if the provider supports autonomous agent functionalities.
-        files: Indicates if file uploading, processing, and referencing are supported.
     """
 
     model_config = ConfigDict(frozen=True)
 
-    multimodal: bool = False
     streaming: bool = False
     tools: bool = False
-    agents: bool = False
-    files: bool = False
 
 
 class ModelSummary(BaseModel):
@@ -245,28 +235,6 @@ class StreamChunk(BaseModel):
     def __str__(self) -> str:
         """Return a string representation of the stream chunk."""
         return self.delta if self.delta is not None else ""
-
-
-class FileUploadResponse(BaseModel):
-    """Information returned after uploading a file to a provider.
-
-    Attributes:
-        file_id: Unique identifier assigned to the uploaded file by the provider.
-        filename: Original name of the file that was uploaded.
-        bytes: Size of the uploaded file in bytes.
-        purpose: The intended use of the file, as specified during upload (e.g., "assistants", "vision").
-        created_at: Optional epoch timestamp (seconds since epoch) indicating when the file was uploaded/created.
-        status: Optional current status of the file (e.g., "uploaded", "processing", "ready", "error").
-        metadata: Optional dictionary for any additional provider-specific metadata about the file.
-    """
-
-    file_id: str
-    filename: str
-    bytes: int
-    purpose: str | None = None
-    created_at: int | None = None
-    status: str | None = None
-    metadata: dict[str, Any] | None = None
 
 
 ###################
@@ -501,20 +469,3 @@ class ChimericStreamChunk(BaseModel, Generic[NativeStreamType]):
 
     native: NativeStreamType
     common: StreamChunk
-
-
-class ChimericFileUploadResponse(BaseModel, Generic[NativeFileUploadType]):
-    """Combined file upload response with both native and common formats.
-
-    This type provides access to both provider-specific file upload details
-    and Chimeric's common format.
-
-    Attributes:
-        native: The provider's native file upload response object.
-        common: The common FileUploadResponse in Chimeric's format.
-    """
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    native: NativeFileUploadType
-    common: FileUploadResponse

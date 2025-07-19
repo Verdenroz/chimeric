@@ -4,7 +4,6 @@ from google.genai import Client
 from google.genai.client import AsyncClient
 from google.genai.types import (
     Content,
-    File,
     GenerateContentConfig,
     GenerateContentResponse,
     GenerateContentResponseUsageMetadata,
@@ -14,9 +13,7 @@ from google.genai.types import (
 from chimeric.base import ChimericAsyncClient, ChimericClient
 from chimeric.types import (
     Capability,
-    ChimericFileUploadResponse,
     ChimericStreamChunk,
-    FileUploadResponse,
     Message,
     ModelSummary,
     Tool,
@@ -26,7 +23,7 @@ from chimeric.types import (
 from chimeric.utils import StreamProcessor, create_stream_chunk
 
 
-class GoogleClient(ChimericClient[Client, GenerateContentResponse, GenerateContentResponse, File]):
+class GoogleClient(ChimericClient[Client, GenerateContentResponse, GenerateContentResponse]):
     """Google Client for interacting with the Google Gemini API.
 
     This client provides a unified interface for synchronous interactions with
@@ -64,18 +61,12 @@ class GoogleClient(ChimericClient[Client, GenerateContentResponse, GenerateConte
 
         Returns:
             Capability object indicating which features are supported:
-            - multimodal: True (supports text, images, audio, etc.)
             - streaming: True (supports real-time streaming responses)
             - tools: True (supports function calling)
-            - agents: False (agent workflows not supported)
-            - files: True (supports file uploads and management)
         """
         return Capability(
-            multimodal=True,
             streaming=True,
             tools=True,
-            agents=False,
-            files=True,
         )
 
     def _list_models_impl(self) -> list[ModelSummary]:
@@ -301,45 +292,9 @@ class GoogleClient(ChimericClient[Client, GenerateContentResponse, GenerateConte
 
         return usage
 
-    def _upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[File]:
-        """Upload a file using Gemini's file service.
-
-        Args:
-            **kwargs: Parameters forwarded to client.files.upload.
-                Common parameters include:
-                - path: File path to upload
-                - mime_type: MIME type of the file
-                - display_name: Optional display name
-
-        Returns:
-            ChimericFileUploadResponse containing file metadata and upload details.
-        """
-        file_obj = self.client.files.upload(**kwargs)
-
-        # Extract file metadata with safe defaults
-        file_id = file_obj.name or "unknown"
-        filename = file_obj.display_name or "unknown"
-        file_size = file_obj.size_bytes or 0
-
-        # Convert datetime to timestamp if available
-        created_at = None
-        if file_obj.create_time and hasattr(file_obj.create_time, "timestamp"):
-            created_at = int(file_obj.create_time.timestamp())
-
-        return ChimericFileUploadResponse(
-            native=file_obj,
-            common=FileUploadResponse(
-                file_id=file_id,
-                filename=filename,
-                bytes=file_size,
-                created_at=created_at,
-                metadata=file_obj.model_dump(),
-            ),
-        )
-
 
 class GoogleAsyncClient(
-    ChimericAsyncClient[AsyncClient, GenerateContentResponse, GenerateContentResponse, File]
+    ChimericAsyncClient[AsyncClient, GenerateContentResponse, GenerateContentResponse]
 ):
     """Async Google Client for interacting with the Google Gemini API.
 
@@ -378,18 +333,12 @@ class GoogleAsyncClient(
 
         Returns:
             Capability object indicating which features are supported:
-            - multimodal: True (supports text, images, audio, etc.)
             - streaming: True (supports real-time streaming responses)
             - tools: True (supports function calling)
-            - agents: False (agent workflows not supported)
-            - files: True (supports file uploads and management)
         """
         return Capability(
-            multimodal=True,
             streaming=True,
             tools=True,
-            agents=False,
-            files=True,
         )
 
     async def _list_models_impl(self) -> list[ModelSummary]:
@@ -615,40 +564,3 @@ class GoogleAsyncClient(
                 setattr(usage, key, value)
 
         return usage
-
-    async def _upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[File]:
-        """Upload a file using Gemini's async file service.
-
-        Args:
-            **kwargs: Parameters forwarded to async_client.files.upload.
-                Common parameters include:
-                - path: File path to upload
-                - mime_type: MIME type of the file
-                - display_name: Optional display name
-
-        Returns:
-            ChimericFileUploadResponse containing file metadata and upload details.
-        """
-        # Note: Adjust this if Google's async client has a different file upload method
-        file_obj = await self.async_client.files.upload(**kwargs)
-
-        # Extract file metadata with safe defaults
-        file_id = file_obj.name or "unknown"
-        filename = file_obj.display_name or "unknown"
-        file_size = file_obj.size_bytes or 0
-
-        # Convert datetime to timestamp if available
-        created_at = None
-        if file_obj.create_time and hasattr(file_obj.create_time, "timestamp"):
-            created_at = int(file_obj.create_time.timestamp())
-
-        return ChimericFileUploadResponse(
-            native=file_obj,
-            common=FileUploadResponse(
-                file_id=file_id,
-                filename=filename,
-                bytes=file_size,
-                created_at=created_at,
-                metadata=file_obj.model_dump(),
-            ),
-        )

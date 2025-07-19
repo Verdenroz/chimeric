@@ -7,7 +7,6 @@ from chimeric.base import ChimericAsyncClient, ChimericClient
 from chimeric.types import (
     Capability,
     ChimericCompletionResponse,
-    ChimericFileUploadResponse,
     ChimericStreamChunk,
     Message,
     ModelSummary,
@@ -19,7 +18,7 @@ from chimeric.types import (
 from chimeric.utils import StreamProcessor, create_completion_response, create_stream_chunk
 
 
-class GrokClient(ChimericClient[Client, Response, Chunk, Any]):
+class GrokClient(ChimericClient[Client, Response, Chunk]):
     """Synchronous Grok Client for interacting with Grok's API using the xai-sdk.
 
     This client provides a unified interface for synchronous interactions with
@@ -29,7 +28,6 @@ class GrokClient(ChimericClient[Client, Response, Chunk, Any]):
 
     The client supports:
         - Text generation with Grok's conversational AI models
-        - Multimodal inputs (text and images)
         - Function/tool calling with automatic execution
         - Streaming responses with real-time output
         - Model listing and metadata retrieval
@@ -37,7 +35,6 @@ class GrokClient(ChimericClient[Client, Response, Chunk, Any]):
     Note:
         Grok uses a unique chat-based API where conversations are managed
         through chat objects rather than stateless request/response patterns.
-        File uploads are not currently supported.
 
     Example:
         ```python
@@ -105,22 +102,12 @@ class GrokClient(ChimericClient[Client, Response, Chunk, Any]):
 
         Returns:
             Capability object indicating which features are supported:
-                - multimodal: True (supports text and image inputs)
-                - streaming: True (supports real-time streaming responses)
-                - tools: True (supports function calling)
-                - agents: False (agent workflows not currently supported)
-                - files: False (no file upload support)
-
-        Note:
-            Grok provides advanced conversational AI capabilities with support
-            for multimodal inputs and sophisticated tool calling.
+            - streaming: True (supports real-time streaming responses)
+            - tools: True (supports function calling)
         """
         return Capability(
-            multimodal=True,
             streaming=True,
             tools=True,
-            agents=False,
-            files=False,
         )
 
     def _list_models_impl(self) -> list[ModelSummary]:
@@ -463,19 +450,8 @@ class GrokClient(ChimericClient[Client, Response, Chunk, Any]):
         # it for interface compatibility
         return messages
 
-    def _upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[Any]:
-        """Grok does not support file uploads.
 
-        Args:
-            **kwargs: Not used.
-
-        Raises:
-            NotImplementedError: Grok does not support file uploads.
-        """
-        raise NotImplementedError("Grok does not support file uploads")
-
-
-class GrokAsyncClient(ChimericAsyncClient[AsyncClient, Response, Chunk, Any]):
+class GrokAsyncClient(ChimericAsyncClient[AsyncClient, Response, Chunk]):
     """Asynchronous Grok Client for interacting with Grok's API using the xai-sdk."""
 
     def __init__(self, api_key: str, tool_manager, **kwargs: Any) -> None:
@@ -492,13 +468,16 @@ class GrokAsyncClient(ChimericAsyncClient[AsyncClient, Response, Chunk, Any]):
         return AsyncClient(api_key=self.api_key, **kwargs)
 
     def _get_capabilities(self) -> Capability:
-        """Gets Grok provider capabilities."""
+        """Get supported features for the Grok provider.
+
+        Returns:
+            Capability object indicating which features are supported:
+            - streaming: True (supports real-time streaming responses)
+            - tools: True (supports function calling)
+        """
         return Capability(
-            multimodal=True,
             streaming=True,
             tools=True,
-            agents=False,
-            files=False,
         )
 
     async def _list_models_impl(self) -> list[ModelSummary]:
@@ -839,14 +818,3 @@ class GrokAsyncClient(ChimericAsyncClient[AsyncClient, Response, Chunk, Any]):
         # won't be used in the tool calling flow, but we need to implement
         # it for interface compatibility
         return messages
-
-    async def _upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[Any]:
-        """Grok does not support file uploads.
-
-        Args:
-            **kwargs: Not used.
-
-        Raises:
-            NotImplementedError: Grok does not support file uploads.
-        """
-        raise NotImplementedError("Grok does not support file uploads")

@@ -31,7 +31,7 @@ __all__ = [
 ]
 
 # Mapping of provider enums to their corresponding client classes.
-PROVIDER_CLIENTS: dict[Provider, type[ChimericClient[Any, Any, Any, Any]]] = {
+PROVIDER_CLIENTS: dict[Provider, type[ChimericClient[Any, Any, Any]]] = {
     Provider.OPENAI: OpenAIClient,
     Provider.ANTHROPIC: AnthropicClient,
     Provider.GOOGLE: GoogleClient,
@@ -42,7 +42,7 @@ PROVIDER_CLIENTS: dict[Provider, type[ChimericClient[Any, Any, Any, Any]]] = {
 }
 
 # Mapping of provider enums to their corresponding async client classes.
-ASYNC_PROVIDER_CLIENTS: dict[Provider, type[ChimericAsyncClient[Any, Any, Any, Any]]] = {
+ASYNC_PROVIDER_CLIENTS: dict[Provider, type[ChimericAsyncClient[Any, Any, Any]]] = {
     Provider.OPENAI: OpenAIAsyncClient,
     Provider.ANTHROPIC: AnthropicAsyncClient,
     Provider.GOOGLE: GoogleAsyncClient,
@@ -120,8 +120,8 @@ class Chimeric:
             groq_api_key: Groq API key for authentication.
             **kwargs: Additional provider-specific configuration options.
         """
-        self.providers: dict[Provider, ChimericClient[Any, Any, Any, Any]] = {}
-        self.async_providers: dict[Provider, ChimericAsyncClient[Any, Any, Any, Any]] = {}
+        self.providers: dict[Provider, ChimericClient[Any, Any, Any]] = {}
+        self.async_providers: dict[Provider, ChimericAsyncClient[Any, Any, Any]] = {}
         self.primary_provider: Provider | None = None
 
         # Initialize the tool management system.
@@ -589,7 +589,7 @@ class Chimeric:
         # Create a new instance with the merged values
         return Capability(**merged_values)
 
-    def get_provider_client(self, provider: str) -> ChimericClient[Any, Any, Any, Any]:
+    def get_provider_client(self, provider: str) -> ChimericClient[Any, Any, Any]:
         """Gets direct access to a provider's client instance.
 
         Args:

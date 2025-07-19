@@ -1,12 +1,25 @@
 from collections.abc import AsyncGenerator, Generator
-import json
 from typing import Any
 
 from cohere import AsyncClientV2 as AsyncCohere
+from cohere import (
+    ChatResponse,
+    CitationEndStreamedChatResponseV2,
+    CitationStartStreamedChatResponseV2,
+    ContentDeltaStreamedChatResponseV2,
+    ContentEndStreamedChatResponseV2,
+    ContentStartStreamedChatResponseV2,
+    DebugStreamedChatResponseV2,
+    MessageEndStreamedChatResponseV2,
+    MessageStartStreamedChatResponseV2,
+    ToolCallDeltaStreamedChatResponseV2,
+    ToolCallEndStreamedChatResponseV2,
+    ToolCallStartStreamedChatResponseV2,
+    ToolPlanDeltaStreamedChatResponseV2,
+)
 from cohere import ClientV2 as Cohere
 
 from chimeric.base import ChimericAsyncClient, ChimericClient
-from chimeric.exceptions import ToolRegistrationError
 from chimeric.types import (
     Capability,
     ChimericStreamChunk,
@@ -20,8 +33,23 @@ from chimeric.types import (
 )
 from chimeric.utils import StreamProcessor, create_stream_chunk
 
+CohereChunk = (
+    MessageStartStreamedChatResponseV2
+    | ContentStartStreamedChatResponseV2
+    | ContentDeltaStreamedChatResponseV2
+    | ContentEndStreamedChatResponseV2
+    | ToolPlanDeltaStreamedChatResponseV2
+    | ToolCallStartStreamedChatResponseV2
+    | ToolCallDeltaStreamedChatResponseV2
+    | ToolCallEndStreamedChatResponseV2
+    | CitationStartStreamedChatResponseV2
+    | CitationEndStreamedChatResponseV2
+    | MessageEndStreamedChatResponseV2
+    | DebugStreamedChatResponseV2
+)
 
-class CohereClient(ChimericClient[Cohere, Any, Any, Any]):
+
+class CohereClient(ChimericClient[Cohere, ChatResponse, CohereChunk]):
     """Synchronous Cohere Client for interacting with Cohere models."""
 
     def __init__(self, api_key: str, tool_manager, **kwargs: Any) -> None:
@@ -59,9 +87,11 @@ class CohereClient(ChimericClient[Cohere, Any, Any, Any]):
         """Gets Cohere provider capabilities.
 
         Returns:
-            A Capability object describing the provider's features.
+            Capability object indicating which features are supported:
+            - streaming: True (supports real-time streaming responses)
+            - tools: True (supports function calling)
         """
-        return Capability(multimodal=False, streaming=True, tools=True, agents=False, files=False)
+        return Capability(streaming=True, tools=True)
 
     def _list_models_impl(self) -> list[ModelSummary]:
         """Lists available models from the Cohere API.
@@ -150,7 +180,7 @@ class CohereClient(ChimericClient[Cohere, Any, Any, Any]):
 
     def _process_provider_stream_event(
         self, event: Any, processor: StreamProcessor
-    ) -> ChimericStreamChunk[Any] | None:
+    ) -> ChimericStreamChunk[CohereChunk] | None:
         """Processes a Cohere stream event using the standardized processor.
 
         Args:
@@ -379,7 +409,7 @@ class CohereClient(ChimericClient[Cohere, Any, Any, Any]):
         model: str,
         tools: Any,
         **kwargs: Any,
-    ) -> Generator[ChimericStreamChunk[Any], None, None]:
+    ) -> Generator[ChimericStreamChunk[CohereChunk], None, None]:
         """Handles streaming with tool calls for Cohere's specific pattern.
 
         This method manages the conversation loop for tool calls in streaming mode,
@@ -437,20 +467,33 @@ class CohereClient(ChimericClient[Cohere, Any, Any, Any]):
                     }
                 )
 
-                # Execute each tool call
-                for call in non_stream_response.message.tool_calls:
-                    # Execute the tool call
-                    tool_call_info = self._process_function_call(call)
+                # Convert to ToolCall objects
+                tool_calls = [
+                    ToolCall(
+                        call_id=call.id,
+                        name=call.function.name,
+                        arguments=call.function.arguments,
+                    )
+                    for call in non_stream_response.message.tool_calls
+                ]
 
-                    # Add the tool result message
+                # Execute tool calls
+                tool_results = self._execute_tool_calls(tool_calls)
+
+                # Add tool result messages
+                for result in tool_results:
                     current_messages.append(
                         {
                             "role": "tool",
-                            "tool_call_id": call.id,
+                            "tool_call_id": result.call_id,
                             "content": [
                                 {
                                     "type": "document",
-                                    "document": {"data": tool_call_info["result"]},
+                                    "document": {
+                                        "data": result.result
+                                        if not result.is_error
+                                        else f"Error: {result.error}"
+                                    },
                                 }
                             ],
                         }
@@ -476,7 +519,7 @@ class CohereClient(ChimericClient[Cohere, Any, Any, Any]):
         self,
         event: Any,
         accumulated: str,
-    ) -> tuple[str, ChimericStreamChunk[Any] | None]:
+    ) -> tuple[str, ChimericStreamChunk[CohereChunk] | None]:
         """Processes a single event from a Cohere response stream.
 
         Args:
@@ -517,42 +560,8 @@ class CohereClient(ChimericClient[Cohere, Any, Any, Any]):
 
         return accumulated, None
 
-    def _process_function_call(self, call: Any) -> dict[str, Any]:
-        """Executes a function call from the model and returns metadata.
 
-        Args:
-            call: The tool call object from the Cohere response.
-
-        Returns:
-            A dictionary containing the tool call ID, name, arguments, and result.
-
-        Raises:
-            ToolRegistrationError: If the requested tool is not registered or not callable.
-        """
-        tool_name = call.function.name
-        tool_call_info = {
-            "call_id": call.id,
-            "name": tool_name,
-            "arguments": call.function.arguments,
-        }
-
-        tool = self.tool_manager.get_tool(tool_name)
-        if not callable(tool.function):
-            raise ToolRegistrationError(f"Tool '{tool_name}' is not callable.")
-
-        try:
-            args = json.loads(call.function.arguments)
-            result = tool.function(**args)
-            tool_call_info["result"] = str(result)
-        except Exception as e:
-            error_msg = f"Error executing tool '{tool_name}': {e!s}"
-            tool_call_info["result"] = error_msg
-            tool_call_info["error"] = True
-
-        return tool_call_info
-
-
-class CohereAsyncClient(ChimericAsyncClient[AsyncCohere, Any, Any, Any]):
+class CohereAsyncClient(ChimericAsyncClient[AsyncCohere, ChatResponse, CohereChunk]):
     """Asynchronous Cohere Client for interacting with Cohere models."""
 
     def __init__(self, api_key: str, tool_manager, **kwargs: Any) -> None:
@@ -590,9 +599,11 @@ class CohereAsyncClient(ChimericAsyncClient[AsyncCohere, Any, Any, Any]):
         """Gets Cohere provider capabilities.
 
         Returns:
-            A Capability object describing the provider's features.
+            Capability object indicating which features are supported:
+            - streaming: True (supports real-time streaming responses)
+            - tools: True (supports function calling)
         """
-        return Capability(multimodal=False, streaming=True, tools=True, agents=False, files=False)
+        return Capability(streaming=True, tools=True)
 
     async def _list_models_impl(self) -> list[ModelSummary]:
         """Lists available models from the Cohere API.
@@ -681,7 +692,7 @@ class CohereAsyncClient(ChimericAsyncClient[AsyncCohere, Any, Any, Any]):
 
     def _process_provider_stream_event(
         self, event: Any, processor: StreamProcessor
-    ) -> ChimericStreamChunk[Any] | None:
+    ) -> ChimericStreamChunk[CohereChunk] | None:
         """Processes a Cohere stream event using the standardized processor.
 
         Args:
@@ -910,7 +921,7 @@ class CohereAsyncClient(ChimericAsyncClient[AsyncCohere, Any, Any, Any]):
         model: str,
         tools: Any,
         **kwargs: Any,
-    ) -> AsyncGenerator[ChimericStreamChunk[Any], None]:
+    ) -> AsyncGenerator[ChimericStreamChunk[CohereChunk], None]:
         """Handles streaming with tool calls for Cohere's specific pattern.
 
         This method manages the conversation loop for tool calls in streaming mode,
@@ -970,20 +981,33 @@ class CohereAsyncClient(ChimericAsyncClient[AsyncCohere, Any, Any, Any]):
                     }
                 )
 
-                # Execute each tool call
-                for call in non_stream_response.message.tool_calls:
-                    # Execute the tool call
-                    tool_call_info = self._process_function_call(call)
+                # Convert to ToolCall objects and execute using framework
+                tool_calls = [
+                    ToolCall(
+                        call_id=call.id,
+                        name=call.function.name,
+                        arguments=call.function.arguments,
+                    )
+                    for call in non_stream_response.message.tool_calls
+                ]
 
-                    # Add the tool result message
+                # Execute tool calls using framework method
+                tool_results = await self._execute_tool_calls(tool_calls)
+
+                # Add tool result messages
+                for result in tool_results:
                     current_messages.append(
                         {
                             "role": "tool",
-                            "tool_call_id": call.id,
+                            "tool_call_id": result.call_id,
                             "content": [
                                 {
                                     "type": "document",
-                                    "document": {"data": tool_call_info["result"]},
+                                    "document": {
+                                        "data": result.result
+                                        if not result.is_error
+                                        else f"Error: {result.error}"
+                                    },
                                 }
                             ],
                         }
@@ -1009,7 +1033,7 @@ class CohereAsyncClient(ChimericAsyncClient[AsyncCohere, Any, Any, Any]):
         self,
         event: Any,
         accumulated: str,
-    ) -> tuple[str, ChimericStreamChunk[Any] | None]:
+    ) -> tuple[str, ChimericStreamChunk[CohereChunk] | None]:
         """Processes a single event from a Cohere response stream.
 
         Args:
@@ -1049,37 +1073,3 @@ class CohereAsyncClient(ChimericAsyncClient[AsyncCohere, Any, Any, Any]):
             )
 
         return accumulated, None
-
-    def _process_function_call(self, call: Any) -> dict[str, Any]:
-        """Executes a function call from the model and returns metadata.
-
-        Args:
-            call: The tool call object from the Cohere response.
-
-        Returns:
-            A dictionary containing the tool call ID, name, arguments, and result.
-
-        Raises:
-            ToolRegistrationError: If the requested tool is not registered or not callable.
-        """
-        tool_name = call.function.name
-        tool_call_info = {
-            "call_id": call.id,
-            "name": tool_name,
-            "arguments": call.function.arguments,
-        }
-
-        tool = self.tool_manager.get_tool(tool_name)
-        if not callable(tool.function):
-            raise ToolRegistrationError(f"Tool '{tool_name}' is not callable.")
-
-        try:
-            args = json.loads(call.function.arguments)
-            result = tool.function(**args)
-            tool_call_info["result"] = str(result)
-        except Exception as e:
-            error_msg = f"Error executing tool '{tool_name}': {e!s}"
-            tool_call_info["result"] = error_msg
-            tool_call_info["error"] = True
-
-        return tool_call_info

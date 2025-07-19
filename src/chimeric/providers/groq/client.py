@@ -1,4 +1,3 @@
-import os
 from typing import Any
 
 from groq import NOT_GIVEN, AsyncGroq, Groq
@@ -6,15 +5,11 @@ from groq.types.chat import (
     ChatCompletion,
     ChatCompletionChunk,
 )
-import httpx
 
 from chimeric.base import ChimericAsyncClient, ChimericClient
-from chimeric.exceptions import ProviderError
 from chimeric.types import (
     Capability,
-    ChimericFileUploadResponse,
     ChimericStreamChunk,
-    FileUploadResponse,
     Message,
     ModelSummary,
     Tool,
@@ -25,7 +20,7 @@ from chimeric.types import (
 from chimeric.utils import StreamProcessor, create_stream_chunk
 
 
-class GroqClient(ChimericClient[Groq, ChatCompletion, ChatCompletionChunk, Any]):
+class GroqClient(ChimericClient[Groq, ChatCompletion, ChatCompletionChunk]):
     """Synchronous Groq Client for interacting with Groq services.
 
     This client provides a unified interface for synchronous interactions with
@@ -37,7 +32,6 @@ class GroqClient(ChimericClient[Groq, ChatCompletion, ChatCompletionChunk, Any])
         - Text generation with various Groq models
         - Function/tool calling with automatic execution
         - Streaming responses with real-time tool call handling
-        - File uploads for batch processing
         - Model listing and metadata retrieval
 
     Example:
@@ -106,13 +100,13 @@ class GroqClient(ChimericClient[Groq, ChatCompletion, ChatCompletionChunk, Any])
 
         Returns:
             Capability object indicating which features are supported:
-                - multimodal: True (supports text and image inputs)
-                - streaming: True (supports real-time streaming responses)
-                - tools: True (supports function calling)
-                - agents: False (agent workflows not currently supported)
-                - files: True (supports file uploads for batch processing)
+            - streaming: True (supports real-time streaming responses)
+            - tools: True (supports function calling)
         """
-        return Capability(multimodal=True, streaming=True, tools=True, agents=False, files=True)
+        return Capability(
+            streaming=True,
+            tools=True,
+        )
 
     def _list_models_impl(self) -> list[ModelSummary]:
         """List available models from the Groq API.
@@ -352,99 +346,8 @@ class GroqClient(ChimericClient[Groq, ChatCompletion, ChatCompletionChunk, Any])
 
         return updated_messages
 
-    def _upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[Any]:
-        """Upload a file to Groq for batch processing using httpx.
 
-        Args:
-            **kwargs: Provider-specific arguments for file upload including:
-                - file_path (str): Path to the file to upload
-                - file_object: File-like object to upload (alternative to file_path)
-                - filename (str): Name for the uploaded file (optional, defaults
-                    to basename of file_path)
-                - purpose (str): Purpose of the file upload (defaults to "batch")
-
-        Returns:
-            ChimericFileUploadResponse containing both the native response from
-            Groq's API and standardized file upload information.
-
-        Raises:
-            ValueError: If neither file_path nor file_object is provided.
-            ProviderError: If the file upload fails due to network issues,
-                authentication problems, or API errors.
-
-        Note:
-            This method uses httpx directly to upload files to Groq's file API
-            since the groq library may not expose file upload functionality.
-        """
-        # Extract file upload parameters from kwargs
-        file_path = kwargs.get("file_path")
-        file_object = kwargs.get("file_object")
-        filename = kwargs.get("filename")
-        purpose = kwargs.get("purpose", "batch")
-
-        if not file_path and not file_object:
-            raise ValueError("Either 'file_path' or 'file_object' must be provided")
-
-        # Prepare the API request
-        url = "https://api.groq.com/openai/v1/files"
-        headers = {"Authorization": f"Bearer {self.api_key}"}
-        data = {"purpose": purpose}
-
-        with httpx.Client() as client:
-            if file_path:
-                if not filename:
-                    filename = os.path.basename(file_path)
-                with open(file_path, "rb") as f:
-                    file_content = f.read()
-            else:
-                if not filename:
-                    filename = getattr(file_object, "name", "uploaded_file")
-
-                # Get content from the file-like object
-                if hasattr(file_object, "read"):
-                    content = file_object.read()
-                    # Reset the cursor if possible
-                    if hasattr(file_object, "seek"):
-                        file_object.seek(0)
-                    # Ensure content is bytes
-                    file_content = (
-                        content if isinstance(content, bytes) else content.encode("utf-8")
-                    )
-                else:
-                    # file_object is the content itself
-                    file_content = (
-                        file_object
-                        if isinstance(file_object, bytes)
-                        else str(file_object).encode("utf-8")
-                    )
-
-            files = {"file": (filename, file_content, "application/octet-stream")}
-            response = client.post(url, headers=headers, files=files, data=data)
-
-            # Check response status
-            if not response.is_success:
-                raise ProviderError(
-                    provider=self._provider_name,
-                    response_text=response.text,
-                    endpoint="file_upload",
-                    status_code=response.status_code,
-                )
-
-            native_response = response.json()
-            common_response = FileUploadResponse(
-                file_id=native_response.get("id", ""),
-                filename=native_response.get("filename", filename),
-                bytes=native_response.get("bytes", 0),
-                purpose=native_response.get("purpose", purpose),
-                status=native_response.get("status", "uploaded"),
-                created_at=native_response.get("created_at", 0),
-                metadata=native_response,
-            )
-
-            return ChimericFileUploadResponse(native=native_response, common=common_response)
-
-
-class GroqAsyncClient(ChimericAsyncClient[AsyncGroq, ChatCompletion, ChatCompletionChunk, Any]):
+class GroqAsyncClient(ChimericAsyncClient[AsyncGroq, ChatCompletion, ChatCompletionChunk]):
     """Asynchronous Groq Client for interacting with Groq services.
 
     This client provides a unified interface for asynchronous interactions with
@@ -456,7 +359,6 @@ class GroqAsyncClient(ChimericAsyncClient[AsyncGroq, ChatCompletion, ChatComplet
         - Asynchronous text generation with various Groq models
         - Asynchronous function/tool calling with automatic execution
         - Asynchronous streaming responses with real-time tool call handling
-        - Asynchronous file uploads for batch processing
         - Model listing and metadata retrieval
 
     Example:
@@ -529,13 +431,13 @@ class GroqAsyncClient(ChimericAsyncClient[AsyncGroq, ChatCompletion, ChatComplet
 
         Returns:
             Capability object indicating which features are supported:
-                - multimodal: True (supports text and image inputs)
-                - streaming: True (supports real-time streaming responses)
-                - tools: True (supports function calling)
-                - agents: False (agent workflows not currently supported)
-                - files: True (supports file uploads for batch processing)
+            - streaming: True (supports real-time streaming responses)
+            - tools: True (supports function calling)
         """
-        return Capability(multimodal=True, streaming=True, tools=True, agents=False, files=True)
+        return Capability(
+            streaming=True,
+            tools=True,
+        )
 
     async def _list_models_impl(self) -> list[ModelSummary]:
         """List available models from the Groq API asynchronously.
@@ -742,94 +644,3 @@ class GroqAsyncClient(ChimericAsyncClient[AsyncGroq, ChatCompletion, ChatComplet
             )
 
         return updated_messages
-
-    async def _upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[Any]:
-        """Upload a file to Groq for batch processing using httpx asynchronously.
-
-        Args:
-            **kwargs: Provider-specific arguments for file upload including:
-                - file_path (str): Path to the file to upload
-                - file_object: File-like object to upload (alternative to file_path)
-                - filename (str): Name for the uploaded file (optional, defaults
-                    to basename of file_path)
-                - purpose (str): Purpose of the file upload (defaults to "batch")
-
-        Returns:
-            ChimericFileUploadResponse containing both the native response from
-            Groq's API and standardized file upload information.
-
-        Raises:
-            ValueError: If neither file_path nor file_object is provided.
-            ProviderError: If the file upload fails due to network issues,
-                authentication problems, or API errors.
-
-        Note:
-            This method uses httpx AsyncClient to upload files to Groq's file API
-            since the groq library may not expose async file upload functionality.
-        """
-        # Extract file upload parameters from kwargs
-        file_path = kwargs.get("file_path")
-        file_object = kwargs.get("file_object")
-        filename = kwargs.get("filename")
-        purpose = kwargs.get("purpose", "batch")
-
-        if not file_path and not file_object:
-            raise ValueError("Either 'file_path' or 'file_object' must be provided")
-
-        # Prepare the API request
-        url = "https://api.groq.com/openai/v1/files"
-        headers = {"Authorization": f"Bearer {self.api_key}"}
-        data = {"purpose": purpose}
-
-        async with httpx.AsyncClient() as client:
-            if file_path:
-                if not filename:
-                    filename = os.path.basename(file_path)
-                with open(file_path, "rb") as f:
-                    file_content = f.read()
-            else:
-                if not filename:
-                    filename = getattr(file_object, "name", "uploaded_file")
-
-                # Get content from the file-like object
-                if hasattr(file_object, "read"):
-                    content = file_object.read()
-                    # Reset the cursor if possible
-                    if hasattr(file_object, "seek"):
-                        file_object.seek(0)
-                    # Ensure content is bytes
-                    file_content = (
-                        content if isinstance(content, bytes) else content.encode("utf-8")
-                    )
-                else:
-                    # file_object is the content itself
-                    file_content = (
-                        file_object
-                        if isinstance(file_object, bytes)
-                        else str(file_object).encode("utf-8")
-                    )
-
-            files = {"file": (filename, file_content, "application/octet-stream")}
-            response = await client.post(url, headers=headers, files=files, data=data)
-
-            # Check response status
-            if not response.is_success:
-                raise ProviderError(
-                    provider=self._provider_name,
-                    response_text=response.text,
-                    endpoint="file_upload",
-                    status_code=response.status_code,
-                )
-
-            native_response = response.json()
-            common_response = FileUploadResponse(
-                file_id=native_response.get("id", ""),
-                filename=native_response.get("filename", filename),
-                bytes=native_response.get("bytes", 0),
-                purpose=native_response.get("purpose", purpose),
-                status=native_response.get("status", "uploaded"),
-                created_at=native_response.get("created_at", 0),
-                metadata=native_response,
-            )
-
-            return ChimericFileUploadResponse(native=native_response, common=common_response)

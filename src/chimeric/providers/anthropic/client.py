@@ -3,14 +3,11 @@ from typing import Any
 
 from anthropic import NOT_GIVEN, Anthropic, AsyncAnthropic
 from anthropic.types import Message, MessageStreamEvent
-from anthropic.types.beta import FileMetadata
 
 from chimeric.base import ChimericAsyncClient, ChimericClient
 from chimeric.types import (
     Capability,
-    ChimericFileUploadResponse,
     ChimericStreamChunk,
-    FileUploadResponse,
     ModelSummary,
     Tool,
     ToolCall,
@@ -23,7 +20,7 @@ from chimeric.types import (
 from chimeric.utils import StreamProcessor, create_stream_chunk
 
 
-class AnthropicClient(ChimericClient[Anthropic, Message, MessageStreamEvent, FileMetadata]):
+class AnthropicClient(ChimericClient[Anthropic, Message, MessageStreamEvent]):
     """Synchronous Anthropic Client for interacting with Claude models via Anthropic API.
 
     This client provides a unified interface for synchronous interactions with
@@ -36,7 +33,6 @@ class AnthropicClient(ChimericClient[Anthropic, Message, MessageStreamEvent, Fil
         - Multimodal inputs including images and documents
         - Function/tool calling with automatic execution
         - Streaming responses with real-time tool call handling
-        - File upload and processing capabilities
         - Extended context lengths for complex tasks
         - Model listing and metadata retrieval
 
@@ -111,21 +107,14 @@ class AnthropicClient(ChimericClient[Anthropic, Message, MessageStreamEvent, Fil
         return Anthropic(api_key=self.api_key, **kwargs)
 
     def _get_capabilities(self) -> Capability:
-        """Get supported features for the Anthropic provider.
+        """Gets Anthropic provider capabilities.
 
         Returns:
             Capability object indicating which features are supported:
-                - multimodal: True (supports images, documents, and vision)
-                - streaming: True (supports real-time streaming responses)
-                - tools: True (supports function calling and tool use)
-                - agents: False (agent workflows not currently supported)
-                - files: True (supports file upload and processing)
-
-        Note:
-            Anthropic's Claude models are among the most capable for multimodal
-            understanding and complex reasoning tasks.
+            - streaming: True (supports real-time streaming responses)
+            - tools: True (supports function calling)
         """
-        return Capability(multimodal=True, streaming=True, tools=True, agents=False, files=True)
+        return Capability(streaming=True, tools=True)
 
     def _get_model_aliases(self) -> list[str]:
         """Return model aliases to include in model listings.
@@ -419,32 +408,8 @@ class AnthropicClient(ChimericClient[Anthropic, Message, MessageStreamEvent, Fil
 
         return updated_messages
 
-    # ====================================================================
-    # Optional method implementations
-    # ====================================================================
 
-    def _upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[FileMetadata]:
-        """Uploads a file to Anthropic."""
-        if "file" not in kwargs:
-            raise ValueError("'file' parameter is required for file upload")
-
-        file_object = self.client.beta.files.upload(file=kwargs["file"])
-
-        return ChimericFileUploadResponse(
-            native=file_object,
-            common=FileUploadResponse(
-                file_id=file_object.id,
-                filename=file_object.filename,
-                bytes=file_object.size_bytes,
-                created_at=getattr(file_object, "created_at", None),
-                metadata=file_object.model_dump(),
-            ),
-        )
-
-
-class AnthropicAsyncClient(
-    ChimericAsyncClient[AsyncAnthropic, Message, MessageStreamEvent, FileMetadata]
-):
+class AnthropicAsyncClient(ChimericAsyncClient[AsyncAnthropic, Message, MessageStreamEvent]):
     """Asynchronous Anthropic Client for interacting with Claude models via Anthropic API.
 
     This client provides a unified interface for asynchronous interactions with
@@ -454,10 +419,8 @@ class AnthropicAsyncClient(
 
     The async client supports all the same features as the synchronous client:
         - Asynchronous advanced text generation with Claude's reasoning capabilities
-        - Asynchronous multimodal inputs including images and documents
         - Asynchronous function/tool calling with automatic execution
         - Asynchronous streaming responses with real-time tool call handling
-        - File upload and processing capabilities
         - Extended context lengths for complex tasks
         - Model listing and metadata retrieval
 
@@ -508,8 +471,14 @@ class AnthropicAsyncClient(
         return AsyncAnthropic(api_key=self.api_key, **kwargs)
 
     def _get_capabilities(self) -> Capability:
-        """Gets Anthropic provider capabilities."""
-        return Capability(multimodal=True, streaming=True, tools=True, agents=False, files=True)
+        """Gets Anthropic provider capabilities.
+
+        Returns:
+            Capability object indicating which features are supported:
+            - streaming: True (supports real-time streaming responses)
+            - tools: True (supports function calling)
+        """
+        return Capability(streaming=True, tools=True)
 
     def _get_model_aliases(self) -> list[str]:
         """Gets a list of Anthropic model aliases."""
@@ -742,25 +711,3 @@ class AnthropicAsyncClient(
         updated_messages.append({"role": "user", "content": tool_results_content})
 
         return updated_messages
-
-    # ====================================================================
-    # Optional method implementations
-    # ====================================================================
-
-    async def _upload_file(self, **kwargs: Any) -> ChimericFileUploadResponse[FileMetadata]:
-        """Uploads a file to Anthropic asynchronously."""
-        if "file" not in kwargs:
-            raise ValueError("'file' parameter is required for file upload")
-
-        file_object = await self.async_client.beta.files.upload(file=kwargs["file"])
-
-        return ChimericFileUploadResponse(
-            native=file_object,
-            common=FileUploadResponse(
-                file_id=file_object.id,
-                filename=file_object.filename,
-                bytes=file_object.size_bytes,
-                created_at=getattr(file_object, "created_at", None),
-                metadata=file_object.model_dump(),
-            ),
-        )

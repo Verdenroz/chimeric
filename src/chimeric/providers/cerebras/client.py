@@ -21,7 +21,7 @@ from chimeric.types import (
 from chimeric.utils import StreamProcessor, create_stream_chunk
 
 
-class CerebrasClient(ChimericClient[Cerebras, ChatCompletionResponse, ChatChunkResponse, None]):
+class CerebrasClient(ChimericClient[Cerebras, ChatCompletionResponse, ChatChunkResponse]):
     """Synchronous Cerebras Client for interacting with Cerebras Cloud API.
 
     This client provides a unified interface for synchronous interactions with
@@ -39,7 +39,7 @@ class CerebrasClient(ChimericClient[Cerebras, ChatCompletionResponse, ChatChunkR
 
     Note:
         Cerebras specializes in high-speed inference and currently supports text-only
-        models. File uploads and multimodal capabilities are not available.
+        models for fast text processing.
 
     Example:
         ```python
@@ -107,17 +107,14 @@ class CerebrasClient(ChimericClient[Cerebras, ChatCompletionResponse, ChatChunkR
 
         Returns:
             Capability object indicating which features are supported:
-                - multimodal: False (text-only models, no image/video support)
                 - streaming: True (supports real-time streaming responses)
                 - tools: True (supports function calling)
-                - agents: False (agent workflows not currently supported)
-                - files: False (no file upload support)
 
         Note:
-            Cerebras focuses on high-performance text inference and does not
-            currently support multimodal inputs or file operations.
+            Cerebras focuses on high-performance text inference for fast
+            text-only processing.
         """
-        return Capability(multimodal=False, streaming=True, tools=True, agents=False, files=False)
+        return Capability(streaming=True, tools=True)
 
     def _list_models_impl(self) -> list[ModelSummary]:
         """List available models from the Cerebras API.
@@ -439,7 +436,7 @@ class CerebrasClient(ChimericClient[Cerebras, ChatCompletionResponse, ChatChunkR
 
 
 class CerebrasAsyncClient(
-    ChimericAsyncClient[AsyncCerebras, ChatCompletionResponse, ChatChunkResponse, None]
+    ChimericAsyncClient[AsyncCerebras, ChatCompletionResponse, ChatChunkResponse]
 ):
     """Asynchronous Cerebras Client for interacting with Cerebras Cloud API.
 
@@ -458,7 +455,7 @@ class CerebrasAsyncClient(
 
     Note:
         Cerebras specializes in high-speed inference and currently supports text-only
-        models. File uploads and multimodal capabilities are not available.
+        models for fast text processing.
 
     Example:
         ```python
@@ -530,17 +527,14 @@ class CerebrasAsyncClient(
 
         Returns:
             Capability object indicating which features are supported:
-                - multimodal: False (text-only models, no image/video support)
                 - streaming: True (supports real-time streaming responses)
                 - tools: True (supports function calling)
-                - agents: False (agent workflows not currently supported)
-                - files: False (no file upload support)
 
         Note:
-            Cerebras focuses on high-performance text inference and does not
-            currently support multimodal inputs or file operations.
+            Cerebras focuses on high-performance text inference for fast
+            text-only processing.
         """
-        return Capability(multimodal=False, streaming=True, tools=True, agents=False, files=False)
+        return Capability(streaming=True, tools=True)
 
     async def _list_models_impl(self) -> list[ModelSummary]:
         """List available models from the Cerebras API asynchronously.
