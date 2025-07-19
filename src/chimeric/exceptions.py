@@ -1,15 +1,11 @@
 from typing import Any
 
 __all__ = [
-    "AuthenticationError",
     "ChimericError",
-    "ConfigurationError",
     "ModelNotSupportedError",
     "ProviderError",
     "ProviderNotFoundError",
-    "RateLimitError",
     "ToolRegistrationError",
-    "ValidationError",
 ]
 
 
@@ -103,147 +99,49 @@ class ModelNotSupportedError(ChimericError):
         self.supported_models = supported_models or []
 
 
-class AuthenticationError(ChimericError):
-    """Raised when authentication fails with a provider.
-
-    This error is raised when API credentials are invalid, expired,
-    or insufficient for the requested operation.
-    """
-
-    def __init__(self, provider: str, reason: str | None = None) -> None:
-        """Initialize the error.
-
-        Args:
-            provider: Name of the provider where authentication failed
-            reason: Optional reason for the authentication failure
-        """
-        message = f"Authentication failed for provider '{provider}'"
-        if reason:
-            message += f": {reason}"
-
-        details = {
-            "provider": provider,
-            "reason": reason,
-        }
-
-        super().__init__(message, details)
-        self.provider = provider
-        self.reason = reason
-
-
-class RateLimitError(ChimericError):
-    """Raised when rate limits are exceeded.
-
-    This error is raised when the provider's API rate limits have been
-    reached and requests are being throttled or rejected.
-    """
-
-    def __init__(
-        self, provider: str, retry_after: int | None = None, limit_type: str | None = None
-    ) -> None:
-        """Initialize the error.
-
-        Args:
-            provider: Name of the provider where rate limit was exceeded
-            retry_after: Seconds to wait before retrying
-            limit_type: Type of rate limit that was exceeded
-        """
-        message = f"Rate limit exceeded for provider '{provider}'"
-        if limit_type:
-            message += f" ({limit_type})"
-        if retry_after:
-            message += f". Retry after {retry_after} seconds"
-
-        details = {
-            "provider": provider,
-            "retry_after": retry_after,
-            "limit_type": limit_type,
-        }
-
-        super().__init__(message, details)
-        self.provider = provider
-        self.retry_after = retry_after
-        self.limit_type = limit_type
-
-
 class ProviderError(ChimericError):
-    """Raised when an API call fails.
+    """Raised when a provider operation fails.
 
-    This is a general error for API-related failures that don't fall
-    into more specific categories like authentication or rate limiting.
+    This is a flexible error class that can wrap any provider-specific error
+    while maintaining a consistent interface across all providers.
     """
 
     def __init__(
         self,
         provider: str,
-        status_code: int | None = None,
-        response_text: str | None = None,
-        endpoint: str | None = None,
+        message: str | None = None,
+        error: Exception | None = None,
+        **kwargs: Any,
     ) -> None:
         """Initialize the error.
 
         Args:
-            provider: Name of the provider where the API call failed
-            status_code: HTTP status code returned by the API
-            response_text: Response text from the failed API call
-            endpoint: API endpoint that failed
+            provider: Name of the provider where the operation failed
+            message: Custom error message. If not provided, will be derived from error
+            error: The original provider-specific exception that caused this error
+            **kwargs: Additional provider-specific error details
         """
-        message = f"API call failed for provider '{provider}'"
-        if status_code:
-            message += f" (status: {status_code})"
-        if endpoint:
-            message += f" at endpoint '{endpoint}'"
+        # Generate message if not provided
+        if message is None:
+            if error:
+                message = f"Provider '{provider}' failed: {error!s}"
+            else:
+                message = f"Provider '{provider}' failed"
+        else:
+            message = f"Provider '{provider}': {message}"
 
+        # Build details dictionary with all provided information
         details = {
             "provider": provider,
-            "status_code": status_code,
-            "response_text": response_text,
-            "endpoint": endpoint,
+            "error": str(error) if error else None,
+            "error_type": type(error).__name__ if error else None,
+            **kwargs,
         }
 
         super().__init__(message, details)
         self.provider = provider
-        self.status_code = status_code
-        self.response_text = response_text
-        self.endpoint = endpoint
-
-
-class ConfigurationError(ChimericError):
-    """Raised when there's an issue with client configuration.
-
-    This error is raised when the client is misconfigured or when
-    required configuration parameters are missing or invalid.
-    """
-
-    def __init__(
-        self, parameter: str | None = None, value: Any = None, expected: str | None = None
-    ) -> None:
-        """Initialize the error.
-
-        Args:
-            parameter: Name of the configuration parameter that's invalid
-            value: The invalid value that was provided
-            expected: Description of what was expected
-        """
-        if parameter:
-            message = f"Invalid configuration for parameter '{parameter}'"
-            if expected:
-                message += f". Expected: {expected}"
-            if value is not None:
-                message += f". Got: {value}"
-        else:
-            message = "Configuration error"
-
-        details = {
-            "parameter": parameter,
-            "value": value,
-            "expected": expected,
-        }
-
-        super().__init__(message, details)
-        self.parameter = parameter
-        self.value = value
-        self.expected = expected
+        self.error = error
+        self.extra_details = kwargs
 
 
 class ToolRegistrationError(ChimericError):
@@ -279,43 +177,3 @@ class ToolRegistrationError(ChimericError):
         self.tool_name = tool_name
         self.reason = reason
         self.existing_tool = existing_tool
-
-
-class ValidationError(ChimericError):
-    """Raised when input validation fails.
-
-    This error is raised when function parameters, model inputs,
-    or other data fail validation checks.
-    """
-
-    def __init__(
-        self, field: str | None = None, value: Any = None, constraint: str | None = None
-    ) -> None:
-        """Initialize the error.
-
-        Args:
-            field: Name of the field that failed validation
-            value: The invalid value
-            constraint: Description of the validation constraint that was violated
-        """
-        if field:
-            message = f"Validation failed for field '{field}'"
-            if constraint:
-                message += f": {constraint}"
-            if value is not None:
-                message += f" (value: {value})"
-        else:
-            message = "Validation error"
-            if constraint:
-                message += f": {constraint}"
-
-        details = {
-            "field": field,
-            "value": value,
-            "constraint": constraint,
-        }
-
-        super().__init__(message, details)
-        self.field = field
-        self.value = value
-        self.constraint = constraint

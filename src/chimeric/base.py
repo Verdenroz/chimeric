@@ -11,6 +11,7 @@ from typing import Any, Generic, TypeVar
 
 from .exceptions import (
     ChimericError,
+    ProviderError,
     ToolRegistrationError,
 )
 from .tools import ToolManager
@@ -625,9 +626,16 @@ class ChimericClient(
                 usage=usage,
                 model=model,
             )
-        except Exception:
+        except Exception as e:
             self._error_count += 1
-            raise
+            provider_name = (
+                self._provider_name if hasattr(self, "_provider_name") else self.__class__.__name__
+            )
+            raise ProviderError(
+                provider=provider_name,
+                message=str(e),
+                error=e,
+            ) from e
 
     def list_models(self) -> list[ModelSummary]:
         """Lists all available models including aliases.
@@ -1377,9 +1385,15 @@ class ChimericAsyncClient(
                 usage=usage,
                 model=model,
             )
-        except Exception:
-            self._error_count += 1
-            raise
+        except Exception as e:
+            provider_name = (
+                self._provider_name if hasattr(self, "_provider_name") else self.__class__.__name__
+            )
+            raise ProviderError(
+                provider=provider_name,
+                message=str(e),
+                error=e,
+            ) from e
 
     async def list_models(self) -> list[ModelSummary]:
         """Lists all available models including aliases asynchronously.

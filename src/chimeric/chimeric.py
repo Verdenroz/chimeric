@@ -3,7 +3,7 @@ import os
 from typing import Any
 
 from .base import ChimericAsyncClient, ChimericClient
-from .exceptions import ChimericError, ProviderError, ProviderNotFoundError
+from .exceptions import ChimericError, ModelNotSupportedError, ProviderError, ProviderNotFoundError
 from .providers.anthropic.client import AnthropicAsyncClient, AnthropicClient
 from .providers.cerebras.client import CerebrasAsyncClient, CerebrasClient
 from .providers.cohere.client import CohereAsyncClient, CohereClient
@@ -127,8 +127,8 @@ class Chimeric:
         # Initialize the tool management system.
         self._tool_manager = ToolManager()
 
-        # Cache for model-to-provider mapping to avoid repeated API calls
-        self._model_provider_cache: dict[str, Provider] = {}
+        # Mapping of canonical model names to their providers
+        self._model_provider_mapping: dict[str, Provider] = {}
 
         # Initialize providers from explicit API keys.
         self._initialize_providers_from_config(
@@ -242,8 +242,13 @@ class Chimeric:
             if self.primary_provider is None:
                 self.primary_provider = provider
 
-        except (ImportError, ModuleNotFoundError, ValueError) as e:
-            raise ChimericError(f"Failed to initialize provider {provider.value}: {e}") from e
+            # Populate model mapping for this provider
+            self._populate_models_for_provider(provider, client)
+
+        except (ImportError, ModuleNotFoundError) as e:
+            raise ChimericError(
+                f"Failed to initialize provider {provider.value}. Are you sure the provider is in the environment?: {e}"
+            ) from e
 
     def _add_async_provider(self, provider: Provider, **kwargs: Any) -> None:
         """Adds an async provider client to the available async providers.
@@ -267,6 +272,38 @@ class Chimeric:
 
         except (ImportError, ModuleNotFoundError, ValueError) as e:
             raise ChimericError(f"Failed to initialize async provider {provider.value}: {e}") from e
+
+    def _populate_models_for_provider(
+        self, provider: Provider, client: ChimericClient[Any, Any, Any]
+    ) -> None:
+        """Populates the mapping with models from a specific provider.
+
+        Args:
+            provider: The provider enum.
+            client: The provider's client instance.
+
+        Raises:
+            ProviderError: If the provider fails to list models.
+        """
+        try:
+            models = client.list_models()
+
+            # Add both model IDs and names to mapping (using canonical form)
+            for model in models:
+                canon_id = "".join(ch for ch in model.id.lower() if ch.isalnum())
+                canon_name = "".join(ch for ch in model.name.lower() if ch.isalnum())
+
+                # Store both canonical ID and name pointing to this provider
+                self._model_provider_mapping[canon_id] = provider
+                if canon_name != canon_id:  # Avoid duplicate entries
+                    self._model_provider_mapping[canon_name] = provider
+
+        except Exception as e:
+            raise ProviderError(
+                provider=provider.value,
+                message="Failed to list models",
+                error=e,
+            ) from e
 
     @staticmethod
     def _transform_stream(
@@ -439,9 +476,8 @@ class Chimeric:
     def _select_provider_by_model(self, model: str) -> Provider:
         """Selects the appropriate provider based on model availability.
 
-        This method dynamically queries each configured provider to find which
-        one supports the requested model. It uses caching to avoid repeated
-        API calls for the same model.
+        This method uses preloaded model mapping for fast lookups and falls back
+        to individual provider queries if the model is not in the mapping.
 
         Args:
             model: The name of the model to use.
@@ -450,16 +486,16 @@ class Chimeric:
             The provider enum to use for this model.
 
         Raises:
-            ProviderNotFoundError: If no provider supports the requested model.
+            ModelNotSupportedError: If no provider supports the requested model.
         """
         canon_model = "".join(ch for ch in model.lower() if ch.isalnum())
 
-        # Check cache first (stored under canonical form)
-        cached = self._model_provider_cache.get(canon_model)
-        if cached and cached in self.providers:
-            return cached
+        # Check preloaded mapping first
+        provider = self._model_provider_mapping.get(canon_model)
+        if provider and provider in self.providers:
+            return provider
 
-        # If not cached, check each provider for model availability
+        # If not in preloaded mapping, try dynamic lookup (fallback for new models)
         for provider, client in self.providers.items():
             try:
                 models = client.list_models()
@@ -469,8 +505,8 @@ class Chimeric:
                 canon_names = {"".join(ch for ch in m.name.lower() if ch.isalnum()) for m in models}
 
                 if canon_model in canon_ids or canon_model in canon_names:
-                    # Cache under canonical key for quick future lookup
-                    self._model_provider_cache[canon_model] = provider
+                    # Add to mapping for future lookups
+                    self._model_provider_mapping[canon_model] = provider
                     return provider
 
             except (
@@ -484,13 +520,13 @@ class Chimeric:
                 # Skip providers that fail due to connection or API issues
                 continue
 
-        # If no provider found, raise exception
+        # If no provider found, build list of available models and raise exception
         available_models = []
-        for provider, client in self.providers.items():
+        for _provider, client in self.providers.items():
             try:
                 models = client.list_models()
                 for m in models:
-                    available_models.append(f"{m.id} ({provider.value})")
+                    available_models.append(f"{m.id}")
             except (
                 ImportError,
                 ModuleNotFoundError,
@@ -502,10 +538,7 @@ class Chimeric:
                 # Skip providers that fail due to connection or API issues
                 continue
 
-        raise ProviderNotFoundError(
-            f"No provider found for model '{model}'. "
-            f"Available models: {', '.join(available_models)}"
-        )
+        raise ModelNotSupportedError(model=model, provider=None, supported_models=available_models)
 
     def list_models(self, provider: str | None = None) -> list[ModelSummary]:
         """Lists available models from specified provider or all providers.
@@ -607,11 +640,20 @@ class Chimeric:
         return self.providers[provider_enum]
 
     def clear_model_cache(self) -> None:
-        """Clears the model-to-provider cache.
+        """Clears the model-to-provider mapping.
 
         This can be useful if providers add or remove models dynamically.
+        The mapping will be repopulated with fresh data from all providers.
+        Providers that fail to list models will be skipped.
         """
-        self._model_provider_cache.clear()
+        self._model_provider_mapping.clear()
+        # Repopulate the mapping from all configured providers
+        for provider, client in self.providers.items():
+            try:
+                self._populate_models_for_provider(provider, client)
+            except ProviderError:
+                # Skip providers that fail to list models
+                continue
 
     def tool(
         self,

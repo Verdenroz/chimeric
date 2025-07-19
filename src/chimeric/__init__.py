@@ -7,15 +7,11 @@ from .base import (
 )
 from .chimeric import PROVIDER_CLIENTS, Chimeric
 from .exceptions import (
-    AuthenticationError,
     ChimericError,
-    ConfigurationError,
     ModelNotSupportedError,
     ProviderError,
     ProviderNotFoundError,
-    RateLimitError,
     ToolRegistrationError,
-    ValidationError,
 )
 from .tools import ToolManager
 from .types import (
@@ -38,7 +34,6 @@ from .types import (
 
 __all__ = [
     "PROVIDER_CLIENTS",
-    "AuthenticationError",
     "Capability",
     "Chimeric",
     "ChimericAsyncClient",
@@ -49,7 +44,6 @@ __all__ = [
     "ChunkType",
     "CompletionResponse",
     "CompletionResponseType",
-    "ConfigurationError",
     "Input",
     "Metadata",
     "ModelNotSupportedError",
@@ -59,7 +53,6 @@ __all__ = [
     "Provider",
     "ProviderError",
     "ProviderNotFoundError",
-    "RateLimitError",
     "StreamChunk",
     "StreamProcessor",
     "Tool",
@@ -68,7 +61,6 @@ __all__ = [
     "ToolRegistrationError",
     "Tools",
     "Usage",
-    "ValidationError",
 ]
 
 __version__ = "0.1.0"
