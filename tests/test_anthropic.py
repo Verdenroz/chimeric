@@ -1,1630 +1,1264 @@
-import contextlib
-from datetime import datetime
-import os
-from types import SimpleNamespace
-from typing import Any, cast
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
-import pytest
+from anthropic.types import Message, MessageStreamEvent
 
-from chimeric import Chimeric
-from chimeric.exceptions import ToolRegistrationError
-import chimeric.providers.anthropic.client as client_module
-from chimeric.providers.anthropic.client import AnthropicClient
-from chimeric.types import (
-    ChimericCompletionResponse,
-    ChimericStreamChunk,
-    FileUploadResponse,
-    StreamChunk,
-    Tool,
-    ToolCall,
-    ToolCallChunk,
-    ToolParameters,
-)
+from chimeric.providers.anthropic import AnthropicAsyncClient, AnthropicClient
+from chimeric.types import Capability, Message as ChimericMessage, Tool, ToolCall, ToolExecutionResult, ToolParameters
+from chimeric.utils import StreamProcessor
+from conftest import BaseProviderTestSuite
 
 
-@pytest.fixture(scope="module")
-def anthropic_env():
-    """Ensure ANTHROPIC_API_KEY is set for Chimeric initialization."""
-    os.environ["ANTHROPIC_API_KEY"] = "test_key"
-    yield
-    del os.environ["ANTHROPIC_API_KEY"]
+class TestAnthropicClient(BaseProviderTestSuite):
+    """Test suite for Anthropic sync client."""
 
+    client_class = AnthropicClient
+    provider_name = "Anthropic"
+    mock_client_path = "chimeric.providers.anthropic.client.Anthropic"
 
-@pytest.fixture(scope="module")
-def chimeric_anthropic(anthropic_env):
-    """Create a Chimeric instance configured for Anthropic."""
-    return Chimeric(
-        anthropic_api_key=os.getenv("ANTHROPIC_API_KEY", "test_key"),
-        base_url="https://api.anthropic.com",
-        timeout=120,
-        max_retries=2,
-    )
+    @property
+    def sample_response(self):
+        """Create a sample Anthropic response."""
+        response = Mock(spec=Message)
+        content_block = Mock()
+        content_block.type = "text"
+        content_block.text = "Hello there"
+        response.content = [content_block]
+        response.usage = Mock(input_tokens=10, output_tokens=20, total_tokens=30)
+        response.stop_reason = "end_turn"
+        return response
 
+    @property
+    def sample_stream_events(self):
+        """Create sample Anthropic stream events."""
+        events = []
 
-@pytest.fixture(scope="module")
-def client(chimeric_anthropic) -> AnthropicClient:
-    """Get the AnthropicClient from the Chimeric wrapper."""
-    return cast("AnthropicClient", chimeric_anthropic.get_provider_client("anthropic"))
+        # Text content delta event
+        text_event = Mock()  # Remove spec to allow dynamic attributes
+        text_event.type = "content_block_delta"
+        # Use configure_mock to set the nested attributes correctly
+        text_event.configure_mock(**{"delta.text": "Hello"})
+        events.append(text_event)
 
+        # Tool call start event
+        tool_start = Mock()
+        tool_start.type = "content_block_start"
+        tool_start.index = 0
+        tool_content_block = Mock()
+        tool_content_block.type = "tool_use"
+        tool_content_block.name = "test_tool"
+        tool_start.content_block = tool_content_block
+        events.append(tool_start)
 
-@pytest.fixture(autouse=True)
-def patch_anthropic_imports(monkeypatch):
-    """Stub out actual Anthropic classes to prevent network calls."""
+        # Non-tool content block start
+        non_tool_start = Mock()
+        non_tool_start.type = "content_block_start"
+        non_tool_start.index = 1
+        non_tool_content_block = Mock()
+        non_tool_content_block.type = "text"  # Not "tool_use"
+        non_tool_start.content_block = non_tool_content_block
+        events.append(non_tool_start)
 
-    def create_anthropic_mock(api_key: str, **kw: Any) -> SimpleNamespace:
-        return SimpleNamespace(api_key=api_key, **kw)
+        # Tool call arguments delta
+        args_delta = Mock()
+        args_delta.type = "content_block_delta"
+        args_delta.index = 0
+        args_delta.configure_mock(**{"delta.partial_json": '{"x": 1'})
+        events.append(args_delta)
 
-    def create_async_anthropic_mock(api_key: str, **kw: Any) -> SimpleNamespace:
-        return SimpleNamespace(api_key=api_key, **kw)
+        # More arguments
+        args_delta2 = Mock()
+        args_delta2.type = "content_block_delta"
+        args_delta2.index = 0
+        args_delta2.configure_mock(**{"delta.partial_json": '0}'})
+        events.append(args_delta2)
 
-    monkeypatch.setattr(client_module, "Anthropic", create_anthropic_mock)
-    monkeypatch.setattr(client_module, "AsyncAnthropic", create_async_anthropic_mock)
+        # Tool call complete
+        tool_stop = Mock()
+        tool_stop.type = "content_block_stop"
+        tool_stop.index = 0
+        events.append(tool_stop)
 
-    # Create stub Stream types for isinstance checks
-    class MockStreamType:
-        pass
+        # Message completion
+        message_stop = Mock()
+        message_stop.type = "message_stop"
+        events.append(message_stop)
 
-    class MockAsyncStreamType:
-        pass
+        return events
 
-    monkeypatch.setattr(client_module, "Stream", MockStreamType)
-    monkeypatch.setattr(client_module, "AsyncStream", MockAsyncStreamType)
+    # ===== Initialization Tests =====
 
+    def test_client_initialization_success(self):
+        """Test successful client initialization with all parameters."""
+        tool_manager = self.create_tool_manager()
 
-class MockResponse:
-    """Mock Anthropic Message response."""
-
-    def __init__(
-        self, content="Hello from Claude!", model="claude-3-sonnet", usage_tokens=(10, 15)
-    ):
-        self.content = [SimpleNamespace(text=content, type="text")]
-        self.usage = SimpleNamespace(input_tokens=usage_tokens[0], output_tokens=usage_tokens[1])
-        self.model = model
-
-    def model_dump(self) -> dict[str, Any]:
-        return {"response_data": "anthropic_test", "model": self.model}
-
-
-class MockStreamEvent:
-    """Mock Anthropic streaming event."""
-
-    def __init__(self, event_type="content_block_delta", delta_text="", index=0):
-        self.type = event_type
-        self.index = index
-        if event_type == "content_block_delta":
-            self.delta = SimpleNamespace(text=delta_text, type="text")
-
-    def model_dump(self) -> dict[str, Any]:
-        return {"event_type": self.type, "stream_data": True}
-
-
-class MockFile:
-    """Mock Anthropic file upload response."""
-
-    def __init__(self):
-        self.id = "file-anthro-123"
-        self.filename = "test_file.txt"
-        self.size_bytes = 456
-        self.created_at = 789
-
-    @staticmethod
-    def model_dump() -> dict[str, Any]:
-        return {"file_metadata": "anthropic"}
-
-
-# noinspection PyUnusedLocal,PyTypeChecker
-class TestAnthropicClient:
-    """Tests for AnthropicClient class."""
-
-    def test_initialization_and_properties(self, client):
-        """Test client initialization, capabilities, and string representations."""
-        # Test capabilities
-        caps = client.capabilities
-        assert caps.multimodal
-        assert caps.streaming
-        assert caps.tools
-        assert not caps.agents
-        assert caps.files
-
-        # Test convenience methods
-        assert client.supports_multimodal()
-        assert client.supports_streaming()
-        assert client.supports_tools()
-        assert not client.supports_agents()
-        assert client.supports_files()
-
-        # Test string representations
-        assert "AnthropicClient" in repr(client)
-        assert "requests=" in repr(client)
-        assert "AnthropicClient Client" in str(client)
-        assert "- Requests:" in str(client)
-
-        # Test generic types
-        types = client._get_generic_types()
-        assert types["sync"] == client_module.Anthropic
-        assert types["async"] == client_module.AsyncAnthropic
-
-        # Test client initialization methods
-        sync_client = client._init_client(client_module.Anthropic, base_url="https://test.com")
-        assert sync_client.api_key == client.api_key
-
-        async_client = client._init_async_client(client_module.AsyncAnthropic, timeout=30)
-        assert async_client.api_key == client.api_key
-
-    def test_model_operations(self, client, monkeypatch):
-        """Test model listing and information retrieval."""
-
-        class MockModel:
-            def __init__(self, id, display_name=None, created_at=None):
-                self.id = id
-                self.display_name = display_name
-                self.created_at = created_at or datetime(2023, 9, 1)
-
-            def model_dump(self):
-                return {"id": self.id, "display_name": self.display_name}
-
-        def mock_list():
-            return SimpleNamespace(
-                data=[
-                    MockModel("claude-3-opus", "Claude 3 Opus"),
-                    MockModel("claude-3-sonnet", "Claude 3 Sonnet"),
-                ]
+        with patch(self.mock_client_path) as mock_anthropic:
+            client = self.client_class(
+                api_key="test-key",
+                tool_manager=tool_manager,
+                base_url="https://custom.api.com",
+                timeout=30
             )
 
-        monkeypatch.setattr(client.client.models, "list", mock_list)
+            assert client.api_key == "test-key"
+            assert client.tool_manager == tool_manager
+            assert client._provider_name == self.provider_name
+            mock_anthropic.assert_called_once_with(
+                api_key="test-key",
+                base_url="https://custom.api.com",
+                timeout=30
+            )
 
-        # Test list_models
-        models = client.list_models()
-        assert len(models) == 8  # 2 API models + 6 aliases
-        assert models[0].id == "claude-3-opus"
-        assert models[0].name == "Claude 3 Opus"
+    def test_client_initialization_minimal(self):
+        """Test client initialization with minimal parameters."""
+        tool_manager = self.create_tool_manager()
 
-        # Test get_model_info
-        info = client.get_model_info("claude-3-opus")
-        assert info.id == "claude-3-opus"
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            assert client.api_key == "test-key"
 
-        # Test model not found
-        with pytest.raises(ValueError, match="Model nonexistent-model not found"):
-            client.get_model_info("nonexistent-model")
+    # ===== Capability Tests =====
 
-    @pytest.mark.parametrize(
-        ("input_messages", "expected_formatted", "expected_system"),
-        [
-            ("Hello", [{"role": "user", "content": "Hello"}], None),
-            (42, [{"role": "user", "content": "42"}], None),
-            (
-                [{"role": "system", "content": "Be helpful"}, {"role": "user", "content": "Hi"}],
-                [{"role": "user", "content": "Hi"}],
-                "Be helpful",
-            ),
-            (
-                ["string message", {"role": "user", "content": "dict message"}],
-                [
-                    {"role": "user", "content": "string message"},
-                    {"role": "user", "content": "dict message"},
-                ],
-                None,
-            ),
-        ],
-    )
-    def test_message_formatting(self, client, input_messages, expected_formatted, expected_system):
-        """Test message formatting for different input types."""
-        formatted, system = client._format_messages(input_messages)
-        assert formatted == expected_formatted
-        assert system == expected_system
+    def test_capabilities(self):
+        """Test provider capabilities."""
+        tool_manager = self.create_tool_manager()
 
-    def test_tool_encoding(self, client):
-        """Test tool encoding for different input types."""
-        # None input
-        assert client._encode_tools(None) is None
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            capabilities = client._get_capabilities()
 
-        # Tool object
-        tool_params = ToolParameters(properties={"query": {"type": "string"}}, required=["query"])
-        tool = Tool(name="search", description="Search tool", parameters=tool_params)
-        encoded = client._encode_tools([tool])
-        assert len(encoded) == 1
-        assert encoded[0]["name"] == "search"
-        assert encoded[0]["input_schema"] == tool_params.model_dump()
+            assert isinstance(capabilities, Capability)
+            assert capabilities.streaming is True
+            assert capabilities.tools is True
 
-        # Dict object
-        tool_dict = {"name": "dict_tool", "description": "Dict tool"}
-        encoded = client._encode_tools([tool_dict])
-        assert encoded[0] == tool_dict
+    def test_model_aliases(self):
+        """Test model aliases."""
+        tool_manager = self.create_tool_manager()
 
-    def test_tool_execution_comprehensive(self, client):
-        """Test comprehensive tool execution scenarios."""
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            aliases = client._get_model_aliases()
 
-        # Register test tools
-        def calculator(operation: str, a: int, b: int) -> str:
-            if operation == "add":
-                return str(a + b)
-            if operation == "error":
-                raise ValueError("Calculation error")
-            return "unknown"
+            assert isinstance(aliases, list)
+            assert "claude-opus-4-0" in aliases
+            assert "claude-sonnet-4-0" in aliases
+            assert "claude-3-7-sonnet-latest" in aliases
 
-        def failing_tool() -> str:
-            raise RuntimeError("Tool failure")
+    # ===== Model Listing Tests =====
 
-        tool1 = Tool(name="calculator", description="Calculate", function=calculator)
-        tool2 = Tool(name="failing_tool", description="Fails", function=failing_tool)
+    def test_list_models_success(self):
+        """Test successful model listing."""
+        tool_manager = self.create_tool_manager()
 
-        client.tool_manager.register(
-            func=tool1.function, name=tool1.name, description=tool1.description
-        )
-        client.tool_manager.register(
-            func=tool2.function, name=tool2.name, description=tool2.description
-        )
+        with patch(self.mock_client_path) as mock_anthropic:
+            mock_client = MagicMock()
+            mock_anthropic.return_value = mock_client
 
-        # Test successful execution
-        call = ToolCall(
-            call_id="c1", name="calculator", arguments='{"operation": "add", "a": 5, "b": 3}'
-        )
-        result = client._execute_single_tool(call)
-        assert result["result"] == "8"
-        assert "error" not in result
+            # Mock model list response
+            mock_timestamp = Mock()
+            mock_timestamp.timestamp.return_value = 1709251200.0  # Feb 29, 2024
+            
+            mock_model = Mock()
+            mock_model.id = "claude-3-sonnet-20240229"
+            mock_model.display_name = "Claude 3 Sonnet"
+            mock_model.created_at = mock_timestamp
+            mock_model.model_dump.return_value = {"id": "claude-3-sonnet-20240229"}
+            
+            mock_models_response = Mock(data=[mock_model])
+            mock_client.models.list.return_value = mock_models_response
 
-        # Test execution error
-        error_call = ToolCall(
-            call_id="c2", name="calculator", arguments='{"operation": "error", "a": 1, "b": 1}'
-        )
-        error_result = client._execute_single_tool(error_call)
-        assert "Error executing tool" in error_result["result"]
-        assert error_result["error"] == "true"
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            models = client._list_models_impl()
 
-        # Test tool not found
-        with pytest.raises(ToolRegistrationError, match="No tool registered"):
-            client._execute_single_tool(ToolCall(call_id="c3", name="unknown_tool", arguments="{}"))
+            assert len(models) == 1
+            assert models[0].id == "claude-3-sonnet-20240229"
+            assert models[0].name == "Claude 3 Sonnet"
+            assert models[0].created_at == 1709251200
 
-        # Test non-callable tool
-        client.tool_manager.tools["non_callable"] = Mock(function="not_callable")
-        with pytest.raises(ToolRegistrationError, match="not callable"):
-            client._execute_single_tool(ToolCall(call_id="c4", name="non_callable", arguments="{}"))
+    # ===== Message Formatting Tests =====
 
-    def test_parse_tool_arguments_edge_cases(self, client):
-        """Test edge cases for tool argument parsing."""
-        # Valid cases
-        assert client._parse_tool_arguments('{"x": 5}') == {"x": 5}
-        assert client._parse_tool_arguments({"a": 1}) == {"a": 1}
-        assert client._parse_tool_arguments("") == {}
-        assert client._parse_tool_arguments("   ") == {}
+    def test_messages_to_provider_format_regular(self):
+        """Test formatting regular messages."""
+        tool_manager = self.create_tool_manager()
 
-        # Edge cases
-        assert client._parse_tool_arguments(None) is None
-        assert client._parse_tool_arguments([1, 2, 3]) == [1, 2, 3]
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
 
-        # Invalid JSON should not crash
-        try:
-            client._parse_tool_arguments("{invalid")
-        except Exception:
-            contextlib.suppress(Exception)  # Expected behavior
+            messages = [
+                ChimericMessage(role="user", content="Hello"),
+                ChimericMessage(role="assistant", content="Hi there")
+            ]
 
-    def test_tool_batch_execution(self, client):
-        """Test batch tool execution with various statuses."""
+            formatted = client._messages_to_provider_format(messages)
 
-        def test_tool(value: str) -> str:
-            return f"processed: {value}"
+            assert len(formatted) == 2
+            assert formatted[0]["role"] == "user"
+            assert formatted[0]["content"] == "Hello"
 
-        tool = Tool(name="batch_tool", description="Batch tool", function=test_tool)
-        client.tool_manager.register(func=tool.function, name=tool.name)
+    def test_messages_to_provider_format_with_system(self):
+        """Test formatting messages with system message (should be filtered out)."""
+        tool_manager = self.create_tool_manager()
 
-        tool_calls = {
-            "t1": ToolCallChunk(
-                id="t1",
-                call_id="c1",
-                name="batch_tool",
-                arguments='{"value": "test1"}',
-                status="completed",
-            ),
-            "t2": ToolCallChunk(
-                id="t2",
-                call_id="c2",
-                name="",
-                arguments="{}",
-                status="completed",  # Empty name
-            ),
-            "t3": ToolCallChunk(
-                id="t3",
-                call_id="c3",
-                name="batch_tool",
-                arguments='{"value": "test2"}',
-                status="started",  # Not completed
-            ),
-        }
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
 
-        results = client._execute_tool_batch(tool_calls)
-        assert len(results) == 1  # Only t1 should execute
-        assert results[0]["result"] == "processed: test1"
+            messages = [
+                ChimericMessage(role="system", content="You are helpful"),
+                ChimericMessage(role="user", content="Hello"),
+                ChimericMessage(role="assistant", content="Hi there")
+            ]
 
-    def test_generate_tool_summary(self, client):
-        """Test tool summary generation."""
-        # Empty summary
-        assert client._generate_tool_summary([]) == ""
+            formatted = client._messages_to_provider_format(messages)
 
-        # With arguments
-        tool_calls = [
-            {"name": "calc", "arguments": {"a": 10, "b": 5}, "result": "15"},
-            {"name": "weather", "arguments": {"location": "Paris"}, "result": "Sunny"},
-        ]
-        summary = client._generate_tool_summary(tool_calls)
-        assert "calc(a=10, b=5) → 15" in summary
-        assert "weather(location=Paris) → Sunny" in summary
+            # System message should be filtered out
+            assert len(formatted) == 2
+            assert formatted[0]["role"] == "user"
+            assert formatted[1]["role"] == "assistant"
 
-        # Without arguments
-        tool_calls_no_args = [
-            {"name": "random", "arguments": {}, "result": "42"},
-            {"name": "timestamp", "arguments": "", "result": "2023-01-01"},
-        ]
-        summary = client._generate_tool_summary(tool_calls_no_args)
-        assert "random() → 42" in summary
-        assert "timestamp() → 2023-01-01" in summary
+    # ===== Tool Formatting Tests =====
 
-    @pytest.mark.parametrize(
-        ("event_type", "delta_text", "expected_content", "expected_finish"),
-        [
-            ("content_block_delta", " world", "Hello world", None),
-            ("message_stop", "", "Hello", "end_turn"),
-            ("unknown_event", "", "Hello", None),
-        ],
-    )
-    def test_stream_event_processing(
-        self, client, event_type, delta_text, expected_content, expected_finish
-    ):
-        """Test stream event processing with different event types."""
-        accumulated = "Hello"
-        event = MockStreamEvent(event_type, delta_text)
+    def test_tools_to_provider_format(self):
+        """Test formatting tools for provider."""
+        tool_manager = self.create_tool_manager()
 
-        new_accumulated, _, chunk = client._process_stream_event(event, accumulated)
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
 
-        if event_type == "unknown_event":
-            assert chunk is None
-            assert new_accumulated == "Hello"
-        else:
-            assert new_accumulated == expected_content
+            tools = [
+                Tool(
+                    name="test_tool",
+                    description="Test tool",
+                    parameters=ToolParameters(type="object", properties={"x": {"type": "number"}})
+                ),
+                Tool(name="simple_tool", description="Simple", parameters=None)
+            ]
+
+            formatted = client._tools_to_provider_format(tools)
+
+            assert len(formatted) == 2
+            assert formatted[0]["name"] == "test_tool"
+            assert formatted[0]["description"] == "Test tool"
+            assert formatted[0]["input_schema"]["type"] == "object"
+            assert formatted[1]["input_schema"] == {}
+
+    # ===== API Request Tests =====
+
+    def test_make_provider_request_no_tools(self):
+        """Test making API request without tools."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path) as mock_anthropic:
+            mock_client = MagicMock()
+            mock_anthropic.return_value = mock_client
+            sample_response = self.sample_response
+            mock_client.messages.create.return_value = sample_response
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            response = client._make_provider_request(
+                messages=[{"role": "user", "content": "Hello"}],
+                model="claude-3-sonnet-20240229",
+                stream=False
+            )
+
+            assert response is sample_response
+            mock_client.messages.create.assert_called_once()
+
+            # Verify NOT_GIVEN was used for tools
+            call_args = mock_client.messages.create.call_args
+            from anthropic import NOT_GIVEN
+            assert call_args.kwargs["tools"] is NOT_GIVEN
+
+    def test_make_provider_request_with_tools_streaming(self):
+        """Test making streaming API request with tools."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path) as mock_anthropic:
+            mock_client = MagicMock()
+            mock_anthropic.return_value = mock_client
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            tools = [{"name": "test", "description": "Test tool", "input_schema": {}}]
+
+            client._make_provider_request(
+                messages=[{"role": "user", "content": "Hello"}],
+                model="claude-3-sonnet-20240229",
+                stream=True,
+                tools=tools,
+                temperature=0.7
+            )
+
+            mock_client.messages.create.assert_called_once_with(
+                model="claude-3-sonnet-20240229",
+                messages=[{"role": "user", "content": "Hello"}],
+                stream=True,
+                tools=tools,
+                temperature=0.7,
+                max_tokens=4096
+            )
+
+    # ===== Stream Processing Tests =====
+
+    def test_process_stream_events_all_types(self):
+        """Test processing all types of stream events."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            processor = StreamProcessor()
+
+            # Create a simple text delta event directly in the test
+            text_event = Mock()
+            text_event.type = "content_block_delta"
+            text_event.delta = Mock()
+            text_event.delta.text = "Hello"
+            
+            # Create message stop event
+            message_stop = Mock()
+            message_stop.type = "message_stop"
+
+            chunks = []
+            # Process text event
+            chunk = client._process_provider_stream_event(text_event, processor)
             if chunk:
-                assert chunk.common.content == expected_content
-                assert chunk.common.finish_reason == expected_finish
-
-    def test_stream_event_with_tools(self, client):
-        """Test stream event processing with tool calls."""
-        accumulated = "Calculating..."
-        tool_calls = {}
-
-        # Tool use block start
-        event = SimpleNamespace(
-            type="content_block_start",
-            index=1,
-            content_block=SimpleNamespace(type="tool_use", id="toolu_123", name="calculator"),
-        )
-        _, new_tools, _ = client._process_stream_event(event, accumulated, tool_calls)
-        assert "tool_call_1" in new_tools
-        assert new_tools["tool_call_1"].call_id == "toolu_123"
-
-        # Input JSON delta
-        event = SimpleNamespace(
-            type="content_block_delta",
-            index=1,
-            delta=SimpleNamespace(type="input_json_delta", partial_json='{"x": 5}'),
-        )
-        _, new_tools, _ = client._process_stream_event(event, accumulated, new_tools)
-        assert new_tools["tool_call_1"].arguments == '{"x": 5}'
-        assert new_tools["tool_call_1"].status == "arguments_streaming"
-
-        # Content block stop
-        event = SimpleNamespace(type="content_block_stop", index=1)
-        client._process_block_stop(event, new_tools)
-        assert new_tools["tool_call_1"].status == "completed"
-
-        # Test block stop with non-streaming status
-        new_tools["tool_call_1"].status = "started"
-        client._process_block_stop(event, new_tools)
-        assert new_tools["tool_call_1"].status == "started"  # Should not change
-
-        # Test block start without tool_use type
-        event_non_tool = SimpleNamespace(
-            type="content_block_start",
-            index=2,
-            content_block=SimpleNamespace(type="text"),  # Not tool_use
-        )
-        client._process_block_start(event_non_tool, new_tools)
-        assert "tool_call_2" not in new_tools  # Should not create a new tool call
-
-        # Test block start without content_block attribute
-        event_no_block = SimpleNamespace(type="content_block_start", index=3)
-        client._process_block_start(event_no_block, new_tools)  # Should not crash
-
-    def test_sync_streaming(self, client):
-        """Test synchronous streaming."""
-        events = [
-            MockStreamEvent("content_block_delta", "Hello"),
-            MockStreamEvent("unknown_event"),
-            MockStreamEvent("message_stop"),
-        ]
-
-        chunks = list(client._stream(events))
-        assert len(chunks) == 2
-        assert chunks[0].common.content == "Hello"
-        assert chunks[1].common.finish_reason == "end_turn"
-
-    async def test_async_streaming(self, client):
-        """Test asynchronous streaming."""
-
-        async def agen():
-            for event in [
-                MockStreamEvent("content_block_delta", "Async"),
-                MockStreamEvent("message_stop"),
-            ]:
-                yield event
-
-        chunks = []
-        async for chunk in client._astream(agen()):
-            chunks.append(chunk)
-
-        assert len(chunks) == 2
-        assert chunks[0].common.content == "Async"
-
-    def test_chat_completion_basic(self, client, monkeypatch):
-        """Test basic chat completion with various parameter combinations."""
-        mock_response = MockResponse("Test response")
-        captured_params = {}
-
-        def mock_create(**kwargs):
-            captured_params.update(kwargs)
-            return mock_response
-
-        client._client.messages = SimpleNamespace(create=mock_create)
-
-        def filter_kwargs_func(f, kw):
-            return kw
-
-        monkeypatch.setattr(client, "_filter_kwargs", filter_kwargs_func)
-
-        # Basic call
-        result = client._chat_completion_impl(
-            messages=[{"role": "user", "content": "Hello"}], model="claude-3-sonnet"
-        )
-        assert isinstance(result, ChimericCompletionResponse)
-        assert result.common.content == "Test response"
-
-        # With system prompt
-        captured_params.clear()
-        messages_with_system = [
-            {"role": "system", "content": "Be helpful"},
-            {"role": "user", "content": "Hello"},
-        ]
-        client._chat_completion_impl(messages=messages_with_system, model="claude-3-sonnet")
-        assert captured_params["system"] == "Be helpful"
-
-        # With tools
-        captured_params.clear()
-        tools = [{"name": "test_tool", "description": "Test"}]
-        client._chat_completion_impl(
-            messages=[{"role": "user", "content": "Use tool"}], model="claude-3-sonnet", tools=tools
-        )
-        assert "You have access to tools" in captured_params["system"]
-
-        # With optional parameters
-        captured_params.clear()
-        client._chat_completion_impl(
-            messages=[{"role": "user", "content": "Hello"}],
-            model="claude-3-sonnet",
-            temperature=0.8,
-            top_p=0.9,
-            unsupported_param="ignored",
-        )
-        assert captured_params["temperature"] == 0.8
-        assert "unsupported_param" not in captured_params
-
-    def test_chat_completion_with_tool_execution(self, client, monkeypatch):
-        """Test chat completion with tool execution loop."""
-
-        def search(query: str) -> str:
-            return f"Results for: {query}"
-
-        tool = Tool(name="search", description="Search", function=search)
-        client.tool_manager.register(func=tool.function, name=tool.name)
-
-        # Mock responses
-        first_response = MockResponse("Tool call")
-        first_response.content = [
-            SimpleNamespace(type="tool_use", id="c1", name="search", input={"query": "test"})
-        ]
-        second_response = MockResponse("Final answer")
-
-        responses = [first_response, second_response]
-        call_count = 0
-
-        def mock_create(**kwargs):
-            nonlocal call_count
-            result = responses[call_count]
-            call_count += 1
-            return result
-
-        client._client.messages = SimpleNamespace(create=mock_create)
-
-        def filter_kwargs_func(f, kw):
-            return kw
-
-        monkeypatch.setattr(client, "_filter_kwargs", filter_kwargs_func)
-
-        result = client._chat_completion_impl(
-            messages=[{"role": "user", "content": "Search for test"}],
-            model="claude-3-sonnet",
-            tools=[{"name": "search", "description": "Search"}],
-        )
-
-        assert "tool_calls" in result.common.metadata
-        assert result.common.metadata["tool_calls"][0]["result"] == "Results for: test"
-
-    def test_chat_completion_streaming_with_tools(self, client, monkeypatch):
-        """Test streaming chat completion with tool execution."""
-        mock_stream = Mock(spec=client_module.Stream)
-
-        def mock_create(**kwargs):
-            return mock_stream
-
-        client._client.messages = SimpleNamespace(create=mock_create)
-
-        def mock_stream_with_tools(stream, **kwargs):
-            yield ChimericStreamChunk(
-                native=Mock(), common=StreamChunk(content="Result", delta="Result", metadata={})
-            )
-
-        monkeypatch.setattr(client, "_process_stream_with_tools_sync", mock_stream_with_tools)
-
-        result = client._chat_completion_impl(
-            messages=[{"role": "user", "content": "Calculate"}],
-            model="claude-3-sonnet",
-            stream=True,
-            tools=[{"name": "calc", "description": "Calculate"}],
-        )
-
-        chunks = list(result)
-        assert len(chunks) == 1
-        assert "Result" in chunks[0].common.content
-
-        # Test streaming without tools
-        def mock_stream_no_tools(stream):
-            yield ChimericStreamChunk(
-                native=Mock(), common=StreamChunk(content="No tools", delta="No tools", metadata={})
-            )
-
-        monkeypatch.setattr(client, "_stream", mock_stream_no_tools)
-
-        result = client._chat_completion_impl(
-            messages=[{"role": "user", "content": "Hello"}],
-            model="claude-3-sonnet",
-            stream=True,
-            tools=None,
-        )
-
-        chunks = list(result)
-        assert len(chunks) == 1
-        assert "No tools" in chunks[0].common.content
-
-    async def test_async_chat_completion(self, client, monkeypatch):
-        """Test async chat completion with all scenarios."""
-        mock_response = MockResponse("Async response")
-
-        async def mock_create(**kwargs):
-            return mock_response
-
-        client._async_client.messages = SimpleNamespace(create=mock_create)
-
-        async def mock_process_stream_async(stream, **kwargs):
-            yield ChimericStreamChunk(
-                native=Mock(),
-                common=StreamChunk(content="Async response", delta="Response", metadata={}),
-            )
-
-        monkeypatch.setattr(client, "_process_stream_with_tools_async", mock_process_stream_async)
-
-        messages = [{"role": "user", "content": "Async test"}]
-
-        # Register the tool we'll use in the test
-        def async_edge_tool(value: str) -> str:
-            return f"processed: {value}"
-
-        tool = Tool(name="async_edge_tool", description="Async edge tool", function=async_edge_tool)
-        client.tool_manager.register(func=tool.function, name=tool.name)
-
-        # Define tool_calls for the test
-        tool_calls = {
-            "t1": ToolCallChunk(
-                id="t1",
-                call_id="c1",
-                name="async_edge_tool",
-                arguments='{"value": "test"}',
-                status="completed",
-            ),
-        }
-
-        # Case 2: Test with max_tokens already in kwargs
-        chunks = []
-        async for chunk in client._handle_tool_execution_and_continue_async(
-            tool_calls,
-            messages,
-            "claude-3-sonnet",
-            [{"name": "async_edge_tool"}],
-            "Async test content",
-            max_tokens=1024,
-        ):
-            chunks.append(chunk)
-
-        assert len(chunks) == 1
-
-        # Test with no completed tool calls
-        tool_calls_no_complete = {
-            "t1": ToolCallChunk(
-                id="t1",
-                call_id="c1",
-                name="async_edge_tool",
-                arguments='{"value": "test"}',
-                status="started",
-            ),
-        }
-
-        chunks = []
-        async for chunk in client._handle_tool_execution_and_continue_async(
-            tool_calls_no_complete,
-            messages,
-            "claude-3-sonnet",
-            [{"name": "async_edge_tool"}],
-            "Content",
-        ):
-            chunks.append(chunk)
-
-        assert len(chunks) == 0  # No completed tools, no continuation
-
-    def test_file_upload(self, client):
-        """Test file upload success and error cases."""
-        # Success case
-        mock_file = MockFile()
-
-        def mock_upload(**kwargs):
-            return mock_file
-
-        client._client.beta = SimpleNamespace(files=SimpleNamespace(upload=mock_upload))
-
-        result = client._upload_file(file="test_file_content")
-        assert isinstance(result.common, FileUploadResponse)
-        assert result.common.file_id == "file-anthro-123"
-        assert result.common.filename == "test_file.txt"
-
-        # Missing file parameter
-        with pytest.raises(ValueError, match="'file' parameter is required"):
-            client._upload_file(purpose="test")
-
-        # API error propagation
-        def mock_upload_error(**kwargs):
-            error = Exception("Upload failed")
-            error.status_code = 413
-            raise error
-
-        client._client.beta.files.upload = mock_upload_error
-
-        with pytest.raises(Exception) as exc_info:
-            client._upload_file(file="large_file")
-        assert "Upload failed" in str(exc_info.value)
-
-    def test_request_and_error_tracking(self, client, monkeypatch):
-        """Test request and error counting."""
-
-        def mock_impl(*args, **kwargs):
-            return "SUCCESS"
-
-        monkeypatch.setattr(client, "_chat_completion_impl", mock_impl)
-
-        before_req = client.request_count
-        before_err = client.error_count
-
-        client.chat_completion("Hello", "claude-3-sonnet")
-        assert client.request_count == before_req + 1
-        assert client.error_count == before_err
-
-        # Failed request
-        def error_impl(*args, **kwargs):
-            raise RuntimeError("Request failed")
-
-        monkeypatch.setattr(client, "_chat_completion_impl", error_impl)
-
-        with pytest.raises(RuntimeError):
-            client.chat_completion("Hello", "claude-3-sonnet")
-
-        assert client.request_count == before_req + 2
-        assert client.error_count == before_err + 1
-
-    def test_exception_propagation(self, client, monkeypatch):
-        """Test that exceptions properly propagate to base class."""
-
-        def mock_create(**kwargs):
-            error = Exception("API Error")
-            error.status_code = 429
-            raise error
-
-        client._client.messages = SimpleNamespace(create=mock_create)
-
-        def filter_kwargs_func(f, kw):
-            return kw
-
-        monkeypatch.setattr(client, "_filter_kwargs", filter_kwargs_func)
-
-        with pytest.raises(Exception) as exc_info:
-            client._chat_completion_impl(
-                messages=[{"role": "user", "content": "Hello"}], model="claude-3-sonnet"
-            )
-
-        assert "API Error" in str(exc_info.value)
-        assert exc_info.value.status_code == 429
-
-    def test_response_tools_processing(self, client):
-        """Test comprehensive tool response processing."""
-
-        def calc(a: int, b: int) -> int:
-            return a + b
-
-        tool = Tool(name="calc", description="Calculate", function=calc)
-        client.tool_manager.register(func=tool.function, name=tool.name)
-
-        # Response with mixed content types
-        response = MockResponse("Text content")
-        response.content = [
-            SimpleNamespace(type="text", text="I'll calculate that."),
-            SimpleNamespace(type="image", data="base64data"),  # Unknown type
-            SimpleNamespace(type="tool_use", id="c1", name="calc", input={"a": 5, "b": 3}),
-            SimpleNamespace(type="audio", url="audio.mp3"),  # Unknown type
-        ]
-
-        messages = [{"role": "user", "content": "Calculate 5 + 3"}]
-        tool_calls, updated_messages = client._process_response_tools(response, messages)
-
-        # Verify processing
-        assert len(tool_calls) == 1
-        assert tool_calls[0]["result"] == "8"
-
-        # Check assistant message structure
-        assistant_msg = updated_messages[1]
-        assert len(assistant_msg["content"]) == 2  # Only text and tool_use
-        content_types = [c["type"] for c in assistant_msg["content"]]
-        assert content_types == ["text", "tool_use"]
-
-        # Test with no tool calls
-        response_no_tools = MockResponse("No tools")
-        response_no_tools.content = [SimpleNamespace(type="text", text="Regular response")]
-        tool_calls, updated = client._process_response_tools(response_no_tools, messages)
-        assert tool_calls == []
-        assert updated == messages
-
-    def test_create_chimeric_response_variations(self, client):
-        """Test response creation with various scenarios."""
-        # With text content and tool calls
-        response = MockResponse("Text response")
-        tool_calls = [{"name": "tool1", "arguments": {"x": 1}, "result": "result1"}]
-        result = client._create_chimeric_response(response, tool_calls)
-        assert result.common.content == "Text response"
-        assert "tool_calls" in result.common.metadata
-
-        # Tool-only response (no text)
-        response_no_text = MockResponse("")
-        response_no_text.content = []
-        result = client._create_chimeric_response(response_no_text, tool_calls)
-        assert "Tool execution results:" in result.common.content
-        assert "tool1(x=1) → result1" in result.common.content
-
-        # No content or tools
-        result = client._create_chimeric_response(response_no_text, [])
-        assert result.common.content == ""
-
-    def test_process_stream_with_tools_comprehensive(self, client, monkeypatch):
-        """Test comprehensive streaming with tools scenarios."""
-
-        def test_tool(value: str) -> str:
-            return f"processed: {value}"
-
-        tool = Tool(name="stream_tool", description="Stream tool", function=test_tool)
-        client.tool_manager.register(func=tool.function, name=tool.name)
-
-        # Setup mocks for tool execution continuation
-        def mock_handle_tool_execution(tool_calls, messages, model, tools, content, **kwargs):
-            yield ChimericStreamChunk(
-                native=Mock(),
-                common=StreamChunk(content="Tool executed", delta="Tool executed", metadata={}),
-            )
-
-        monkeypatch.setattr(
-            client, "_handle_tool_execution_and_continue_sync", mock_handle_tool_execution
-        )
-
-        # Create events that include tool calls
-        def mock_events():
-            yield MockStreamEvent("content_block_delta", "Processing...")
-            yield SimpleNamespace(type="message_stop", model_dump=lambda: {"type": "message_stop"})
-
-        tool_calls = {
-            "tool_call_1": ToolCallChunk(
-                id="tool_call_1",
-                call_id="call_test",
-                name="stream_tool",
-                arguments='{"value": "test"}',
-                status="completed",
-            )
-        }
-
-        # Mock process_stream_event to return tool calls on finish
-        original_process = client._process_stream_event
-
-        def mock_process_stream_event(event, acc, tools=None):
-            if tools is None:
-                tools = {}
-            if event.type == "message_stop":
-                return (
-                    acc,
-                    tool_calls,
-                    ChimericStreamChunk(
-                        native=event,
-                        common=StreamChunk(content=acc, finish_reason="end_turn", metadata={}),
-                    ),
-                )
-            return original_process(event, acc, tools)
-
-        monkeypatch.setattr(client, "_process_stream_event", mock_process_stream_event)
-
-        # Test with tools
-        chunks = list(
-            client._process_stream_with_tools_sync(
-                mock_events(),
-                original_messages=[{"role": "user", "content": "Test"}],
-                original_model="claude-3-sonnet",
-                original_tools=[{"name": "stream_tool"}],
-            )
-        )
-
-        assert len(chunks) >= 1
-
-        # Test without tools
-        def mock_events_no_finish():
-            yield MockStreamEvent("content_block_delta", "Hello")
-
-        chunks = list(
-            client._process_stream_with_tools_sync(
-                mock_events_no_finish(),
-                original_messages=[{"role": "user", "content": "Test"}],
-                original_model="claude-3-sonnet",
-                original_tools=None,
-            )
-        )
-
-        assert len(chunks) == 1
-        assert "Hello" in chunks[0].common.content
-
-        # Test early return when finish reason is found
-        def mock_events_with_finish():
-            yield SimpleNamespace(type="message_stop", model_dump=lambda: {"type": "message_stop"})
-
-        # Reset process_stream_event to original
-        monkeypatch.setattr(client, "_process_stream_event", original_process)
-
-        chunks = list(
-            client._process_stream_with_tools_sync(
-                mock_events_with_finish(),
-                original_messages=[{"role": "user", "content": "Test"}],
-                original_model="claude-3-sonnet",
-                original_tools=None,
-            )
-        )
-
-        assert len(chunks) == 1
-        assert chunks[0].common.finish_reason == "end_turn"
-
-    async def test_process_stream_with_tools_async_comprehensive(self, client, monkeypatch):
-        """Test async streaming with tools edge cases."""
-
-        def test_tool(value: str) -> str:
-            return f"async processed: {value}"
-
-        tool = Tool(name="async_stream_tool", description="Async stream tool", function=test_tool)
-        client.tool_manager.register(func=tool.function, name=tool.name)
-
-        # Test early return with finish reason
-        async def mock_events_with_finish():
-            yield SimpleNamespace(type="message_stop", model_dump=lambda: {"type": "message_stop"})
-
-        tool_calls = {}
-        original_process = client._process_stream_event
-
-        def mock_process_stream_event(event, acc, tools=None):
-            if tools is None:
-                tools = {}
-            if event.type == "message_stop":
-                return (
-                    acc,
-                    tool_calls,
-                    ChimericStreamChunk(
-                        native=event,
-                        common=StreamChunk(content=acc, finish_reason="end_turn", metadata={}),
-                    ),
-                )
-            return original_process(event, acc, tools)
-
-        monkeypatch.setattr(client, "_process_stream_event", mock_process_stream_event)
-
-        chunks = []
-        async for chunk in client._process_stream_with_tools_async(
-            mock_events_with_finish(),
-            original_messages=[{"role": "user", "content": "Test"}],
-            original_model="claude-3-sonnet",
-            original_tools=None,
-        ):
-            chunks.append(chunk)
-
-        assert len(chunks) == 1
-        assert chunks[0].common.finish_reason == "end_turn"
-
-    def test_content_delta_edge_cases(self, client):
-        """Test content delta processing edge cases."""
-        accumulated = "test"
-        tool_calls = {}
-
-        # Event with neither text nor partial_json
-        event = SimpleNamespace(
-            type="content_block_delta",
-            index=0,
-            delta=SimpleNamespace(type="other", data="some_data"),
-        )
-
-        new_acc, new_tools, chunk = client._process_content_delta(event, accumulated, tool_calls)
-        assert new_acc == accumulated
-        assert new_tools == tool_calls
-        assert chunk is None
-
-        # Test partial JSON processing
-        event_json = SimpleNamespace(
-            type="content_block_delta",
-            index=1,
-            delta=SimpleNamespace(type="input_json_delta", partial_json='{"test": "value"}'),
-        )
-
-        new_acc, new_tools, chunk = client._process_content_delta(
-            event_json, accumulated, tool_calls
-        )
-        assert "tool_call_1" in new_tools
-        assert new_tools["tool_call_1"].arguments == '{"test": "value"}'
-
-    def test_make_create_params_comprehensive(self, client):
-        """Test comprehensive parameter creation scenarios."""
-        # With tools and existing system prompt
-        tools = [{"name": "test", "description": "test tool"}]
-        messages_with_system = [
-            {"role": "system", "content": "You are helpful"},
-            {"role": "user", "content": "Hello"},
-        ]
-
-        params = client._make_create_params(
-            messages=messages_with_system,
-            model="claude-3-sonnet",
-            stream=False,
-            tools=tools,
-            temperature=0.7,
-            max_tokens=2048,
-        )
-
-        assert "You are helpful" in params["system"]
-        assert "You have access to tools" in params["system"]
-        assert params["tools"] == tools
-        assert params["temperature"] == 0.7
-        assert params["max_tokens"] == 2048
-
-        # Without system prompt but with tools
-        messages_no_system = [{"role": "user", "content": "Hello"}]
-        params = client._make_create_params(
-            messages=messages_no_system, model="claude-3-sonnet", stream=False, tools=tools
-        )
-
-        assert (
-            params["system"]
-            == "You have access to tools. Use them when appropriate to help answer the user's questions. When you need to use multiple tools, call them in parallel whenever possible for efficiency."
-        )
-
-        # No tools, no system
-        params = client._make_create_params(
-            messages=messages_no_system, model="claude-3-sonnet", stream=True, tools=None
-        )
-
-        assert "system" not in params
-        assert params["stream"] is True
-
-    def test_tool_execution_loops(self, client, monkeypatch):
-        """Test tool execution loops for non-streaming responses."""
-
-        def mock_tool(value: str) -> str:
-            return f"result: {value}"
-
-        tool = Tool(name="loop_tool", description="Loop tool", function=mock_tool)
-        client.tool_manager.register(func=tool.function, name=tool.name)
-
-        # Mock _process_response_tools to avoid double execution
-        def mock_process_response_tools(response, messages):
-            if hasattr(response, "_tool_processed"):
-                # Second call - no tools
-                return [], messages
-
-            # First call - return tool calls
-            response._tool_processed = True
-            tool_calls = [
-                {
-                    "name": "loop_tool",
-                    "arguments": {"value": "test"},
-                    "result": "result: test",
-                    "call_id": "c1",
-                }
+                chunks.append(chunk)
+            
+            # Process completion event
+            chunk = client._process_provider_stream_event(message_stop, processor)
+            if chunk:
+                chunks.append(chunk)
+
+            # Should have text chunk and completion chunk
+            assert len(chunks) == 2
+            assert chunks[0].common.content == "Hello"
+            assert chunks[1].common.finish_reason == "end_turn"
+
+    def test_process_stream_events_tool_calls(self):
+        """Test processing tool call stream events to achieve full coverage."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            processor = StreamProcessor()
+
+            # Tool call start event
+            tool_start = Mock()
+            tool_start.type = "content_block_start"
+            tool_start.index = 0
+            tool_start.content_block = Mock()
+            tool_start.content_block.type = "tool_use"
+            tool_start.content_block.name = "test_tool"
+
+            # Tool call arguments delta - only has partial_json, NOT text
+            args_delta = Mock()
+            args_delta.type = "content_block_delta"
+            args_delta.index = 0
+            args_delta.delta = Mock(spec=['partial_json'])  # Only partial_json attribute
+            args_delta.delta.partial_json = '{"x": 1'
+
+            # More arguments
+            args_delta2 = Mock()
+            args_delta2.type = "content_block_delta"
+            args_delta2.index = 0
+            args_delta2.delta = Mock(spec=['partial_json'])  # Only partial_json attribute
+            args_delta2.delta.partial_json = '0}'
+
+            # Tool call complete
+            tool_stop = Mock()
+            tool_stop.type = "content_block_stop"
+            tool_stop.index = 0
+
+            # Process events to cover tool call branches
+            client._process_provider_stream_event(tool_start, processor)
+            client._process_provider_stream_event(args_delta, processor)
+            client._process_provider_stream_event(args_delta2, processor)
+            client._process_provider_stream_event(tool_stop, processor)
+
+            # Check tool calls were processed
+            tool_calls = processor.get_completed_tool_calls()
+            assert len(tool_calls) == 1
+            assert tool_calls[0].name == "test_tool"
+            assert tool_calls[0].arguments == '{"x": 10}'
+
+    def test_process_stream_event_unknown_type(self):
+        """Test processing unknown event type."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            processor = StreamProcessor()
+
+            unknown_event = Mock()
+            unknown_event.type = "unknown_event_type"
+
+            chunk = client._process_provider_stream_event(unknown_event, processor)
+            assert chunk is None
+
+    def test_process_stream_event_content_delta_without_text(self):
+        """Test processing content delta event without text attribute."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            processor = StreamProcessor()
+
+            # Event with delta but no text attribute
+            event = Mock()
+            event.type = "content_block_delta"
+            event.delta = Mock(spec=[])  # No text attribute
+
+            chunk = client._process_provider_stream_event(event, processor)
+            assert chunk is None
+
+    def test_process_stream_event_content_start_without_content_block(self):
+        """Test processing content start event without content_block attribute."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            processor = StreamProcessor()
+
+            # Event without content_block attribute
+            event = Mock()
+            event.type = "content_block_start"
+            event.index = 0
+            # Missing content_block attribute
+
+            chunk = client._process_provider_stream_event(event, processor)
+            assert chunk is None
+
+            # Event with content_block but type != 'tool_use'
+            event2 = Mock()
+            event2.type = "content_block_start"
+            event2.content_block = Mock()
+            event2.content_block.type = "text"  # Not 'tool_use'
+            event2.index = 1
+
+            chunk2 = client._process_provider_stream_event(event2, processor)
+            assert chunk2 is None
+            # Verify no tool calls were started since it's not tool_use type
+            assert len(processor.state.tool_calls) == 0
+
+            # Event with content_block_start but content_block has no type attribute
+            event3 = Mock()
+            event3.type = "content_block_start"
+            event3.content_block = Mock(spec=[])  # Mock with no attributes
+            event3.index = 2
+
+            chunk3 = client._process_provider_stream_event(event3, processor)
+            assert chunk3 is None
+            # Verify no tool calls were started
+            assert len(processor.state.tool_calls) == 0
+
+    def test_process_stream_event_delta_without_partial_json(self):
+        """Test processing delta event without partial_json attribute."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            processor = StreamProcessor()
+
+            # Event with delta but no partial_json attribute
+            event = Mock()
+            event.type = "content_block_delta"
+            event.index = 0
+            event.delta = Mock(spec=[])  # No partial_json attribute
+
+            chunk = client._process_provider_stream_event(event, processor)
+            assert chunk is None
+
+    # ===== Response Extraction Tests =====
+
+    def test_extract_usage_from_response(self):
+        """Test extracting usage information."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            # Response with usage
+            response = Mock()
+            response.usage = Mock(input_tokens=10, output_tokens=20, total_tokens=30)
+
+            usage = client._extract_usage_from_response(response)
+            assert usage.prompt_tokens == 10
+            assert usage.completion_tokens == 20
+            assert usage.total_tokens == 30
+
+            # Response without usage
+            response_no_usage = Mock()
+            response_no_usage.usage = None
+
+            usage_empty = client._extract_usage_from_response(response_no_usage)
+            assert usage_empty.prompt_tokens == 0
+            assert usage_empty.completion_tokens == 0
+
+    def test_extract_content_from_response(self):
+        """Test extracting content from response."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            # Response with text content
+            response = Mock()
+            response.content = [Mock(type="text", text="Hello world")]
+
+            content = client._extract_content_from_response(response)
+            assert content == "Hello world"
+
+            # Response with multiple content blocks
+            response_multi = Mock()
+            response_multi.content = [
+                Mock(type="text", text="Hello"),
+                Mock(type="text", text=" world")
             ]
-            updated_messages = [*messages, {"role": "assistant", "content": "Using tool"}]
-            return tool_calls, updated_messages
 
-        monkeypatch.setattr(client, "_process_response_tools", mock_process_response_tools)
+            content_multi = client._extract_content_from_response(response_multi)
+            assert content_multi == "Hello world"
 
-        # Response with tool call
-        response1 = MockResponse("Using tool")
-        response1.content = [
-            SimpleNamespace(type="tool_use", id="c1", name="loop_tool", input={"value": "test"})
-        ]
+            # Response with no content
+            response_empty = Mock()
+            response_empty.content = []
 
-        # Final response without tools
-        response2 = MockResponse("Final answer")
+            content_empty = client._extract_content_from_response(response_empty)
+            assert content_empty == ""
 
-        responses = [response1, response2]
-        call_count = 0
+    def test_extract_tool_calls_from_response(self):
+        """Test extracting tool calls from response."""
+        tool_manager = self.create_tool_manager()
 
-        def mock_create(**kwargs):
-            nonlocal call_count
-            result = responses[call_count]
-            call_count += 1
-            return result
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
 
-        client._client.messages = SimpleNamespace(create=mock_create)
+            # Response with tool calls
+            tool_block = Mock()
+            tool_block.type = "tool_use"
+            tool_block.id = "call_123"
+            tool_block.name = "test_tool"
+            tool_block.input = {"x": 10}
 
-        params = {"messages": [{"role": "user", "content": "Test"}], "model": "claude-3-sonnet"}
+            # Add non-tool block to test branch condition
+            text_block = Mock()
+            text_block.type = "text"
+            text_block.text = "Some text"
 
-        # Test sync version
-        final_response, tool_calls = client._handle_tool_execution_loop(response1, params)
-        assert hasattr(final_response, "content")
-        assert len(tool_calls) == 1
-        assert tool_calls[0]["result"] == "result: test"
+            response = Mock()
+            response.content = [tool_block, text_block]
 
-        # Test with no tool calls initially
-        response_no_tools = MockResponse("No tools needed")
-        response_no_tools._tool_processed = True  # Mark as already processed
-        final_response, tool_calls = client._handle_tool_execution_loop(response_no_tools, params)
-        assert hasattr(final_response, "content")
-        assert tool_calls == []
+            tool_calls = client._extract_tool_calls_from_response(response)
+            assert tool_calls is not None
+            assert len(tool_calls) == 1
+            assert tool_calls[0].call_id == "call_123"
+            assert tool_calls[0].name == "test_tool"
+            assert tool_calls[0].arguments == '{"x": 10}'
 
-    async def test_async_tool_execution_loops(self, client, monkeypatch):
-        """Test async tool execution loops."""
+            # Response without tool calls
+            response_no_tools = Mock()
+            response_no_tools.content = [text_block]
 
-        def mock_tool(value: str) -> str:
-            return f"async result: {value}"
+            tool_calls_none = client._extract_tool_calls_from_response(response_no_tools)
+            assert tool_calls_none is None
 
-        tool = Tool(name="async_loop_tool", description="Async loop tool", function=mock_tool)
-        client.tool_manager.register(func=tool.function, name=tool.name)
+    def test_extract_tool_calls_with_non_dict_input(self):
+        """Test extracting tool calls with non-dict input."""
+        tool_manager = self.create_tool_manager()
 
-        # Mock _process_response_tools to avoid double execution
-        def mock_process_response_tools(response, messages):
-            if hasattr(response, "_tool_processed"):
-                # Second call - no tools
-                return [], messages
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
 
-            # First call - return tool calls
-            response._tool_processed = True
-            tool_calls = [
-                {
-                    "name": "async_loop_tool",
-                    "arguments": {"value": "async_test"},
-                    "result": "async result: async_test",
-                    "call_id": "c1",
-                }
+            # Tool block with string input (not dict)
+            tool_block = Mock()
+            tool_block.type = "tool_use"
+            tool_block.id = "call_456"
+            tool_block.name = "string_tool"
+            tool_block.input = "string_input"
+
+            response = Mock()
+            response.content = [tool_block]
+
+            tool_calls = client._extract_tool_calls_from_response(response)
+            assert tool_calls is not None
+            assert len(tool_calls) == 1
+            assert tool_calls[0].arguments == "string_input"
+
+    # ===== Message Update Tests =====
+
+    def test_update_messages_with_tool_calls_simple(self):
+        """Test updating messages with tool calls and results."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            # Mock assistant response with tool calls
+            tool_block = Mock()
+            tool_block.type = "tool_use"
+            tool_block.id = "call_123"
+            tool_block.name = "test_tool"
+            tool_block.input = {"x": 10}
+
+            assistant_response = Mock()
+            assistant_response.content = [tool_block]
+
+            tool_calls = [ToolCall(call_id="call_123", name="test_tool", arguments='{"x": 10}')]
+            tool_results = [ToolExecutionResult(call_id="call_123", name="test_tool", arguments='{"x": 10}', result="Result: 10")]
+
+            messages = [{"role": "user", "content": "Hello"}]
+            updated = client._update_messages_with_tool_calls(
+                messages, assistant_response, tool_calls, tool_results
+            )
+
+            assert len(updated) == 3  # Original + assistant + tool results
+            assert updated[1]["role"] == "assistant"
+            assert updated[2]["role"] == "user"  # Tool results become user messages
+
+    def test_update_messages_with_tool_error(self):
+        """Test updating messages with tool execution error."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            assistant_response = Mock()
+            assistant_response.content = []
+
+            tool_calls = [ToolCall(call_id="call_456", name="error_tool", arguments='{"x": 10}')]
+            tool_results = [
+                ToolExecutionResult(
+                    call_id="call_456",
+                    name="error_tool",
+                    arguments='{"x": 10}',
+                    error="Tool failed",
+                    is_error=True
+                )
             ]
-            updated_messages = [*messages, {"role": "assistant", "content": "Using async tool"}]
-            return tool_calls, updated_messages
 
-        monkeypatch.setattr(client, "_process_response_tools", mock_process_response_tools)
-
-        response1 = MockResponse("Using async tool")
-        response1.content = [
-            SimpleNamespace(
-                type="tool_use", id="c1", name="async_loop_tool", input={"value": "async_test"}
-            )
-        ]
-
-        response2 = MockResponse("Async final answer")
-
-        responses = [response1, response2]
-        call_count = 0
-
-        async def mock_create(**kwargs):
-            nonlocal call_count
-            result = responses[call_count]
-            call_count += 1
-            return result
-
-        client._async_client.messages = SimpleNamespace(create=mock_create)
-
-        params = {
-            "messages": [{"role": "user", "content": "Async test"}],
-            "model": "claude-3-sonnet",
-        }
-
-        final_response, tool_calls = await client._handle_async_tool_execution_loop(
-            response1, params
-        )
-        assert hasattr(final_response, "content")
-        assert len(tool_calls) == 1
-        assert tool_calls[0]["result"] == "async result: async_test"
-
-    async def test_async_chat_completion_complete(self, client, monkeypatch):
-        """Test complete async chat completion scenarios."""
-        mock_response = MockResponse("Async response")
-
-        async def mock_create(**kwargs):
-            return mock_response
-
-        client._async_client.messages = SimpleNamespace(create=mock_create)
-
-        def filter_kwargs_func(f, kw):
-            return kw
-
-        monkeypatch.setattr(client, "_filter_kwargs", filter_kwargs_func)
-
-        # Basic async call
-        result = await client._achat_completion_impl(
-            messages=[{"role": "user", "content": "Hello"}], model="claude-3-sonnet"
-        )
-        assert result.common.content == "Async response"
-
-        # With tool execution
-        def translate(text: str) -> str:
-            return f"Translated: {text}"
-
-        tool = Tool(name="translate", description="Translate", function=translate)
-        client.tool_manager.register(func=tool.function, name=tool.name)
-
-        first_response = MockResponse("Tool call")
-        first_response.content = [
-            SimpleNamespace(type="tool_use", id="c1", name="translate", input={"text": "hello"})
-        ]
-        second_response = MockResponse("Translation complete")
-
-        responses = [first_response, second_response]
-        call_count = 0
-
-        async def mock_create_with_tools(**kwargs):
-            nonlocal call_count
-            result = responses[call_count]
-            call_count += 1
-            return result
-
-        client._async_client.messages.create = mock_create_with_tools
-
-        result = await client._achat_completion_impl(
-            messages=[{"role": "user", "content": "Translate hello"}],
-            model="claude-3-sonnet",
-            tools=[{"name": "translate", "description": "Translate"}],
-        )
-
-        assert "tool_calls" in result.common.metadata
-        assert result.common.metadata["tool_calls"][0]["result"] == "Translated: hello"
-
-        # Test async streaming with tools
-        mock_async_stream = Mock(spec=client_module.AsyncStream)
-
-        async def mock_create_stream(**kwargs):
-            return mock_async_stream
-
-        client._async_client.messages.create = mock_create_stream
-
-        async def mock_astream_with_tools(stream, **kwargs):
-            yield ChimericStreamChunk(
-                native=Mock(),
-                common=StreamChunk(content="Async stream", delta="Async stream", metadata={}),
+            messages = []
+            updated = client._update_messages_with_tool_calls(
+                messages, assistant_response, tool_calls, tool_results
             )
 
-        monkeypatch.setattr(client, "_process_stream_with_tools_async", mock_astream_with_tools)
+            # Check error formatting in tool result content
+            tool_result_content = updated[-1]["content"][0]["content"]
+            assert "Error: Tool failed" in tool_result_content
 
-        result = await client._achat_completion_impl(
-            messages=[{"role": "user", "content": "Stream with tools"}],
-            model="claude-3-sonnet",
-            stream=True,
-            tools=[{"name": "tool", "description": "Tool"}],
-        )
+    def test_update_messages_with_mixed_content_response(self):
+        """Test updating messages with response containing both text and tool blocks."""
+        tool_manager = self.create_tool_manager()
 
-        chunks = []
-        async for chunk in result:
-            chunks.append(chunk)
-        assert len(chunks) == 1
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
 
-        # Test async streaming without tools
-        async def mock_astream_no_tools(stream):
-            yield ChimericStreamChunk(
-                native=Mock(),
-                common=StreamChunk(content="No tools async", delta="No tools", metadata={}),
+            # Response with both text and tool_use blocks
+            text_block = Mock()
+            text_block.type = "text"
+            text_block.text = "I'll help with that."
+
+            tool_block = Mock()
+            tool_block.type = "tool_use"
+            tool_block.id = "call_123"
+            tool_block.name = "test_tool"
+            tool_block.input = {"x": 10}
+
+            assistant_response = Mock()
+            assistant_response.content = [text_block, tool_block]
+
+            tool_calls = [ToolCall(call_id="call_123", name="test_tool", arguments='{"x": 10}')]
+            tool_results = [ToolExecutionResult(call_id="call_123", name="test_tool", arguments='{"x": 10}', result="Result: 10")]
+
+            messages = [{"role": "user", "content": "Hello"}]
+            updated = client._update_messages_with_tool_calls(
+                messages, assistant_response, tool_calls, tool_results
             )
 
-        monkeypatch.setattr(client, "_astream", mock_astream_no_tools)
+            # Check that both text and tool blocks are included
+            assert len(updated) == 3  # Original + assistant + tool results
 
-        result = await client._achat_completion_impl(
-            messages=[{"role": "user", "content": "Hello"}],
-            model="claude-3-sonnet",
-            stream=True,
-            tools=None,
-        )
+            # Response with content blocks that aren't text or tool_use
+            unknown_block = Mock()
+            unknown_block.type = "unknown_type"  # This should be ignored
 
-        chunks = []
-        async for chunk in result:
-            chunks.append(chunk)
-        assert len(chunks) == 1
+            text_block2 = Mock()
+            text_block2.type = "text"
+            text_block2.text = "Valid text"
 
-    def test_handle_tool_execution_edge_cases_sync(self, client, monkeypatch):
-        """Test sync tool execution handler edge cases."""
+            assistant_response2 = Mock()
+            assistant_response2.content = [unknown_block, text_block2]
 
-        def test_tool(value: str) -> str:
-            return f"result: {value}"
-
-        tool = Tool(name="edge_tool", description="Edge case tool", function=test_tool)
-        client.tool_manager.register(func=tool.function, name=tool.name)
-
-        # Case 1: Tool calls with non-completed status
-        tool_calls = {
-            "t1": ToolCallChunk(
-                id="t1",
-                call_id="c1",
-                name="edge_tool",
-                arguments='{"value": "test"}',
-                status="started",  # NOT completed
-            ),
-            "t2": ToolCallChunk(
-                id="t2",
-                call_id="c2",
-                name="edge_tool",
-                arguments='{"value": "test2"}',
-                status="completed",
-            ),
-        }
-
-        # Mock the continuation
-        def mock_create(**kwargs):
-            return [MockStreamEvent("content_block_delta", "Continued")]
-
-        client._client.messages = SimpleNamespace(create=mock_create)
-
-        def mock_process_stream(stream, **kwargs):
-            yield ChimericStreamChunk(
-                native=Mock(), common=StreamChunk(content="Response", delta="Response", metadata={})
+            updated2 = client._update_messages_with_tool_calls(
+                messages, assistant_response2, [], []
             )
 
-        monkeypatch.setattr(client, "_process_stream_with_tools_sync", mock_process_stream)
+            # Should only have the text block, unknown_type should be ignored
+            assistant_msg = updated2[1]
+            assert len(assistant_msg["content"]) == 1
+            assert assistant_msg["content"][0]["type"] == "text"
+            assert assistant_msg["content"][0]["text"] == "Valid text"
+            assistant_msg = updated[1]
+            assert assistant_msg["role"] == "assistant"
+            assert len(assistant_msg["content"]) == 2  # Text + tool blocks
+            assert assistant_msg["content"][0]["type"] == "text"
+            assert assistant_msg["content"][0]["text"] == "I'll help with that."
+            assert assistant_msg["content"][1]["type"] == "tool_use"
 
-        messages = [{"role": "user", "content": "Test"}]
+    def test_update_messages_with_streaming_response(self):
+        """Test updating messages with streaming response format"""
+        tool_manager = self.create_tool_manager()
 
-        # Case 2: Test with max_tokens already in kwargs
-        chunks = list(
-            client._handle_tool_execution_and_continue_sync(
-                tool_calls,
-                messages,
-                "claude-3-sonnet",
-                [{"name": "edge_tool"}],
-                "Test content",
-                max_tokens=2048,
-            )
-        )
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
 
-        assert len(chunks) == 1
+            # Streaming response WITH accumulated_content
+            assistant_response = Mock()
+            assistant_response.accumulated_content = "Let me help you."
+            if hasattr(assistant_response, 'content'):
+                del assistant_response.content
 
-        # Test with no completed tool calls
-        tool_calls_no_complete = {
-            "t1": ToolCallChunk(
-                id="t1",
-                call_id="c1",
-                name="edge_tool",
-                arguments='{"value": "test"}',
-                status="started",
-            ),
-        }
+            tool_calls = [ToolCall(call_id="call_789", name="helper_tool", arguments='{"action": "help"}')]
+            tool_results = [ToolExecutionResult(call_id="call_789", name="helper_tool", arguments='{"action": "help"}', result="Success")]
 
-        chunks = list(
-            client._handle_tool_execution_and_continue_sync(
-                tool_calls_no_complete,
-                messages,
-                "claude-3-sonnet",
-                [{"name": "edge_tool"}],
-                "Test content",
-            )
-        )
-
-        assert len(chunks) == 0  # No completed tools, no continuation
-
-    async def test_handle_tool_execution_edge_cases_async(self, client, monkeypatch):
-        """Test async tool execution handler edge cases."""
-
-        def test_tool(value: str) -> str:
-            return f"async result: {value}"
-
-        tool = Tool(name="async_edge_tool_2", description="Async edge tool", function=test_tool)
-        client.tool_manager.register(func=tool.function, name=tool.name)
-
-        # Case 1: Tool calls with non-completed status
-        tool_calls = {
-            "t1": ToolCallChunk(
-                id="t1",
-                call_id="c1",
-                name="async_edge_tool_2",
-                arguments='{"value": "test"}',
-                status="arguments_streaming",  # NOT completed
-            ),
-            "t2": ToolCallChunk(
-                id="t2",
-                call_id="c2",
-                name="async_edge_tool_2",
-                arguments='{"value": "test2"}',
-                status="completed",
-            ),
-        }
-
-        # Mock the continuation
-        async def mock_create(**kwargs):
-            class MockAsyncStream:
-                async def __aiter__(self):
-                    yield MockStreamEvent("content_block_delta", "Async continued")
-
-            return MockAsyncStream()
-
-        client._async_client.messages = SimpleNamespace(create=mock_create)
-
-        async def mock_process_stream_async(stream, **kwargs):
-            yield ChimericStreamChunk(
-                native=Mock(),
-                common=StreamChunk(content="Async continued", delta="Async continued", metadata={}),
+            messages = []
+            updated = client._update_messages_with_tool_calls(
+                messages, assistant_response, tool_calls, tool_results
             )
 
-        monkeypatch.setattr(client, "_process_stream_with_tools_async", mock_process_stream_async)
+            # Check streaming response handling - should have text content
+            assistant_msg = updated[0]
+            assert assistant_msg["role"] == "assistant"
+            assert len(assistant_msg["content"]) == 2  # Text + tool blocks
+            assert assistant_msg["content"][0]["type"] == "text"
+            assert assistant_msg["content"][0]["text"] == "Let me help you."
 
-        messages = [{"role": "user", "content": "Async test"}]
+            # Streaming response WITHOUT accumulated_content
+            assistant_response2 = Mock()
+            # Explicitly remove accumulated_content to test the false branch
+            if hasattr(assistant_response2, 'accumulated_content'):
+                del assistant_response2.accumulated_content
+            if hasattr(assistant_response2, 'content'):
+                del assistant_response2.content
 
-        # Case 2: Test with max_tokens already in kwargs
-        chunks = []
-        async for chunk in client._handle_tool_execution_and_continue_async(
-            tool_calls,
-            messages,
-            "claude-3-sonnet",
-            [{"name": "async_edge_tool_2"}],
-            "Async test content",
-            max_tokens=1024,
-        ):
-            chunks.append(chunk)
+            tool_calls2 = [ToolCall(call_id="call_999", name="no_text_tool", arguments='{"test": true}')]
+            tool_results2 = [ToolExecutionResult(call_id="call_999", name="no_text_tool", arguments='{"test": true}', result="OK")]
 
-        assert len(chunks) == 1
+            messages2 = []
+            updated2 = client._update_messages_with_tool_calls(
+                messages2, assistant_response2, tool_calls2, tool_results2
+            )
 
-        # Test with no completed tool calls
-        tool_calls_no_complete = {
-            "t1": ToolCallChunk(
-                id="t1",
-                call_id="c1",
-                name="async_edge_tool_2",
-                arguments='{"value": "test"}',
-                status="started",
-            ),
-        }
+            # Check streaming response without accumulated_content - should only have tool blocks
+            assistant_msg2 = updated2[0]
+            assert assistant_msg2["role"] == "assistant"
+            assert len(assistant_msg2["content"]) == 1  # Only tool blocks, no text
+            assert assistant_msg2["content"][0]["type"] == "tool_use"
 
-        chunks = []
-        async for chunk in client._handle_tool_execution_and_continue_async(
-            tool_calls_no_complete,
-            messages,
-            "claude-3-sonnet",
-            [{"name": "async_edge_tool_2"}],
-            "Content",
-        ):
-            chunks.append(chunk)
+            # Streaming response WITH accumulated_content but empty string
+            assistant_response3 = Mock()
+            assistant_response3.accumulated_content = ""  # Empty string should be skipped
+            if hasattr(assistant_response3, 'content'):
+                del assistant_response3.content
 
-        assert len(chunks) == 0  # No completed tools, no continuation
+            tool_calls3 = [ToolCall(call_id="call_empty", name="empty_tool", arguments='{"empty": true}')]
+            tool_results3 = [ToolExecutionResult(call_id="call_empty", name="empty_tool", arguments='{"empty": true}', result="Empty OK")]
 
-    async def test_async_process_stream_with_tools_finish_reason_coverage(
-        self, client, monkeypatch
-    ):
-        """Test async streaming with finish reason."""
+            messages3 = []
+            updated3 = client._update_messages_with_tool_calls(
+                messages3, assistant_response3, tool_calls3, tool_results3
+            )
 
-        def finish_tool(value: str) -> str:
-            return f"finished: {value}"
+            # Check streaming response with empty accumulated_content - should only have tool blocks
+            assistant_msg3 = updated3[0]
+            assert assistant_msg3["role"] == "assistant"
+            assert len(assistant_msg3["content"]) == 1  # Only tool blocks, no text since content is empty
+            assert assistant_msg3["content"][0]["type"] == "tool_use"
 
-        tool = Tool(name="finish_coverage_tool", description="Finish tool", function=finish_tool)
-        client.tool_manager.register(func=tool.function, name=tool.name)
+    def test_update_messages_with_invalid_tool_arguments(self):
+        """Test updating messages with invalid JSON tool arguments."""
+        tool_manager = self.create_tool_manager()
 
-        # Mock events that will trigger finish reason and tool execution
-        async def mock_events():
-            # First event creates a tool call
-            yield SimpleNamespace(
-                type="content_block_start",
-                index=1,
-                content_block=SimpleNamespace(
-                    type="tool_use", id="finish_123", name="finish_coverage_tool"
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            # Streaming response without content attribute, but with accumulated content
+            assistant_response = Mock()
+            assistant_response.accumulated_content = ""  # Empty string
+            if hasattr(assistant_response, 'content'):
+                del assistant_response.content
+
+            # Tool call with invalid JSON arguments
+            tool_calls = [ToolCall(call_id="call_bad", name="bad_tool", arguments="invalid_json")]
+            tool_results = [ToolExecutionResult(call_id="call_bad", name="bad_tool", arguments="invalid_json", result="Fixed")]
+
+            messages = []
+            updated = client._update_messages_with_tool_calls(
+                messages, assistant_response, tool_calls, tool_results
+            )
+
+            # Check that invalid JSON is handled gracefully
+            assistant_msg = updated[0]
+            # With empty accumulated_content, only tool_use should be present
+            tool_content = assistant_msg["content"][0]
+            assert tool_content["type"] == "tool_use"
+            assert tool_content["input"] == {}  # Should default to empty dict
+
+
+class TestAnthropicAsyncClient(BaseProviderTestSuite):
+    """Test suite for Anthropic async client"""
+
+    client_class = AnthropicAsyncClient
+    provider_name = "Anthropic"
+    mock_async_client_path = "chimeric.providers.anthropic.client.AsyncAnthropic"
+
+    @property
+    def sample_response(self):
+        """Create a sample Anthropic response."""
+        response = Mock(spec=Message)
+        content_block = Mock()
+        content_block.type = "text"
+        content_block.text = "Hello there"
+        response.content = [content_block]
+        response.usage = Mock(input_tokens=10, output_tokens=20, total_tokens=30)
+        response.stop_reason = "end_turn"
+        return response
+
+    @property
+    def sample_stream_events(self):
+        """Create sample Anthropic stream events."""
+        events = []
+
+        # Text content delta event
+        text_event = Mock()  # Remove spec to allow dynamic attributes
+        text_event.type = "content_block_delta"
+        # Use configure_mock to set the nested attributes correctly
+        text_event.configure_mock(**{"delta.text": "Hello"})
+        events.append(text_event)
+
+        # Message completion
+        message_stop = Mock()
+        message_stop.type = "message_stop"
+        events.append(message_stop)
+
+        return events
+
+    # ===== Async Initialization Tests =====
+
+    async def test_async_client_initialization(self):
+        """Test async client initialization."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path):
+            client = self.client_class(
+                api_key="test-key",
+                tool_manager=tool_manager
+            )
+
+            assert client.api_key == "test-key"
+            assert client._provider_name == self.provider_name
+
+    async def test_async_capabilities(self):
+        """Test async provider capabilities."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            capabilities = client._get_capabilities()
+
+            assert isinstance(capabilities, Capability)
+            assert capabilities.streaming is True
+            assert capabilities.tools is True
+
+    async def test_async_model_aliases(self):
+        """Test async model aliases."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            aliases = client._get_model_aliases()
+
+            assert isinstance(aliases, list)
+            assert "claude-opus-4-0" in aliases
+
+    async def test_async_list_models(self):
+        """Test async model listing."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path) as mock_async_anthropic:
+            mock_client = AsyncMock()
+            mock_async_anthropic.return_value = mock_client
+
+            # Mock async model list
+            mock_timestamp = Mock()
+            mock_timestamp.timestamp.return_value = 1709251200.0  # Feb 29, 2024
+            
+            mock_model = Mock()
+            mock_model.id = "claude-3-opus-20240229"
+            mock_model.display_name = "Claude 3 Opus"
+            mock_model.created_at = mock_timestamp
+            mock_model.model_dump.return_value = {"id": "claude-3-opus-20240229"}
+            
+            mock_models_response = Mock(data=[mock_model])
+            mock_client.models.list.return_value = mock_models_response
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            models = await client._list_models_impl()
+
+            assert len(models) == 1
+            assert models[0].id == "claude-3-opus-20240229"
+
+    async def test_async_make_request(self):
+        """Test async API request."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path) as mock_async_anthropic:
+            mock_client = AsyncMock()
+            mock_async_anthropic.return_value = mock_client
+            sample_response = self.sample_response
+            mock_client.messages.create.return_value = sample_response
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            response = await client._make_async_provider_request(
+                messages=[{"role": "user", "content": "Hello"}],
+                model="claude-3-sonnet-20240229",
+                stream=False
+            )
+
+            assert response is sample_response
+
+    async def test_async_tools_to_provider_format(self):
+        """Test async formatting tools for provider."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            tools = [
+                Tool(
+                    name="test_tool",
+                    description="Test tool",
+                    parameters=ToolParameters(type="object", properties={})
                 ),
+                Tool(name="simple_tool", description="Simple", parameters=None)
+            ]
+
+            formatted = client._tools_to_provider_format(tools)
+
+            assert len(formatted) == 2
+            assert formatted[0]["name"] == "test_tool"
+            assert formatted[1]["input_schema"] == {}
+
+    async def test_async_stream_processing(self):
+        """Test async stream processing."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            processor = StreamProcessor()
+
+            chunks = []
+            for event in self.sample_stream_events:
+                chunk = client._process_provider_stream_event(event, processor)
+                if chunk:
+                    chunks.append(chunk)
+
+            assert len(chunks) == 2
+            assert chunks[0].common.content == "Hello"
+            assert chunks[1].common.finish_reason == "end_turn"
+
+    async def test_async_messages_formatting_edge_cases(self):
+        """Test async message formatting edge cases."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            # Empty messages list
+            messages = []
+            formatted = client._messages_to_provider_format(messages)
+            assert formatted == []
+
+            # Mixed message types
+            messages = [
+                ChimericMessage(role="system", content="System message"),
+                ChimericMessage(role="user", content="User message"),
+                ChimericMessage(role="assistant", content="Assistant message")
+            ]
+            formatted = client._messages_to_provider_format(messages)
+            assert len(formatted) == 2  # System message filtered out
+            assert formatted[0]["role"] == "user"
+            assert formatted[1]["role"] == "assistant"
+
+    async def test_async_usage_extraction_no_usage(self):
+        """Test async usage extraction when no usage data."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            response = Mock()
+            response.usage = None
+            usage = client._extract_usage_from_response(response)
+            assert usage.prompt_tokens == 0
+            assert usage.completion_tokens == 0
+            assert usage.total_tokens == 0
+
+    async def test_async_usage_extraction_with_usage(self):
+        """Test async usage extraction with actual usage data."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            response = Mock()
+            response.usage = Mock(input_tokens=50, output_tokens=75, total_tokens=125)
+            usage = client._extract_usage_from_response(response)
+            assert usage.prompt_tokens == 50
+            assert usage.completion_tokens == 75
+            assert usage.total_tokens == 125
+
+    async def test_async_content_extraction_variations(self):
+        """Test async content extraction variations."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            # Single text block
+            response1 = Mock()
+            response1.content = [Mock(type="text", text="Single")]
+            content1 = client._extract_content_from_response(response1)
+            assert content1 == "Single"
+
+            # Multiple text blocks
+            response2 = Mock()
+            response2.content = [
+                Mock(type="text", text="Multi"),
+                Mock(type="text", text="ple")
+            ]
+            content2 = client._extract_content_from_response(response2)
+            assert content2 == "Multiple"
+
+            # Empty content
+            response3 = Mock()
+            response3.content = []
+            content3 = client._extract_content_from_response(response3)
+            assert content3 == ""
+
+    async def test_async_tool_calls_extraction_with_calls(self):
+        """Test async tool call extraction with actual tool calls."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            # Response with tool calls
+            tool_block = Mock()
+            tool_block.type = "tool_use"
+            tool_block.id = "call_async_123"
+            tool_block.name = "async_test_tool"
+            tool_block.input = {"async_param": "value"}
+
+            response = Mock()
+            response.content = [tool_block]
+
+            tool_calls = client._extract_tool_calls_from_response(response)
+            assert tool_calls is not None
+            assert len(tool_calls) == 1
+            assert tool_calls[0].call_id == "call_async_123"
+            assert tool_calls[0].name == "async_test_tool"
+            assert tool_calls[0].arguments == '{"async_param": "value"}'
+
+    async def test_async_tool_calls_extraction_no_calls(self):
+        """Test async tool call extraction with no tool calls."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            # Response with only text blocks
+            text_block = Mock()
+            text_block.type = "text"
+            text_block.text = "No tools here"
+
+            response = Mock()
+            response.content = [text_block]
+
+            tool_calls = client._extract_tool_calls_from_response(response)
+            assert tool_calls is None
+
+    async def test_async_update_messages_comprehensive(self):
+        """Test async comprehensive message update scenarios."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            # Response with text and tool_use blocks
+            text_block = Mock()
+            text_block.type = "text"
+            text_block.text = "I'll use a tool:"
+
+            tool_block = Mock()
+            tool_block.type = "tool_use"
+            tool_block.id = "call_async_456"
+            tool_block.name = "async_tool"
+            tool_block.input = {"param": "test"}
+
+            assistant_response = Mock()
+            assistant_response.content = [text_block, tool_block]
+
+            tool_calls = [ToolCall(call_id="call_async_456", name="async_tool", arguments='{"param": "test"}')]
+            tool_results = [
+                ToolExecutionResult(
+                    call_id="call_async_456",
+                    name="async_tool", 
+                    arguments='{"param": "test"}',
+                    result="Tool executed successfully"
+                )
+            ]
+
+            messages = [{"role": "user", "content": "Test async"}]
+            updated = client._update_messages_with_tool_calls(
+                messages, assistant_response, tool_calls, tool_results
             )
-            # Add input to the tool call
-            yield SimpleNamespace(
-                type="content_block_delta",
-                index=1,
-                delta=SimpleNamespace(type="input_json_delta", partial_json='{"value": "test"}'),
-            )
-            # Stop the block to mark tool as completed
-            yield SimpleNamespace(type="content_block_stop", index=1)
-            # End with finish reason to trigger tool execution
-            yield SimpleNamespace(type="message_stop", model_dump=lambda: {"type": "message_stop"})
 
-        # Mock tool execution continuation
-        async def mock_handle_tool_execution(tool_calls, messages, model, tools, content, **kwargs):
-            yield ChimericStreamChunk(
-                native=Mock(),
-                common=StreamChunk(
-                    content="Tool executed and finished", delta="Tool executed", metadata={}
-                ),
-            )
+            assert len(updated) == 3  # Original + assistant + tool results
+            assert updated[1]["role"] == "assistant"
+            assert len(updated[1]["content"]) == 2  # Text + tool blocks
+            assert updated[2]["role"] == "user"
+            assert "Tool executed successfully" in updated[2]["content"][0]["content"]
 
-        monkeypatch.setattr(
-            client, "_handle_tool_execution_and_continue_async", mock_handle_tool_execution
-        )
+            # Response with content blocks that aren't text or tool_use
+            unknown_block = Mock()
+            unknown_block.type = "unknown_async_type"  # This should be ignored
 
-        # Process the stream
-        chunks = []
-        async for chunk in client._process_stream_with_tools_async(
-            mock_events(),
-            original_messages=[{"role": "user", "content": "Test finish"}],
-            original_model="claude-3-sonnet",
-            original_tools=[{"name": "finish_coverage_tool"}],
-        ):
-            chunks.append(chunk)
+            text_block2 = Mock()
+            text_block2.type = "text"
+            text_block2.text = "Valid async text"
 
-        # Should have chunks from both the stream event and tool execution
-        assert len(chunks) >= 1
+            assistant_response2 = Mock()
+            assistant_response2.content = [unknown_block, text_block2]
 
-    def test_sync_streaming_no_chunk_returned(self, client):
-        """Test sync streaming when process_stream_event returns None chunk."""
-        # Create an event that will return None chunk
-        events = [SimpleNamespace(type="unknown_event", model_dump=lambda: {"type": "unknown"})]
-
-        chunks = list(client._stream(events))
-        assert len(chunks) == 0  # No chunks should be yielded for unknown events
-
-    def test_sync_streaming_with_tools_no_chunk_returned(self, client):
-        """Test sync streaming with tools when process_stream_event returns None chunk."""
-        # Create events that will return None chunk
-        events = [SimpleNamespace(type="unknown_event", model_dump=lambda: {"type": "unknown"})]
-
-        chunks = list(
-            client._process_stream_with_tools_sync(
-                events,
-                original_messages=[{"role": "user", "content": "Test"}],
-                original_model="claude-3-sonnet",
-                original_tools=None,
-            )
-        )
-        assert len(chunks) == 0  # No chunks should be yielded for unknown events
-
-    async def test_async_streaming_no_chunk_returned(self, client):
-        """Test async streaming when process_stream_event returns None chunk."""
-
-        async def mock_events():
-            # Unknown event type that returns None chunk
-            yield SimpleNamespace(type="unknown_event", model_dump=lambda: {"type": "unknown"})
-
-        chunks = []
-        async for chunk in client._astream(mock_events()):
-            chunks.append(chunk)
-
-        assert len(chunks) == 0  # No chunks should be yielded for unknown events
-
-    async def test_async_streaming_with_tools_no_chunk_returned(self, client):
-        """Test async streaming with tools when process_stream_event returns None chunk."""
-
-        async def mock_events():
-            # Unknown event type that returns None chunk
-            yield SimpleNamespace(type="unknown_event", model_dump=lambda: {"type": "unknown"})
-
-        chunks = []
-        async for chunk in client._process_stream_with_tools_async(
-            mock_events(),
-            original_messages=[{"role": "user", "content": "Test"}],
-            original_model="claude-3-sonnet",
-            original_tools=None,
-        ):
-            chunks.append(chunk)
-
-        assert len(chunks) == 0  # No chunks should be yielded for unknown events
-
-    def test_sync_tool_execution_empty_content(self, client, monkeypatch):
-        """Test sync tool execution with empty accumulated content."""
-
-        def empty_tool() -> str:
-            return "tool result"
-
-        tool = Tool(
-            name="empty_content_tool", description="Empty content tool", function=empty_tool
-        )
-        client.tool_manager.register(func=tool.function, name=tool.name)
-
-        # Tool calls with completed status but no accumulated content
-        tool_calls = {
-            "t1": ToolCallChunk(
-                id="t1", call_id="c1", name="empty_content_tool", arguments="{}", status="completed"
-            ),
-        }
-
-        messages = [{"role": "user", "content": "Test"}]
-
-        # Call with empty accumulated content (empty string)
-        chunks = list(
-            client._handle_tool_execution_and_continue_sync(
-                tool_calls,
-                messages,
-                "claude-3-sonnet",
-                [{"name": "empty_content_tool"}],
-                "",  # Empty accumulated content
-            )
-        )
-
-        # Should still work but won't add text content to an assistant message
-        assert len(chunks) >= 0
-
-    async def test_async_tool_execution_empty_content(self, client, monkeypatch):
-        """Test async tool execution with empty accumulated content."""
-
-        def empty_tool_async() -> str:
-            return "async tool result"
-
-        tool = Tool(
-            name="empty_content_async_tool",
-            description="Empty content async tool",
-            function=empty_tool_async,
-        )
-        client.tool_manager.register(func=tool.function, name=tool.name)
-
-        # Mock the continuation
-        async def mock_create(**kwargs):
-            class MockAsyncStream:
-                async def __aiter__(self):
-                    yield MockStreamEvent("content_block_delta", "Response")
-
-            return MockAsyncStream()
-
-        client._async_client.messages = SimpleNamespace(create=mock_create)
-
-        async def mock_process_stream_async(stream, **kwargs):
-            yield ChimericStreamChunk(
-                native=Mock(),
-                common=StreamChunk(content="Final response", delta="Final", metadata={}),
+            updated2 = client._update_messages_with_tool_calls(
+                messages, assistant_response2, [], []
             )
 
-        monkeypatch.setattr(client, "_process_stream_with_tools_async", mock_process_stream_async)
+            # Should only have the text block, unknown_async_type should be ignored
+            assistant_msg2 = updated2[1]
+            assert len(assistant_msg2["content"]) == 1
+            assert assistant_msg2["content"][0]["type"] == "text"
+            assert assistant_msg2["content"][0]["text"] == "Valid async text"
 
-        # Tool calls with completed status but no accumulated content
-        tool_calls = {
-            "t1": ToolCallChunk(
-                id="t1",
-                call_id="c1",
-                name="empty_content_async_tool",
-                arguments="{}",
-                status="completed",
-            ),
-        }
+    async def test_async_stream_tool_processing(self):
+        """Test async stream tool call processing for coverage including unknown events."""
+        tool_manager = self.create_tool_manager()
 
-        messages = [{"role": "user", "content": "Test"}]
+        with patch(self.mock_async_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            processor = StreamProcessor()
 
-        # Call with empty accumulated content (empty string)
-        chunks = []
-        async for chunk in client._handle_tool_execution_and_continue_async(
-            tool_calls,
-            messages,
-            "claude-3-sonnet",
-            [{"name": "empty_content_async_tool"}],
-            "",  # Empty accumulated content
-        ):
-            chunks.append(chunk)
+            # Tool call start event
+            tool_start = Mock()
+            tool_start.type = "content_block_start"
+            tool_start.index = 1
+            tool_start.content_block = Mock()
+            tool_start.content_block.type = "tool_use"
+            tool_start.content_block.name = "async_tool"
 
-        # Should still work but won't add text content to an assistant message
-        assert len(chunks) >= 0
+            # Tool call arguments delta
+            args_delta = Mock()
+            args_delta.type = "content_block_delta"
+            args_delta.index = 1
+            args_delta.delta = Mock(spec=['partial_json'])
+            args_delta.delta.partial_json = '{"async": true}'
+
+            # Tool call complete
+            tool_stop = Mock()
+            tool_stop.type = "content_block_stop"
+            tool_stop.index = 1
+
+            # Unknown event type to hit the return None path
+            unknown_event = Mock()
+            unknown_event.type = "unknown_async_event_type"
+
+            # Process events to cover async tool call branches
+            client._process_provider_stream_event(tool_start, processor)
+            client._process_provider_stream_event(args_delta, processor)
+            client._process_provider_stream_event(tool_stop, processor)
+            result = client._process_provider_stream_event(unknown_event, processor)
+            assert result is None  # Unknown event should return None
+
+            # Check tool calls were processed
+            tool_calls = processor.get_completed_tool_calls()
+            assert len(tool_calls) == 1
+            assert tool_calls[0].name == "async_tool"
+            assert tool_calls[0].arguments == '{"async": true}'
+
+            # content_block_start with non-tool_use type
+            non_tool_event = Mock()
+            non_tool_event.type = "content_block_start"
+            non_tool_event.content_block = Mock()
+            non_tool_event.content_block.type = "text"  # Not tool_use
+            non_tool_event.index = 2
+
+            result2 = client._process_provider_stream_event(non_tool_event, processor)
+            assert result2 is None  # Should return None without processing as tool
+
+    async def test_async_streaming_response_paths(self):
+        """Test async streaming response with accumulated content and JSON error handling."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            # Test streaming response with accumulated content
+            assistant_response = Mock()
+            assistant_response.accumulated_content = "Async response"
+            del assistant_response.content  # Trigger streaming path
+
+            # Test invalid JSON arguments
+            tool_calls = [ToolCall(call_id="async_call", name="async_tool", arguments="{invalid json")]
+            tool_results = [ToolExecutionResult(call_id="async_call", name="async_tool", arguments="{invalid json", result="OK")]
+
+            messages = []
+            updated = client._update_messages_with_tool_calls(
+                messages, assistant_response, tool_calls, tool_results
+            )
+
+            assistant_msg = updated[0]
+            assert assistant_msg["content"][0]["text"] == "Async response"
+            assert assistant_msg["content"][1]["input"] == {}  # Invalid JSON should become empty dict
+
+            # Async streaming response WITHOUT accumulated_content
+            assistant_response2 = Mock()
+            if hasattr(assistant_response2, 'accumulated_content'):
+                del assistant_response2.accumulated_content
+            if hasattr(assistant_response2, 'content'):
+                del assistant_response2.content
+
+            tool_calls2 = [ToolCall(call_id="async_no_content", name="async_tool", arguments='{"test": 1}')]
+            tool_results2 = [ToolExecutionResult(call_id="async_no_content", name="async_tool", arguments='{"test": 1}', result="No content OK")]
+
+            updated2 = client._update_messages_with_tool_calls(
+                [], assistant_response2, tool_calls2, tool_results2
+            )
+
+            # Should only have tool blocks, no text
+            assistant_msg2 = updated2[0]
+            assert len(assistant_msg2["content"]) == 1  # Only tool blocks
+            assert assistant_msg2["content"][0]["type"] == "tool_use"
+
+            # Async streaming response WITH accumulated_content but empty string
+            assistant_response3 = Mock()
+            assistant_response3.accumulated_content = ""  # Empty string should be skipped
+            if hasattr(assistant_response3, 'content'):
+                del assistant_response3.content
+
+            tool_calls3 = [ToolCall(call_id="async_empty", name="async_tool", arguments='{"empty": true}')]
+            tool_results3 = [ToolExecutionResult(call_id="async_empty", name="async_tool", arguments='{"empty": true}', result="Empty async OK")]
+
+            updated3 = client._update_messages_with_tool_calls(
+                [], assistant_response3, tool_calls3, tool_results3
+            )
+
+            # Should only have tool blocks, no text since content is empty
+            assistant_msg3 = updated3[0]
+            assert len(assistant_msg3["content"]) == 1  # Only tool blocks
+            assert assistant_msg3["content"][0]["type"] == "tool_use"
