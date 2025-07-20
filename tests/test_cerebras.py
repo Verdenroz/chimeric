@@ -1,1084 +1,945 @@
-from collections.abc import AsyncGenerator
-import os
-from types import SimpleNamespace
-from typing import Any, cast
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import Mock, patch
 
-from cerebras.cloud.sdk.types.chat.chat_completion import (
-    ChatChunkResponse,
-    ChatCompletionResponse,
-    ChatCompletionResponseChoiceMessageToolCall,
-)
-import pytest
-
-from chimeric import Chimeric
-from chimeric.exceptions import ToolRegistrationError
-import chimeric.providers.cerebras.client as client_module
-from chimeric.providers.cerebras.client import CerebrasClient
-from chimeric.types import (
-    ChimericCompletionResponse,
-    ModelSummary,
-    Tool,
-    ToolParameters,
-)
+from chimeric.providers.cerebras import CerebrasAsyncClient, CerebrasClient
+from chimeric.types import Capability, Message as ChimericMessage, Tool, ToolCall, ToolExecutionResult, ToolParameters
+from chimeric.utils import StreamProcessor
+from conftest import BaseProviderTestSuite
 
 
-@pytest.fixture(scope="module")
-def chimeric_cerebras():
-    """Create a Chimeric instance configured for Cerebras."""
-    return Chimeric(
-        cerebras_api_key=os.getenv("CEREBRAS_API_KEY", "test_key"),
-        timeout=120,
-        max_retries=2,
-    )
+class TestCerebrasClient(BaseProviderTestSuite):
+    """Test suite for Cerebras sync client."""
 
+    client_class = CerebrasClient
+    provider_name = "Cerebras"
+    mock_client_path = "chimeric.providers.cerebras.client.Cerebras"
 
-@pytest.fixture(scope="module")
-def chimeric_cerebras_client(chimeric_cerebras) -> CerebrasClient:
-    """Get the CerebrasClient from the Chimeric wrapper."""
-    return cast("CerebrasClient", chimeric_cerebras.get_provider_client("cerebras"))
+    @property
+    def sample_response(self):
+        """Create a sample Cerebras response."""
+        mock_response = Mock()
+        mock_response.choices = [Mock()]
+        mock_response.choices[0].message = Mock()
+        mock_response.choices[0].message.content = "Hello from Cerebras"
+        mock_response.choices[0].message.tool_calls = None
+        mock_response.usage = Mock()
+        mock_response.usage.prompt_tokens = 10
+        mock_response.usage.completion_tokens = 20
+        mock_response.usage.total_tokens = 30
+        return mock_response
 
+    @property
+    def sample_stream_events(self):
+        """Create sample Cerebras stream events."""
+        events = []
 
-@pytest.fixture(autouse=True)
-def patch_cerebras_imports(monkeypatch):
-    """Stub out actual Cerebras classes to prevent network calls."""
+        # Text content event
+        text_event = Mock()
+        text_event.choices = [Mock()]
+        text_event.choices[0].delta = Mock()
+        text_event.choices[0].delta.content = "Hello"
+        text_event.choices[0].delta.tool_calls = None
+        text_event.choices[0].finish_reason = None
+        events.append(text_event)
 
-    def create_cerebras_mock(api_key: str, **kw: Any) -> SimpleNamespace:
-        return SimpleNamespace(api_key=api_key, **kw)
+        # Tool call start event
+        tool_start = Mock()
+        tool_start.choices = [Mock()]
+        tool_start.choices[0].delta = Mock()
+        tool_start.choices[0].delta.content = None
+        tool_start.choices[0].delta.tool_calls = [Mock()]
+        tool_start.choices[0].delta.tool_calls[0].id = "call_123"
+        tool_start.choices[0].delta.tool_calls[0].index = 0
+        tool_start.choices[0].delta.tool_calls[0].function = Mock()
+        tool_start.choices[0].delta.tool_calls[0].function.name = "test_tool"
+        tool_start.choices[0].delta.tool_calls[0].function.arguments = None
+        tool_start.choices[0].finish_reason = None
+        events.append(tool_start)
 
-    def create_async_cerebras_mock(api_key: str, **kw: Any) -> SimpleNamespace:
-        return SimpleNamespace(api_key=api_key, **kw)
+        # Tool call args event
+        tool_args = Mock()
+        tool_args.choices = [Mock()]
+        tool_args.choices[0].delta = Mock()
+        tool_args.choices[0].delta.content = None
+        tool_args.choices[0].delta.tool_calls = [Mock()]
+        tool_args.choices[0].delta.tool_calls[0].id = "call_123"
+        tool_args.choices[0].delta.tool_calls[0].index = 0
+        tool_args.choices[0].delta.tool_calls[0].function = Mock()
+        tool_args.choices[0].delta.tool_calls[0].function.name = None
+        tool_args.choices[0].delta.tool_calls[0].function.arguments = '{"x": 10}'
+        tool_args.choices[0].finish_reason = None
+        events.append(tool_args)
 
-    monkeypatch.setattr(client_module, "Cerebras", create_cerebras_mock)
-    monkeypatch.setattr(client_module, "AsyncCerebras", create_async_cerebras_mock)
-    return
+        # Completion event
+        completion_event = Mock()
+        completion_event.choices = [Mock()]
+        completion_event.choices[0].delta = Mock()
+        completion_event.choices[0].delta.content = None
+        completion_event.choices[0].delta.tool_calls = None
+        completion_event.choices[0].finish_reason = "stop"
+        events.append(completion_event)
 
+        # Event with no choices (edge case)
+        no_choices_event = Mock()
+        no_choices_event.choices = []
+        events.append(no_choices_event)
 
-# Helper functions for creating mock objects
-def create_mock_chat_completion_response(
-    content: str = "hello", model: str = "llama-3.1-8b", tool_calls: Any = None
-) -> Mock:
-    """Create a properly mocked ChatCompletionResponse."""
-    mock_message = Mock()
-    mock_message.role = "assistant"
-    mock_message.content = content
-    mock_message.tool_calls = tool_calls
+        return events
 
-    mock_choice = Mock()
-    mock_choice.index = 0
-    mock_choice.message = mock_message
-    mock_choice.finish_reason = "stop"
+    def test_client_initialization_success(self):
+        """Test successful client initialization."""
+        tool_manager = self.create_tool_manager()
 
-    mock_usage = Mock()
-    mock_usage.prompt_tokens = 10
-    mock_usage.completion_tokens = 5
-    mock_usage.total_tokens = 15
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            assert client._provider_name == "Cerebras"
+            assert client.api_key == "test-key"
 
-    mock_response = Mock(spec=ChatCompletionResponse)
-    mock_response.id = "chatcmpl-123"
-    mock_response.object = "chat.completion"
-    mock_response.created = 1234567890
-    mock_response.model = model
-    mock_response.choices = [mock_choice]
-    mock_response.usage = mock_usage
-    mock_response.model_dump.return_value = {"dumped": True}
+    def test_client_initialization_minimal(self):
+        """Test client initialization with minimal parameters."""
+        tool_manager = self.create_tool_manager()
 
-    return mock_response
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            assert client.api_key == "test-key"
 
+    def test_capabilities(self):
+        """Test getting provider capabilities."""
+        tool_manager = self.create_tool_manager()
 
-def create_mock_chat_chunk_response(
-    content: str = "hello",
-    finish_reason: str | None = None,
-    choices: list[Any] | None = None,
-    tool_calls: list[Any] | None = None,
-) -> Mock:
-    """Create a properly mocked ChatChunkResponse."""
-    if choices is not None:
-        mock_choices = choices
-    else:
-        mock_delta = Mock()
-        mock_delta.role = "assistant"
-        mock_delta.content = content
-        mock_delta.tool_calls = tool_calls
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            capabilities = client._get_capabilities()
+            assert isinstance(capabilities, Capability)
+            assert capabilities.streaming is True
+            assert capabilities.tools is True
 
-        mock_choice = Mock()
-        mock_choice.index = 0
-        mock_choice.delta = mock_delta
-        mock_choice.finish_reason = finish_reason
+    def test_list_models_success(self):
+        """Test successful model listing."""
+        tool_manager = self.create_tool_manager()
 
-        mock_choices = [mock_choice]
+        with patch(self.mock_client_path) as mock_client:
+            mock_instance = Mock()
+            mock_client.return_value = mock_instance
 
-    mock_chunk = Mock(spec=ChatChunkResponse)
-    mock_chunk.id = "chatcmpl-123"
-    mock_chunk.object = "chat.completion.chunk"
-    mock_chunk.created = 1234567890
-    mock_chunk.model = "llama-3.1-8b"
-    mock_chunk.choices = mock_choices
-    mock_chunk.model_dump.return_value = {"dumped": True, "chunk": True}
+            # Mock models response
+            mock_model = Mock()
+            mock_model.id = "llama3.1-8b"
+            mock_model.owned_by = "cerebras"
+            mock_model.created = 1234567890
 
-    return mock_chunk
+            mock_response = Mock()
+            mock_response.data = [mock_model]
+            mock_instance.models.list.return_value = mock_response
 
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            models = client._list_models_impl()
 
-def create_mock_tool_call(
-    tool_id: str = "call_123", name: str = "test_tool", arguments: str = '{"param1": "value1"}'
-) -> Mock:
-    """Create a properly mocked ChatCompletionResponseChoiceMessageToolCall."""
-    mock_function = Mock()
-    mock_function.name = name
-    mock_function.arguments = arguments
+            assert len(models) == 1
+            assert models[0].id == "llama3.1-8b"
+            assert models[0].name == "llama3.1-8b"
+            assert models[0].owned_by == "cerebras"
+            assert models[0].created_at == 1234567890
 
-    mock_tool_call = Mock(spec=ChatCompletionResponseChoiceMessageToolCall)
-    mock_tool_call.id = tool_id
-    mock_tool_call.function = mock_function
+    def test_list_models_with_missing_attributes(self):
+        """Test model listing with missing attributes."""
+        tool_manager = self.create_tool_manager()
 
-    return mock_tool_call
+        with patch(self.mock_client_path) as mock_client:
+            mock_instance = Mock()
+            mock_client.return_value = mock_instance
 
+            # Mock model without optional attributes
+            mock_model = Mock(spec=['id'])  # Only has id attribute
+            mock_model.id = "llama3.1-70b"
+            # No owned_by or created attributes
 
-class MockModel:
-    """Mock implementation of Cerebras Model."""
+            mock_response = Mock()
+            mock_response.data = [mock_model]
+            mock_instance.models.list.return_value = mock_response
 
-    def __init__(self, model_id: str = "llama-3.1-8b") -> None:
-        self.id = model_id
-        self.object = "model"
-        self.created = 1234567890
-        self.owned_by = "cerebras"
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            models = client._list_models_impl()
 
+            assert len(models) == 1
+            assert models[0].id == "llama3.1-70b"
+            assert models[0].owned_by == "cerebras"  # Default value
+            assert models[0].created_at is None
 
-# noinspection PyUnusedLocal,PyTypeChecker
-class TestCerebrasClient:
-    """Test suite for the CerebrasClient implementation."""
+    def test_messages_to_provider_format(self):
+        """Test message format conversion."""
+        tool_manager = self.create_tool_manager()
 
-    def test_initialization_and_basics(self, chimeric_cerebras_client: CerebrasClient) -> None:
-        """Test client initialization, capabilities, and basic methods."""
-        # Verify initialization
-        assert chimeric_cerebras_client.api_key == "test_key"
-        assert chimeric_cerebras_client._provider_name == "Cerebras"
-        assert chimeric_cerebras_client.client.api_key == "test_key"
-        assert chimeric_cerebras_client.async_client.api_key == "test_key"
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            messages = [
+                ChimericMessage(role="user", content="Hello"),
+                ChimericMessage(role="assistant", content="Hi there"),
+            ]
 
-        # Verify generic types
-        types = chimeric_cerebras_client._get_generic_types()
-        assert "sync" in types
-        assert "async" in types
+            formatted = client._messages_to_provider_format(messages)
+            assert len(formatted) == 2
+            assert formatted[0]["role"] == "user"
+            assert formatted[0]["content"] == "Hello"
+            assert formatted[1]["role"] == "assistant"
+            assert formatted[1]["content"] == "Hi there"
 
-        # Verify capabilities
-        capabilities = chimeric_cerebras_client._get_capabilities()
-        assert not capabilities.multimodal
-        assert capabilities.streaming
-        assert capabilities.tools
-        assert not capabilities.agents
-        assert not capabilities.files
+    def test_tools_to_provider_format(self):
+        """Test tool format conversion."""
+        tool_manager = self.create_tool_manager()
 
-        # Verify file upload raises NotImplementedError
-        with pytest.raises(NotImplementedError, match="Cerebras does not support file uploads"):
-            chimeric_cerebras_client._upload_file()
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
 
-    def test_list_models_variations(self, chimeric_cerebras_client: CerebrasClient) -> None:
-        """Test model listing with different scenarios."""
-        # Test with normal models
-        mock_models = [MockModel("llama-3.1-8b"), MockModel("llama-3.1-70b")]
-        mock_response = SimpleNamespace(data=mock_models)
-        chimeric_cerebras_client.client.models = SimpleNamespace(list=lambda: mock_response)
-
-        models = chimeric_cerebras_client._list_models_impl()
-        assert len(models) == 2
-        assert all(isinstance(m, ModelSummary) for m in models)
-        assert models[0].id == "llama-3.1-8b"
-
-        # Test with models missing attributes
-        class MinimalModel:
-            def __init__(self, model_id: str):
-                self.id = model_id
-
-        minimal_models = [MinimalModel("model1"), MinimalModel("model2")]
-        chimeric_cerebras_client.client.models.list = lambda: SimpleNamespace(data=minimal_models)
-
-        models = chimeric_cerebras_client._list_models_impl()
-        assert all(m.owned_by == "cerebras" for m in models)
-        assert all(m.created_at is None for m in models)
-
-    def test_tool_encoding_scenarios(self, chimeric_cerebras_client: CerebrasClient) -> None:
-        """Test various tool encoding scenarios."""
-        # Test None/empty tools
-        assert chimeric_cerebras_client._encode_tools(None) is None
-        assert chimeric_cerebras_client._encode_tools([]) is None
-
-        # Test Tool with ToolParameters
-        tool = Tool(
-            name="test_tool",
-            description="A test tool",
-            parameters=ToolParameters(
+            # Test with ToolParameters
+            params = ToolParameters(
                 type="object",
-                properties={"param1": {"type": "string"}},
-                required=["param1"],
-                strict=True,
-            ),
-        )
-        encoded = chimeric_cerebras_client._encode_tools([tool])
-        assert encoded is not None
-        encoded_list = list(encoded)
-        assert encoded_list[0]["function"]["strict"] is True
-        assert "strict" not in encoded_list[0]["function"]["parameters"]
-
-        # Test Tool with dict parameters - use explicit cast
-        from typing import cast
-
-        tool_dict = Tool(
-            name="test_tool",
-            description="A test tool",
-            parameters=cast(
-                "ToolParameters", {"type": "object", "properties": {"x": {"type": "int"}}}
-            ),
-        )
-        encoded = chimeric_cerebras_client._encode_tools([tool_dict])
-        assert encoded is not None
-        encoded_list = list(encoded)
-        assert "type" in encoded_list[0]["function"]["parameters"]
-
-        # Test already formatted tools
-        pre_formatted = [{"type": "function", "function": {"name": "existing"}}]
-        result = chimeric_cerebras_client._encode_tools(pre_formatted)
-        assert result is not None
-        assert list(result) == pre_formatted
-
-    def test_chimeric_response_creation_edge_cases(
-        self, chimeric_cerebras_client: CerebrasClient
-    ) -> None:
-        """Test creating ChimericCompletionResponse with edge cases."""
-        # Test normal response
-        mock_response = create_mock_chat_completion_response("Hello!")
-        response = chimeric_cerebras_client._create_chimeric_response(mock_response, [])
-        assert response.common.content == "Hello!"
-
-        # Test with tool calls
-        tool_calls = [{"call_id": "123", "name": "test", "result": "success"}]
-        response = chimeric_cerebras_client._create_chimeric_response(mock_response, tool_calls)
-        assert response.common.metadata is not None
-        assert response.common.metadata["tool_calls"] == tool_calls
-
-        # Test empty choices
-        mock_response.choices = []
-        response = chimeric_cerebras_client._create_chimeric_response(mock_response, [])
-        assert response.common.content == ""
-
-        # Test no message
-        mock_response = create_mock_chat_completion_response()
-        mock_response.choices[0].message = None
-        response = chimeric_cerebras_client._create_chimeric_response(mock_response, [])
-        assert response.common.content == ""
-
-        # Test None content
-        mock_response = create_mock_chat_completion_response()
-        mock_response.choices[0].message.content = None
-        response = chimeric_cerebras_client._create_chimeric_response(mock_response, [])
-        assert response.common.content == ""
-
-        # Test no/None usage
-        mock_response = create_mock_chat_completion_response()
-        mock_response.usage = None
-        response = chimeric_cerebras_client._create_chimeric_response(mock_response, [])
-        assert response.common.usage.total_tokens == 0
-
-        mock_response = create_mock_chat_completion_response()
-        mock_response.usage.prompt_tokens = None
-        mock_response.usage.completion_tokens = None
-        mock_response.usage.total_tokens = None
-        response = chimeric_cerebras_client._create_chimeric_response(mock_response, [])
-        assert response.common.usage.total_tokens == 0
-
-    def test_sync_chat_completion_variations(
-        self, chimeric_cerebras_client: CerebrasClient
-    ) -> None:
-        """Test synchronous chat completion with different scenarios."""
-        # Test basic completion
-        mock_response = create_mock_chat_completion_response("Hello, sync!")
-        chimeric_cerebras_client.client.chat = SimpleNamespace(
-            completions=SimpleNamespace(create=Mock(return_value=mock_response))
-        )
-
-        result = chimeric_cerebras_client._chat_completion_impl(
-            messages=[{"role": "user", "content": "Hello"}],
-            model="llama-3.1-8b",
-            stream=False,
-        )
-        assert result.common.content == "Hello, sync!"
-
-        # Test message as string
-        result = chimeric_cerebras_client._chat_completion_impl(
-            messages="Single message string",
-            model="llama-3.1-8b",
-            stream=False,
-        )
-        assert isinstance(result, ChimericCompletionResponse)
-
-        # Test with tools but no tool calls
-        tools = [{"type": "function", "function": {"name": "test"}}]
-        result = chimeric_cerebras_client._chat_completion_impl(
-            messages=[{"role": "user", "content": "Hello"}],
-            model="llama-3.1-8b",
-            stream=False,
-            tools=tools,
-        )
-        assert result.common.content == "Hello, sync!"
-
-    async def test_async_chat_completion_variations(
-        self, chimeric_cerebras_client: CerebrasClient
-    ) -> None:
-        """Test asynchronous chat completion with different scenarios."""
-        mock_response = create_mock_chat_completion_response("Hello, async!")
-        chimeric_cerebras_client.async_client.chat = SimpleNamespace(
-            completions=SimpleNamespace(create=AsyncMock(return_value=mock_response))
-        )
-
-        result = await chimeric_cerebras_client._achat_completion_impl(
-            messages=[{"role": "user", "content": "Hello"}],
-            model="llama-3.1-8b",
-            stream=False,
-        )
-        assert result.common.content == "Hello, async!"
-
-        # Test message as string
-        result = await chimeric_cerebras_client._achat_completion_impl(
-            messages="Single async message string",
-            model="llama-3.1-8b",
-            stream=False,
-        )
-        assert result.common.content == "Hello, async!"
-
-    def test_streaming_edge_cases(self, chimeric_cerebras_client: CerebrasClient) -> None:
-        """Test streaming with various edge cases."""
-        # Test empty content chunks
-        mock_chunks = [
-            create_mock_chat_chunk_response(""),
-            create_mock_chat_chunk_response("Hello"),
-            create_mock_chat_chunk_response("", finish_reason="stop"),
-        ]
-
-        def mock_generator():
-            yield from mock_chunks
-
-        result = chimeric_cerebras_client._stream(mock_generator())
-        chunks = list(result)
-        assert len(chunks) == 1
-        assert chunks[0].common.content == "Hello"
-
-        # Test empty choices
-        mock_chunks = [
-            create_mock_chat_chunk_response("Hello", choices=[]),
-            create_mock_chat_chunk_response("World", choices=[]),
-        ]
-
-        def mock_generator2():
-            yield from mock_chunks
-
-        result = chimeric_cerebras_client._stream(mock_generator2())
-        chunks = list(result)
-        assert len(chunks) == 0
-
-        # Test no delta content
-        mock_chunks = [
-            create_mock_chat_chunk_response(
-                "",
-                choices=[
-                    SimpleNamespace(
-                        index=0,
-                        delta=SimpleNamespace(role="assistant", content=None),
-                        finish_reason=None,
-                    )
-                ],
-            ),
-            create_mock_chat_chunk_response("Hello"),
-        ]
-
-        def mock_generator3():
-            yield from mock_chunks
-
-        result = chimeric_cerebras_client._stream(mock_generator3())
-        chunks = list(result)
-        assert len(chunks) == 1
-
-    def test_sync_streaming_with_varied_chunks(
-        self, chimeric_cerebras_client: CerebrasClient
-    ) -> None:
-        """Test synchronous streaming with a variety of chunk structures."""
-        # Create chunks that test all branches
-        mock_chunks = [
-            # Chunk with choices but no content (false on second condition)
-            create_mock_chat_chunk_response(
-                "",
-                choices=[
-                    SimpleNamespace(
-                        index=0,
-                        delta=SimpleNamespace(role="assistant", content=None),
-                        finish_reason=None,
-                    )
-                ],
-            ),
-            # Chunk with no choices (false on first condition)
-            create_mock_chat_chunk_response("", choices=[]),
-            # Chunk with choices and content (both conditions true)
-            create_mock_chat_chunk_response("Hello"),
-            # Another chunk with no choices
-            create_mock_chat_chunk_response("", choices=None),
-            # Final chunk with content
-            create_mock_chat_chunk_response(" World", finish_reason="stop"),
-        ]
-
-        def mock_generator4():
-            yield from mock_chunks
-
-        result = chimeric_cerebras_client._stream(mock_generator4())
-        chunks = list(result)
-
-        # Should only get 2 chunks (the ones with actual content)
-        assert len(chunks) == 2
-        assert chunks[0].common.delta == "Hello"
-        assert chunks[1].common.delta == " World"
-        assert chunks[1].common.content == "Hello World"
-
-    async def test_async_streaming_with_varied_chunks(
-        self, chimeric_cerebras_client: CerebrasClient
-    ) -> None:
-        """Test asynchronous streaming with a variety of chunk structures."""
-
-        async def mock_stream():
-            # Chunk with choices but no content (false on second condition)
-            yield create_mock_chat_chunk_response(
-                "",
-                choices=[
-                    SimpleNamespace(
-                        index=0,
-                        delta=SimpleNamespace(role="assistant", content=None),
-                        finish_reason=None,
-                    )
-                ],
+                properties={"x": {"type": "integer"}},
+                required=["x"],
+                strict=True
             )
-            # Chunk with no choices (false on first condition)
-            yield create_mock_chat_chunk_response("", choices=[])
-            # Chunk with choices and content (both conditions true)
-            yield create_mock_chat_chunk_response("Async")
-            # Another chunk with no choices
-            yield create_mock_chat_chunk_response("", choices=None)
-            # Final chunk with content
-            yield create_mock_chat_chunk_response(" Hello", finish_reason="stop")
-
-        result = chimeric_cerebras_client._astream(mock_stream())
-        chunks = []
-        async for chunk in result:
-            chunks.append(chunk)
-
-        # Should only get 2 chunks (the ones with actual content)
-        assert len(chunks) == 2
-        assert chunks[0].common.delta == "Async"
-        assert chunks[1].common.delta == " Hello"
-        assert chunks[1].common.content == "Async Hello"
-
-    def test_tool_execution_scenarios(self, chimeric_cerebras_client: CerebrasClient) -> None:
-        """Test various tool execution scenarios."""
-
-        # Test normal tool execution
-        def mock_tool(param1: str) -> str:
-            return f"Result: {param1}"
-
-        chimeric_cerebras_client.tool_manager.register(mock_tool, "test_tool")
-        mock_call = create_mock_tool_call("call_123", "test_tool", '{"param1": "value1"}')
-
-        result = chimeric_cerebras_client._process_function_call(mock_call)
-        assert result["result"] == "Result: value1"
-
-        # Test tool not found
-        mock_call = create_mock_tool_call("call_123", "nonexistent", "{}")
-        with pytest.raises(ToolRegistrationError):
-            chimeric_cerebras_client._process_function_call(mock_call)
-
-        # Test non-callable tool
-        bad_tool = Tool(
-            name="bad_tool", description="bad tool", parameters=cast("ToolParameters", {})
-        )
-        bad_tool.function = "not_callable"
-        chimeric_cerebras_client.tool_manager.tools["bad_tool"] = bad_tool
-        mock_call = create_mock_tool_call("call_123", "bad_tool", "{}")
-        with pytest.raises(ToolRegistrationError):
-            chimeric_cerebras_client._process_function_call(mock_call)
-
-        # Test tool with error
-        def error_tool(x: int) -> int:
-            raise ValueError("Tool error")
-
-        chimeric_cerebras_client.tool_manager.register(error_tool, "error_tool")
-        mock_call = create_mock_tool_call("call_123", "error_tool", '{"x": 5}')
-
-        result = chimeric_cerebras_client._process_function_call(mock_call)
-        assert "error" in result
-        assert "Tool error" in result["error"]
-
-        # Test invalid JSON arguments
-        mock_call = create_mock_tool_call("call_123", "test_tool", "invalid json")
-        result = chimeric_cerebras_client._process_function_call(mock_call)
-        assert "error" in result
-
-    def test_tool_execution_loops(self, chimeric_cerebras_client: CerebrasClient) -> None:
-        """Test tool execution loops for non-streaming responses."""
-
-        # Register tools
-        def tool1(x: int) -> int:
-            return x * 2
-
-        def tool2(x: int) -> int:
-            return x + 10
-
-        chimeric_cerebras_client.tool_manager.register(tool1, "multiply")
-        chimeric_cerebras_client.tool_manager.register(tool2, "add_ten")
-
-        # Mock responses
-        mock_response_with_tools = create_mock_chat_completion_response("Using tools")
-        mock_response_with_tools.choices[0].message.tool_calls = [
-            create_mock_tool_call("call_1", "multiply", '{"x": 5}'),
-            create_mock_tool_call("call_2", "add_ten", '{"x": 3}'),
-        ]
-
-        mock_final_response = create_mock_chat_completion_response("Done")
-        mock_final_response.choices[0].message.tool_calls = None
-
-        messages = [{"role": "user", "content": "Calculate"}]
-        tools = [{"type": "function", "function": {"name": "multiply"}}]
-
-        # Test without tool calls
-        _, tool_calls = chimeric_cerebras_client._handle_tool_execution_loop(
-            mock_final_response, messages.copy(), "model", tools
-        )
-        assert tool_calls == []
-
-        # Test with empty choices
-        mock_empty = create_mock_chat_completion_response()
-        mock_empty.choices = []
-        _, tool_calls = chimeric_cerebras_client._handle_tool_execution_loop(
-            mock_empty, messages.copy(), "model", tools
-        )
-        assert tool_calls == []
-
-        # Test with tool calls
-        call_count = 0
-
-        def mock_create(*args, **kwargs):
-            nonlocal call_count
-            call_count += 1
-            return mock_final_response
-
-        chimeric_cerebras_client.client.chat = SimpleNamespace(
-            completions=SimpleNamespace(create=mock_create)
-        )
-
-        _, tool_calls = chimeric_cerebras_client._handle_tool_execution_loop(
-            mock_response_with_tools, messages.copy(), "model", tools
-        )
-        assert len(tool_calls) == 2
-        assert any(tc["result"] == "10" for tc in tool_calls)
-        assert any(tc["result"] == "13" for tc in tool_calls)
-
-    async def test_async_tool_execution_loops(
-        self, chimeric_cerebras_client: CerebrasClient
-    ) -> None:
-        """Test async tool execution loops."""
-
-        def tool1(x: int) -> int:
-            return x * 3
-
-        chimeric_cerebras_client.tool_manager.register(tool1, "triple")
-
-        mock_response_with_tools = create_mock_chat_completion_response("Using tools")
-        mock_response_with_tools.choices[0].message.tool_calls = [
-            create_mock_tool_call("call_1", "triple", '{"x": 4}'),
-        ]
-
-        mock_final_response = create_mock_chat_completion_response("Done")
-
-        call_count = 0
-
-        async def mock_create(*args, **kwargs):
-            nonlocal call_count
-            call_count += 1
-            return mock_final_response
-
-        chimeric_cerebras_client.async_client.chat = SimpleNamespace(
-            completions=SimpleNamespace(create=mock_create)
-        )
-
-        messages = [{"role": "user", "content": "Calculate"}]
-        tools = [{"type": "function", "function": {"name": "triple"}}]
-
-        _, tool_calls = await chimeric_cerebras_client._handle_async_tool_execution_loop(
-            mock_response_with_tools, messages.copy(), "model", tools
-        )
-        assert len(tool_calls) == 1
-        assert tool_calls[0]["result"] == "12"
-
-    async def test_async_chat_completion_with_tools_non_streaming(
-        self, chimeric_cerebras_client: CerebrasClient
-    ) -> None:
-        """Test async chat completion with tools and stream=False to hit missing coverage."""
-
-        def tool_multiply(x: int) -> int:
-            return x * 5
-
-        chimeric_cerebras_client.tool_manager.register(tool_multiply, "multiply_by_five")
-
-        # Mock response with tool calls
-        mock_response_with_tools = create_mock_chat_completion_response("I'll use the tool")
-        mock_response_with_tools.choices[0].message.tool_calls = [
-            create_mock_tool_call("call_1", "multiply_by_five", '{"x": 6}'),
-        ]
-
-        # Mock final response after tool execution
-        mock_final_response = create_mock_chat_completion_response("Result is 30")
-
-        call_count = 0
-
-        async def mock_create(*args, **kwargs):
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
-                return mock_response_with_tools
-            return mock_final_response
-
-        chimeric_cerebras_client.async_client.chat = SimpleNamespace(
-            completions=SimpleNamespace(create=mock_create)
-        )
-
-        messages = [{"role": "user", "content": "Multiply 6 by 5"}]
-        tools = [{"type": "function", "function": {"name": "multiply_by_five"}}]
-
-        # This should hit lines 781-784 in the async implementation
-        result = await chimeric_cerebras_client._achat_completion_impl(
-            messages=messages,
-            model="llama-3.1-8b",
-            stream=False,
-            tools=tools,
-        )
-
-        assert result.common.content == "Result is 30"
-        assert call_count == 2  # Should have made 2 calls
-
-    def test_streaming_with_tools(self, chimeric_cerebras_client: CerebrasClient) -> None:
-        """Test streaming with tool execution."""
-
-        def mock_tool(param1: str) -> str:
-            return f"Result: {param1}"
-
-        chimeric_cerebras_client.tool_manager.register(mock_tool, "stream_tool")
-
-        # Initial chunks with tool call
-        mock_tool_call = create_mock_tool_call("call_123", "stream_tool", '{"param1": "test"}')
-        initial_chunks = [
-            create_mock_chat_chunk_response("Using", tool_calls=[mock_tool_call]),
-            create_mock_chat_chunk_response(" tool", finish_reason="tool_calls"),
-        ]
-
-        # Continuation chunks
-        continuation_chunks = [
-            create_mock_chat_chunk_response("Tool result"),
-            create_mock_chat_chunk_response(" processed", finish_reason="stop"),
-        ]
-
-        call_count = 0
-
-        def mock_stream(*args, **kwargs):
-            nonlocal call_count
-            call_count += 1
-            yield from (initial_chunks if call_count == 1 else continuation_chunks)
-
-        chimeric_cerebras_client.client.chat = SimpleNamespace(
-            completions=SimpleNamespace(create=mock_stream)
-        )
-
-        messages = [{"role": "user", "content": "Test"}]
-        tools = [{"type": "function", "function": {"name": "stream_tool"}}]
-
-        # Test sync streaming
-        result = chimeric_cerebras_client._chat_completion_impl(
-            messages=messages, model="model", stream=True, tools=tools
-        )
-        chunks = list(result)
-        assert len(chunks) >= 2
-        assert call_count == 2
-
-        # Test without tools
-        call_count = 0
-
-        def continuation_generator():
-            yield from continuation_chunks
-
-        result = chimeric_cerebras_client._process_stream_with_tools_sync(
-            continuation_generator(),
-            messages,
-            "model",
-            None,
-        )
-        chunks = list(result)
-        assert len(chunks) == 2
-
-    def test_streaming_without_tools(self, chimeric_cerebras_client: CerebrasClient) -> None:
-        """Test streaming without tools"""
-        mock_chunks = [
-            create_mock_chat_chunk_response("Hello"),
-            create_mock_chat_chunk_response(" World", finish_reason="stop"),
-        ]
-
-        def mock_stream(*args, **kwargs):
-            yield from mock_chunks
-
-        chimeric_cerebras_client.client.chat = SimpleNamespace(
-            completions=SimpleNamespace(create=mock_stream)
-        )
-
-        # Test sync streaming without tools
-        result = chimeric_cerebras_client._chat_completion_impl(
-            messages=[{"role": "user", "content": "Hello"}],
-            model="llama-3.1-8b",
-            stream=True,
-            tools=None,
-        )
-        chunks = list(result)
-        assert len(chunks) == 2
-        assert chunks[1].common.content == "Hello World"
-
-    async def test_async_streaming_without_tools(
-        self, chimeric_cerebras_client: CerebrasClient
-    ) -> None:
-        """Test async streaming without tools"""
-        mock_chunks = [
-            create_mock_chat_chunk_response("Async"),
-            create_mock_chat_chunk_response(" Hello", finish_reason="stop"),
-        ]
-
-        async def mock_stream():
-            for chunk in mock_chunks:
-                yield chunk
-
-        async def mock_create(*args, **kwargs):
-            return mock_stream()
-
-        chimeric_cerebras_client.async_client.chat = SimpleNamespace(
-            completions=SimpleNamespace(create=mock_create)
-        )
-
-        # Test async streaming without tools
-        result = await chimeric_cerebras_client._achat_completion_impl(
-            messages=[{"role": "user", "content": "Hello"}],
-            model="llama-3.1-8b",
-            stream=True,
-            tools=None,
-        )
-        chunks = []
-        # When stream=True, result should be an AsyncGenerator
-        if isinstance(result, AsyncGenerator):
-            async for chunk in result:
-                chunks.append(chunk)
-        else:
-            # Handle case where result is not async iterable
-            chunks = [result]
-        assert len(chunks) == 2
-        assert chunks[1].common.content == "Async Hello"
-
-    async def test_async_streaming_with_tools_full_loop(
-        self, chimeric_cerebras_client: CerebrasClient
-    ) -> None:
-        """Test async streaming with tools to ensure full loop coverage."""
-
-        def mock_tool(param1: str) -> str:
-            return f"Processed: {param1}"
-
-        chimeric_cerebras_client.tool_manager.register(mock_tool, "async_full_tool")
-
-        mock_tool_call = create_mock_tool_call("call_123", "async_full_tool", '{"param1": "test"}')
-
-        initial_chunks = [
-            create_mock_chat_chunk_response("I'll use", tool_calls=[mock_tool_call]),
-            create_mock_chat_chunk_response(" the tool", finish_reason="tool_calls"),
-        ]
-
-        continuation_chunks = [
-            create_mock_chat_chunk_response("The tool"),
-            create_mock_chat_chunk_response(" returned"),
-            create_mock_chat_chunk_response(" the result:", finish_reason=None),
-            create_mock_chat_chunk_response(" Processed: test", finish_reason="stop"),
-        ]
-
-        call_count = 0
-
-        async def mock_create(*args, **kwargs):
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
-
-                async def first_stream():
-                    for chunk in initial_chunks:
-                        yield chunk
-
-                return first_stream()
-
-            async def continuation_stream():
-                for chunk in continuation_chunks:
-                    yield chunk
-
-            return continuation_stream()
-
-        chimeric_cerebras_client.async_client.chat = SimpleNamespace(
-            completions=SimpleNamespace(create=mock_create)
-        )
-
-        messages = [{"role": "user", "content": "Process this"}]
-        tools = [
-            {"type": "function", "function": {"name": "async_full_tool", "description": "test"}}
-        ]
-
-        result = await chimeric_cerebras_client._achat_completion_impl(
-            messages=messages,
-            model="llama-3.1-8b",
-            stream=True,
-            tools=tools,
-        )
-
-        chunks = []
-        # When stream=True, result should be an AsyncGenerator
-        if isinstance(result, AsyncGenerator):
-            async for chunk in result:
-                chunks.append(chunk)
-        else:
-            # Handle case where result is not async iterable
-            chunks = [result]
-
-        assert len(chunks) >= 6 if isinstance(result, AsyncGenerator) else len(chunks) >= 1
-        assert call_count == 2
-
-        content_parts = [chunk.common.delta for chunk in chunks if chunk.common.delta]
-        assert "I'll use" in content_parts
-        assert " the tool" in content_parts
-        assert "The tool" in content_parts
-        assert " Processed: test" in content_parts
-
-        assert chunks[-1].common.finish_reason == "stop"
-
-    async def test_async_streaming_without_tools_full_loop(
-        self, chimeric_cerebras_client: CerebrasClient
-    ) -> None:
-        """Test async streaming without tools to ensure full loop coverage"""
-        mock_chunks = [
-            create_mock_chat_chunk_response("Hello"),
-            create_mock_chat_chunk_response(" async", finish_reason="stop"),
-        ]
-
-        async def mock_stream():
-            for chunk in mock_chunks:
-                yield chunk
-
-        result = chimeric_cerebras_client._process_stream_with_tools_async(
-            mock_stream(),
-            [{"role": "user", "content": "Hi"}],
-            "model",
-            None,
-        )
-
-        chunks = []
-        async for chunk in result:
-            chunks.append(chunk)
-
-        assert len(chunks) == 2
-        assert chunks[1].common.content == "Hello async"
-
-    def test_direct_stream_tool_execution_methods(
-        self, chimeric_cerebras_client: CerebrasClient
-    ) -> None:
-        """Test direct execution of stream tool handling methods."""
-
-        def mock_tool(param1: str) -> str:
-            return f"Direct: {param1}"
-
-        chimeric_cerebras_client.tool_manager.register(mock_tool, "direct_tool")
-
-        mock_tool_call = create_mock_tool_call("call_123", "direct_tool", '{"param1": "test"}')
-
-        continuation_chunks = [
-            create_mock_chat_chunk_response("Final"),
-            create_mock_chat_chunk_response(" result", finish_reason="stop"),
-        ]
-
-        def mock_continuation(*args, **kwargs):
-            yield from continuation_chunks
-
-        chimeric_cerebras_client.client.chat = SimpleNamespace(
-            completions=SimpleNamespace(create=mock_continuation)
-        )
-
-        result = chimeric_cerebras_client._handle_stream_tool_execution_sync(
-            [mock_tool_call], [{"role": "user", "content": "Test"}], "model", None, "Initial"
-        )
-        chunks = list(result)
-        assert len(chunks) >= 1
-
-    async def test_direct_async_stream_tool_execution(
-        self, chimeric_cerebras_client: CerebrasClient
-    ) -> None:
-        """Test direct async stream tool execution method."""
-
-        def mock_tool(param1: str) -> str:
-            return f"Async Direct: {param1}"
-
-        chimeric_cerebras_client.tool_manager.register(mock_tool, "async_direct_tool")
-
-        mock_tool_call = create_mock_tool_call(
-            "call_123", "async_direct_tool", '{"param1": "test"}'
-        )
-
-        continuation_chunks = [
-            create_mock_chat_chunk_response("Async"),
-            create_mock_chat_chunk_response(" final"),
-            create_mock_chat_chunk_response(" result", finish_reason="stop"),
-        ]
-
-        async def mock_continuation(*args, **kwargs):
-            for chunk in continuation_chunks:
-                yield chunk
-
-        chimeric_cerebras_client.async_client.chat = SimpleNamespace(
-            completions=SimpleNamespace(create=AsyncMock(return_value=mock_continuation()))
-        )
-
-        result = chimeric_cerebras_client._handle_stream_tool_execution_async(
-            [mock_tool_call],
-            [{"role": "user", "content": "Test async"}],
-            "model",
-            None,
-            "Initial async",
-        )
-
-        chunks = []
-        async for chunk in result:
-            chunks.append(chunk)
-
-        assert len(chunks) == 3
-        assert chunks[0].common.delta == "Async"
-        assert chunks[1].common.delta == " final"
-        assert chunks[2].common.delta == " result"
-
-    def test_sync_stream_processing_with_tools_and_varied_chunks(
-        self, chimeric_cerebras_client: CerebrasClient
-    ) -> None:
-        """Test synchronous stream processing with tools handles a variety of chunk types."""
-
-        def mock_tool(x: int) -> int:
-            return x * 2
-
-        chimeric_cerebras_client.tool_manager.register(mock_tool, "coverage_tool")
-
-        mock_tool_call = create_mock_tool_call("call_123", "coverage_tool", '{"x": 5}')
-
-        # Create a stream that tests all branches
-        mock_chunks = [
-            # Chunk with no choices (false on first condition)
-            create_mock_chat_chunk_response("", choices=[]),
-            # Chunk with choices but no content (false on second condition)
-            create_mock_chat_chunk_response(
-                "",
-                choices=[
-                    SimpleNamespace(
-                        index=0,
-                        delta=SimpleNamespace(role="assistant", content=None, tool_calls=None),
-                        finish_reason=None,
-                    )
-                ],
-            ),
-            # Chunk with content
-            create_mock_chat_chunk_response("Processing"),
-            # Chunk with tool calls
-            create_mock_chat_chunk_response(" now", tool_calls=[mock_tool_call]),
-            # Final chunk with finish reason and tool calls
-            create_mock_chat_chunk_response("", finish_reason="tool_calls", tool_calls=[]),
-        ]
-
-        # Mock the continuation
-        continuation_chunks = [
-            create_mock_chat_chunk_response("Tool executed"),
-            create_mock_chat_chunk_response(" successfully", finish_reason="stop"),
-        ]
-
-        def mock_create(*args, **kwargs):
-            yield from continuation_chunks
-
-        chimeric_cerebras_client.client.chat = SimpleNamespace(
-            completions=SimpleNamespace(create=mock_create)
-        )
-
-        def sync_generator():
-            yield from mock_chunks
-
-        result = chimeric_cerebras_client._process_stream_with_tools_sync(
-            sync_generator(),
-            [{"role": "user", "content": "Test"}],
-            "model",
-            [{"type": "function", "function": {"name": "coverage_tool"}}],
-        )
-
-        chunks = list(result)
-        # Should get chunks from initial stream + continuation
-        assert len(chunks) >= 4
-
-    async def test_async_stream_processing_with_tools_and_varied_chunks(
-        self, chimeric_cerebras_client: CerebrasClient
-    ) -> None:
-        """Test asynchronous stream processing with tools handles a variety of chunk types."""
-
-        def mock_tool(x: int) -> int:
-            return x * 3
-
-        chimeric_cerebras_client.tool_manager.register(mock_tool, "async_coverage_tool")
-
-        mock_tool_call = create_mock_tool_call("call_456", "async_coverage_tool", '{"x": 7}')
-
-        # Create a stream that tests all branches
-        async def mock_stream():
-            # Chunk with no choices (false on first condition)
-            yield create_mock_chat_chunk_response("", choices=[])
-            # Chunk with choices but no content (false on second condition)
-            yield create_mock_chat_chunk_response(
-                "",
-                choices=[
-                    SimpleNamespace(
-                        index=0,
-                        delta=SimpleNamespace(role="assistant", content=None, tool_calls=None),
-                        finish_reason=None,
-                    )
-                ],
+            tool = Tool(name="test_tool", description="Test tool", parameters=params)
+
+            formatted = client._tools_to_provider_format([tool])
+            assert len(formatted) == 1
+            assert formatted[0]["type"] == "function"
+            assert formatted[0]["function"]["name"] == "test_tool"
+            assert formatted[0]["function"]["strict"] is True
+            assert "strict" not in formatted[0]["function"]["parameters"]
+
+    def test_tools_to_provider_format_no_parameters(self):
+        """Test tool format conversion without parameters."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            tool = Tool(name="simple_tool", description="Simple tool")
+            formatted = client._tools_to_provider_format([tool])
+
+            assert len(formatted) == 1
+            assert formatted[0]["function"]["parameters"] == {}
+
+    def test_make_provider_request(self):
+        """Test making provider request."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path) as mock_client:
+            mock_instance = Mock()
+            mock_client.return_value = mock_instance
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            messages = [{"role": "user", "content": "Hello"}]
+            tools = [{"type": "function", "function": {"name": "test"}}]
+
+            client._make_provider_request(
+                messages=messages,
+                model="llama3.1-8b",
+                stream=False,
+                tools=tools,
+                temperature=0.7
             )
-            # Chunk with content
-            yield create_mock_chat_chunk_response("Async processing")
-            # Chunk with tool calls
-            yield create_mock_chat_chunk_response(" in progress", tool_calls=[mock_tool_call])
-            # Final chunk with finish reason and tool calls
-            yield create_mock_chat_chunk_response("", finish_reason="tool_calls", tool_calls=[])
 
-        # Mock the continuation
-        async def mock_continuation():
-            yield create_mock_chat_chunk_response("Async tool")
-            yield create_mock_chat_chunk_response(" completed", finish_reason="stop")
+            mock_instance.chat.completions.create.assert_called_once_with(
+                model="llama3.1-8b",
+                messages=messages,
+                stream=False,
+                tools=tools,
+                temperature=0.7
+            )
 
-        async def mock_create(*args, **kwargs):
-            return mock_continuation()
+    def test_process_stream_events_all_types(self):
+        """Test processing all types of stream events."""
+        tool_manager = self.create_tool_manager()
 
-        chimeric_cerebras_client.async_client.chat = SimpleNamespace(
-            completions=SimpleNamespace(create=mock_create)
-        )
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            processor = StreamProcessor()
 
-        result = chimeric_cerebras_client._process_stream_with_tools_async(
-            mock_stream(),
-            [{"role": "user", "content": "Test async"}],
-            "model",
-            [{"type": "function", "function": {"name": "async_coverage_tool"}}],
-        )
+            chunks = []
+            for event in self.sample_stream_events:
+                chunk = client._process_provider_stream_event(event, processor)
+                if chunk:
+                    chunks.append(chunk)
 
-        chunks = []
-        async for chunk in result:
-            chunks.append(chunk)
+            # Should get text chunk and completion chunk
+            assert len(chunks) == 2
+            assert chunks[0].common.delta == "Hello"
+            assert chunks[1].common.finish_reason == "stop"
 
-        # Should get chunks from initial stream + continuation
-        assert len(chunks) >= 4
+    def test_process_stream_event_no_choices(self):
+        """Test processing stream event with no choices."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            processor = StreamProcessor()
+
+            # Event with no choices
+            event = Mock()
+            event.choices = []
+
+            chunk = client._process_provider_stream_event(event, processor)
+            assert chunk is None
+
+    def test_process_stream_event_no_content(self):
+        """Test processing stream event with no content."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            processor = StreamProcessor()
+
+            # Event with content = None
+            event = Mock()
+            event.choices = [Mock()]
+            event.choices[0].delta = Mock()
+            event.choices[0].delta.content = None
+            event.choices[0].delta.tool_calls = None
+            event.choices[0].finish_reason = None
+
+            chunk = client._process_provider_stream_event(event, processor)
+            assert chunk is None
+
+    def test_process_stream_event_tool_call_no_id(self):
+        """Test processing tool call event without id."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            processor = StreamProcessor()
+
+            # Tool call without id
+            event = Mock()
+            event.choices = [Mock()]
+            event.choices[0].delta = Mock()
+            event.choices[0].delta.content = None
+            event.choices[0].delta.tool_calls = [Mock()]
+            event.choices[0].delta.tool_calls[0].id = None
+            event.choices[0].delta.tool_calls[0].index = 5
+            event.choices[0].delta.tool_calls[0].function = Mock()
+            event.choices[0].delta.tool_calls[0].function.name = "test_tool"
+            event.choices[0].delta.tool_calls[0].function.arguments = None
+            event.choices[0].finish_reason = None
+
+            chunk = client._process_provider_stream_event(event, processor)
+            assert chunk is None
+            # Should use index-based id
+            assert "tool_call_5" in processor.state.tool_calls
+
+    def test_process_stream_event_tool_call_no_function(self):
+        """Test processing tool call event without function."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            processor = StreamProcessor()
+
+            # Tool call without function
+            event = Mock()
+            event.choices = [Mock()]
+            event.choices[0].delta = Mock()
+            event.choices[0].delta.content = None
+            event.choices[0].delta.tool_calls = [Mock()]
+            event.choices[0].delta.tool_calls[0].id = "call_test"
+            event.choices[0].delta.tool_calls[0].function = None
+            event.choices[0].finish_reason = None
+
+            chunk = client._process_provider_stream_event(event, processor)
+            assert chunk is None
+            # Should not create tool call
+            assert len(processor.state.tool_calls) == 0
+
+    def test_process_stream_event_tool_call_branches(self):
+        """Test tool call processing branch coverage."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            processor = StreamProcessor()
+
+            # Tool call with function but no name
+            event1 = Mock()
+            event1.choices = [Mock()]
+            event1.choices[0].delta = Mock()
+            event1.choices[0].delta.content = None
+            event1.choices[0].delta.tool_calls = [Mock()]
+            event1.choices[0].delta.tool_calls[0].id = "call_no_name"
+            event1.choices[0].delta.tool_calls[0].function = Mock()
+            event1.choices[0].delta.tool_calls[0].function.name = None  # No name
+            event1.choices[0].delta.tool_calls[0].function.arguments = '{"test": true}'
+            event1.choices[0].finish_reason = None
+
+            chunk1 = client._process_provider_stream_event(event1, processor)
+            assert chunk1 is None
+
+            # Tool call with function but no arguments
+            event2 = Mock()
+            event2.choices = [Mock()]
+            event2.choices[0].delta = Mock()
+            event2.choices[0].delta.content = None
+            event2.choices[0].delta.tool_calls = [Mock()]
+            event2.choices[0].delta.tool_calls[0].id = "call_no_args"
+            event2.choices[0].delta.tool_calls[0].function = Mock()
+            event2.choices[0].delta.tool_calls[0].function.name = "test_tool"
+            event2.choices[0].delta.tool_calls[0].function.arguments = None  # No arguments
+            event2.choices[0].finish_reason = None
+
+            chunk2 = client._process_provider_stream_event(event2, processor)
+            assert chunk2 is None
+
+    def test_extract_usage_from_response(self):
+        """Test extracting usage from response."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            response = self.sample_response
+            usage = client._extract_usage_from_response(response)
+
+            assert usage.prompt_tokens == 10
+            assert usage.completion_tokens == 20
+            assert usage.total_tokens == 30
+
+    def test_extract_usage_no_usage(self):
+        """Test extracting usage when none exists."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            response = Mock()
+            response.usage = None
+
+            usage = client._extract_usage_from_response(response)
+            assert usage.prompt_tokens == 0
+            assert usage.completion_tokens == 0
+            assert usage.total_tokens == 0
+
+    def test_extract_usage_partial_none_values(self):
+        """Test extracting usage with None values."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            response = Mock()
+            response.usage = Mock()
+            response.usage.prompt_tokens = None
+            response.usage.completion_tokens = 15
+            response.usage.total_tokens = None
+
+            usage = client._extract_usage_from_response(response)
+            assert usage.prompt_tokens == 0
+            assert usage.completion_tokens == 15
+            assert usage.total_tokens == 0
+
+    def test_extract_content_from_response(self):
+        """Test extracting content from response."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            response = self.sample_response
+            content = client._extract_content_from_response(response)
+            assert content == "Hello from Cerebras"
+
+    def test_extract_content_no_choices(self):
+        """Test extracting content when no choices exist."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            response = Mock()
+            response.choices = []
+
+            content = client._extract_content_from_response(response)
+            assert content == ""
+
+    def test_extract_content_no_message(self):
+        """Test extracting content when no message exists."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            response = Mock()
+            response.choices = [Mock()]
+            response.choices[0].message = None
+
+            content = client._extract_content_from_response(response)
+            assert content == ""
+
+    def test_extract_content_no_content(self):
+        """Test extracting content when content is None."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            response = Mock()
+            response.choices = [Mock()]
+            response.choices[0].message = Mock()
+            response.choices[0].message.content = None
+
+            content = client._extract_content_from_response(response)
+            assert content == ""
+
+    def test_extract_tool_calls_from_response(self):
+        """Test extracting tool calls from response."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            response = Mock()
+            response.choices = [Mock()]
+            response.choices[0].message = Mock()
+
+            # Mock tool call
+            tool_call = Mock()
+            tool_call.id = "call_123"
+            tool_call.function = Mock()
+            tool_call.function.name = "test_tool"
+            tool_call.function.arguments = '{"x": 10}'
+
+            response.choices[0].message.tool_calls = [tool_call]
+
+            tool_calls = client._extract_tool_calls_from_response(response)
+            assert len(tool_calls) == 1
+            assert tool_calls[0].call_id == "call_123"
+            assert tool_calls[0].name == "test_tool"
+            assert tool_calls[0].arguments == '{"x": 10}'
+
+    def test_extract_tool_calls_no_choices(self):
+        """Test extracting tool calls when no choices exist."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            response = Mock()
+            response.choices = []
+
+            tool_calls = client._extract_tool_calls_from_response(response)
+            assert tool_calls is None
+
+    def test_extract_tool_calls_no_tool_calls(self):
+        """Test extracting tool calls when none exist."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            response = Mock()
+            response.choices = [Mock()]
+            response.choices[0].message = Mock()
+            response.choices[0].message.tool_calls = None
+
+            tool_calls = client._extract_tool_calls_from_response(response)
+            assert tool_calls is None
+
+    def test_update_messages_with_tool_calls(self):
+        """Test updating messages with tool calls."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            messages = [{"role": "user", "content": "Hello"}]
+            assistant_response = Mock()
+            tool_calls = [ToolCall(call_id="call_123", name="test_tool", arguments='{"x": 10}')]
+            tool_results = [ToolExecutionResult(
+                call_id="call_123",
+                name="test_tool",
+                arguments='{"x": 10}',
+                result="Result: 10"
+            )]
+
+            updated = client._update_messages_with_tool_calls(
+                messages, assistant_response, tool_calls, tool_results
+            )
+
+            assert len(updated) == 3  # Original + assistant + tool result
+            assert updated[1]["role"] == "assistant"
+            assert updated[1]["tool_calls"][0]["id"] == "call_123"
+            assert updated[2]["role"] == "tool"
+            assert updated[2]["tool_call_id"] == "call_123"
+            assert updated[2]["content"] == "Result: 10"
+
+    def test_update_messages_with_tool_error(self):
+        """Test updating messages with tool error."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            messages = []
+            assistant_response = Mock()
+            tool_calls = [ToolCall(call_id="call_error", name="error_tool", arguments='{"x": 5}')]
+            tool_results = [ToolExecutionResult(
+                call_id="call_error",
+                name="error_tool",
+                arguments='{"x": 5}',
+                error="Tool failed",
+                is_error=True
+            )]
+
+            updated = client._update_messages_with_tool_calls(
+                messages, assistant_response, tool_calls, tool_results
+            )
+
+            # Check error formatting in tool result content
+            tool_result_content = updated[-1]["content"]
+            assert "Error: Tool failed" in tool_result_content
+
+
+class TestCerebrasAsyncClient(BaseProviderTestSuite):
+    """Test suite for Cerebras async client."""
+
+    client_class = CerebrasAsyncClient
+    provider_name = "Cerebras"
+    mock_async_client_path = "chimeric.providers.cerebras.client.AsyncCerebras"
+
+    @property
+    def sample_response(self):
+        """Create a sample Cerebras response."""
+        mock_response = Mock()
+        mock_response.choices = [Mock()]
+        mock_response.choices[0].message = Mock()
+        mock_response.choices[0].message.content = "Hello from async Cerebras"
+        mock_response.choices[0].message.tool_calls = None
+        mock_response.usage = Mock()
+        mock_response.usage.prompt_tokens = 15
+        mock_response.usage.completion_tokens = 25
+        mock_response.usage.total_tokens = 40
+        return mock_response
+
+    @property
+    def sample_stream_events(self):
+        """Create sample Cerebras stream events."""
+        events = []
+
+        # Text content event
+        text_event = Mock()
+        text_event.choices = [Mock()]
+        text_event.choices[0].delta = Mock()
+        text_event.choices[0].delta.content = "Async hello"
+        text_event.choices[0].delta.tool_calls = None
+        text_event.choices[0].finish_reason = None
+        events.append(text_event)
+
+        # Completion event
+        completion_event = Mock()
+        completion_event.choices = [Mock()]
+        completion_event.choices[0].delta = Mock()
+        completion_event.choices[0].delta.content = None
+        completion_event.choices[0].delta.tool_calls = None
+        completion_event.choices[0].finish_reason = "stop"
+        events.append(completion_event)
+
+        return events
+
+    async def test_async_client_initialization(self):
+        """Test async client initialization."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            assert client._provider_name == "Cerebras"
+            assert client.api_key == "test-key"
+
+    async def test_async_capabilities(self):
+        """Test async client capabilities."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            capabilities = client._get_capabilities()
+            assert isinstance(capabilities, Capability)
+            assert capabilities.streaming is True
+            assert capabilities.tools is True
+
+    async def test_async_list_models(self):
+        """Test async model listing."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path) as mock_client:
+            mock_instance = Mock()
+            mock_client.return_value = mock_instance
+
+            # Mock async models response
+            mock_model = Mock()
+            mock_model.id = "llama3.1-8b-async"
+            mock_model.owned_by = "cerebras"
+            mock_model.created = 1234567899
+
+            mock_response = Mock()
+            mock_response.data = [mock_model]
+            
+            # Create async mock for the list method
+            async def async_list():
+                return mock_response
+            
+            mock_instance.models.list = async_list
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            models = await client._list_models_impl()
+
+            assert len(models) == 1
+            assert models[0].id == "llama3.1-8b-async"
+            assert models[0].owned_by == "cerebras"
+
+    async def test_async_make_request(self):
+        """Test async provider request."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path) as mock_client:
+            mock_instance = Mock()
+            mock_client.return_value = mock_instance
+
+            # Create async mock for the create method
+            async def async_create(**kwargs):
+                return Mock()
+            
+            mock_instance.chat.completions.create = async_create
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            messages = [{"role": "user", "content": "Async hello"}]
+            result = await client._make_async_provider_request(
+                messages=messages,
+                model="llama3.1-8b",
+                stream=True,
+                temperature=0.5
+            )
+
+            # Verify the result is returned
+            assert result is not None
+
+    async def test_async_stream_processing(self):
+        """Test async stream processing."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            processor = StreamProcessor()
+
+            chunks = []
+            for event in self.sample_stream_events:
+                chunk = client._process_provider_stream_event(event, processor)
+                if chunk:
+                    chunks.append(chunk)
+
+            assert len(chunks) == 2
+            assert chunks[0].common.delta == "Async hello"
+            assert chunks[1].common.finish_reason == "stop"
+
+    async def test_async_messages_formatting(self):
+        """Test async message formatting."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            messages = [ChimericMessage(role="user", content="Async test")]
+            formatted = client._messages_to_provider_format(messages)
+
+            assert len(formatted) == 1
+            assert formatted[0]["role"] == "user"
+            assert formatted[0]["content"] == "Async test"
+
+    async def test_async_tools_formatting(self):
+        """Test async tools formatting."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            tool = Tool(name="async_tool", description="Async test tool")
+            formatted = client._tools_to_provider_format([tool])
+
+            assert len(formatted) == 1
+            assert formatted[0]["function"]["name"] == "async_tool"
+            assert formatted[0]["function"]["strict"] is True
+
+    async def test_async_usage_extraction(self):
+        """Test async usage extraction."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            response = self.sample_response
+            usage = client._extract_usage_from_response(response)
+
+            assert usage.prompt_tokens == 15
+            assert usage.completion_tokens == 25
+            assert usage.total_tokens == 40
+
+    async def test_async_content_extraction(self):
+        """Test async content extraction."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            response = self.sample_response
+            content = client._extract_content_from_response(response)
+            assert content == "Hello from async Cerebras"
+
+    async def test_async_tool_calls_extraction(self):
+        """Test async tool calls extraction."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            response = Mock()
+            response.choices = [Mock()]
+            response.choices[0].message = Mock()
+
+            # Mock async tool call
+            tool_call = Mock()
+            tool_call.id = "async_call_456"
+            tool_call.function = Mock()
+            tool_call.function.name = "async_test_tool"
+            tool_call.function.arguments = '{"x": 20}'
+
+            response.choices[0].message.tool_calls = [tool_call]
+
+            tool_calls = client._extract_tool_calls_from_response(response)
+            assert len(tool_calls) == 1
+            assert tool_calls[0].call_id == "async_call_456"
+            assert tool_calls[0].name == "async_test_tool"
+
+    async def test_async_update_messages(self):
+        """Test async message updates with tool calls."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            messages = [{"role": "user", "content": "Async test"}]
+            assistant_response = Mock()
+            tool_calls = [ToolCall(call_id="async_call", name="async_tool", arguments='{"x": 30}')]
+            tool_results = [ToolExecutionResult(
+                call_id="async_call",
+                name="async_tool",
+                arguments='{"x": 30}',
+                result="Async result: 30"
+            )]
+
+            updated = client._update_messages_with_tool_calls(
+                messages, assistant_response, tool_calls, tool_results
+            )
+
+            assert len(updated) == 3
+            assert updated[1]["role"] == "assistant"
+            assert updated[2]["role"] == "tool"
+            assert updated[2]["content"] == "Async result: 30"
+
+    async def test_async_comprehensive_edge_cases(self):
+        """Test comprehensive edge cases for async client."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            # Test usage extraction with no usage
+            response_no_usage = Mock()
+            response_no_usage.usage = None
+            usage = client._extract_usage_from_response(response_no_usage)
+            assert usage.prompt_tokens == 0
+
+            # Test content extraction edge cases
+            response_no_choices = Mock()
+            response_no_choices.choices = []
+            content = client._extract_content_from_response(response_no_choices)
+            assert content == ""
+
+            # Test tool calls extraction edge cases
+            tool_calls = client._extract_tool_calls_from_response(response_no_choices)
+            assert tool_calls is None
+
+    async def test_async_stream_tool_processing(self):
+        """Test async stream tool call processing."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            processor = StreamProcessor()
+
+            # Tool call event with multiple conditions
+            tool_event = Mock()
+            tool_event.choices = [Mock()]
+            tool_event.choices[0].delta = Mock()
+            tool_event.choices[0].delta.content = None
+            tool_event.choices[0].delta.tool_calls = [Mock()]
+            tool_event.choices[0].delta.tool_calls[0].id = "async_tool_call"
+            tool_event.choices[0].delta.tool_calls[0].function = Mock()
+            tool_event.choices[0].delta.tool_calls[0].function.name = "async_tool"
+            tool_event.choices[0].delta.tool_calls[0].function.arguments = '{"test": true}'
+            tool_event.choices[0].finish_reason = None
+
+            # Process tool event
+            chunk = client._process_provider_stream_event(tool_event, processor)
+            assert chunk is None
+
+            # Completion event with tool call completion
+            completion_event = Mock()
+            completion_event.choices = [Mock()]
+            completion_event.choices[0].delta = Mock()
+            completion_event.choices[0].delta.content = None
+            completion_event.choices[0].delta.tool_calls = None
+            completion_event.choices[0].finish_reason = "tool_calls"
+
+            chunk = client._process_provider_stream_event(completion_event, processor)
+            assert chunk is not None
+            assert chunk.common.finish_reason == "tool_calls"
+
+            # Verify tool call was processed
+            tool_calls = processor.get_completed_tool_calls()
+            assert len(tool_calls) == 1
+            assert tool_calls[0].name == "async_tool"
+
+    async def test_async_stream_tool_call_branches(self):
+        """Test async tool call processing branch coverage."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_async_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            processor = StreamProcessor()
+
+            # Tool call with function but no name
+            event1 = Mock()
+            event1.choices = [Mock()]
+            event1.choices[0].delta = Mock()
+            event1.choices[0].delta.content = None
+            event1.choices[0].delta.tool_calls = [Mock()]
+            event1.choices[0].delta.tool_calls[0].id = "async_call_no_name"
+            event1.choices[0].delta.tool_calls[0].function = Mock()
+            event1.choices[0].delta.tool_calls[0].function.name = None  # No name
+            event1.choices[0].delta.tool_calls[0].function.arguments = '{"async": true}'
+            event1.choices[0].finish_reason = None
+
+            chunk1 = client._process_provider_stream_event(event1, processor)
+            assert chunk1 is None
+
+            # Test Case 2: Tool call with function but no arguments
+            event2 = Mock()
+            event2.choices = [Mock()]
+            event2.choices[0].delta = Mock()
+            event2.choices[0].delta.content = None
+            event2.choices[0].delta.tool_calls = [Mock()]
+            event2.choices[0].delta.tool_calls[0].id = "async_call_no_args"
+            event2.choices[0].delta.tool_calls[0].function = Mock()
+            event2.choices[0].delta.tool_calls[0].function.name = "async_test_tool"
+            event2.choices[0].delta.tool_calls[0].function.arguments = None  # No arguments
+            event2.choices[0].finish_reason = None
+
+            chunk2 = client._process_provider_stream_event(event2, processor)
+            assert chunk2 is None
