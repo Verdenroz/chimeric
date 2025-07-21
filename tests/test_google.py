@@ -1,868 +1,1278 @@
-from datetime import datetime
-import os
-from typing import Any, cast
-from unittest.mock import ANY, AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, patch
 
 from google.genai.types import GenerateContentResponse, GenerateContentResponseUsageMetadata
-import pytest
-
-from chimeric import Chimeric
-from chimeric.exceptions import ProviderError
-import chimeric.providers.google.client as client_module
-from chimeric.providers.google.client import GoogleClient
-from chimeric.types import (
-    ChimericCompletionResponse,
-    ChimericFileUploadResponse,
-    ChimericStreamChunk,
-    CompletionResponse,
-    FileUploadResponse,
-    ModelSummary,
-    StreamChunk,
-    Tool,
-    Usage,
-)
-
-
-@pytest.fixture(scope="module")
-def chimeric_google(google_env):
-    """Create a Chimeric instance configured for Google."""
-    return Chimeric(
-        google_api_key=os.environ.get("GOOGLE_API_KEY", "test_key"),
-    )
-
-
-@pytest.fixture(scope="module")
-def chimeric_google_client(chimeric_google) -> GoogleClient:
-    """Get the GoogleClient from the Chimeric wrapper."""
-    return cast("GoogleClient", chimeric_google.get_provider_client("google"))
-
-
-@pytest.fixture(autouse=True)
-def patch_google_imports(monkeypatch: pytest.MonkeyPatch):
-    """Replace ``google.genai`` symbols with light-weight stubs.
-
-    The real SDK classes are heavy and make network calls.  A minimal stub is
-    more than enough for unit-testing the *client* integration logic.
-    """
-
-    class _StubModels:
-        """Holds "models" RPC methods that we monkey-patch per-test."""
-
-        def list(self):  # pragma: no cover - replaced on demand
-            raise NotImplementedError
-
-    class _StubFiles:
-        """Holds the ``files.upload`` RPC that we monkey-patch per-test."""
-
-        pass
-
-    class _ClientStub:
-        """Minimal sync ``google.genai.Client`` replacement."""
-
-        def __init__(self, api_key: str, **_: Any) -> None:
-            self.api_key = api_key
-            self.models = _StubModels()
-            self.files = _StubFiles()
-            # Async surface mimics ``client.aio`` on the real SDK.
-            self.aio = Mock(models=_StubModels())
-
-    class _AsyncClientStub(_ClientStub):
-        """Placeholder for *type* checks - never directly instantiated."""
-
-        pass
-
-    # Patch the names used inside :pymod:`client_module`.
-    monkeypatch.setattr(client_module, "Client", _ClientStub, False)
-    monkeypatch.setattr(client_module, "AsyncClient", _AsyncClientStub, False)
-    # ``GenerateContentConfig`` is only used for storing attrs, so a Mock works fine.
-    monkeypatch.setattr(client_module, "GenerateContentConfig", Mock, False)
-
-
-class MockGoogleResponse:
-    """Mock implementation of a Google GenerateContentResponse."""
-
-    def __init__(self) -> None:
-        self.text = "Hello from Gemini"
-        self.usage_metadata = Mock(spec=GenerateContentResponseUsageMetadata)
-        self.usage_metadata.prompt_token_count = 10
-        self.usage_metadata.candidates_token_count = 5
-        self.usage_metadata.total_token_count = 15
-        self.usage_metadata.cache_tokens_details = "cache_info"
-        self.model = "gemini-pro"
-
-    def model_dump(self) -> dict[str, Any]:
-        return {"model": self.model, "dumped": True}
-
-
-class MockGoogleFile:
-    """Mock implementation of a Google File object."""
-
-    def __init__(self) -> None:
-        self.name = "file-123456"
-        self.display_name = "test_file.txt"
-        self.size_bytes = 1024
-        self.create_time = datetime.now()
-
-    @staticmethod
-    def model_dump() -> dict[str, Any]:
-        return {"file_metadata": True}
-
-
-# noinspection PyUnusedLocal
-class TestGoogleClient:
-    """Tests for the GoogleClient class."""
-
-    def test_capabilities_and_supports(self, chimeric_google_client):
-        """Test that client reports correct capabilities and support methods."""
-        client = chimeric_google_client
-        caps = client.capabilities
-
-        # Verify expected capabilities - Google should support multimodal, streaming, tools, and files, but not agents
-        assert caps.multimodal
-        assert caps.streaming
-        assert caps.tools
-        assert not caps.agents
-        assert caps.files
-
-        # Verify the supports_* API methods return correct values
-        assert client.supports_multimodal()
-        assert client.supports_streaming()
-        assert client.supports_tools()
-        assert not client.supports_agents()
-        assert client.supports_files()
-
-    def test_list_models_maps_to_summary(self, chimeric_google_client, monkeypatch):
-        """Test that list_models correctly maps raw model data to ModelSummary objects."""
-        client = chimeric_google_client
-
-        # Create mock models
-        model1 = Mock()
-        model1.name = "gemini-pro"
-        model1.display_name = "Gemini Pro"
-        model1.description = "Text model"
-
-        model2 = Mock()
-        model2.name = "gemini-vision"
-        model2.display_name = "Gemini Vision"
-        model2.description = "Vision model"
-
-        model3 = Mock()
-        model3.name = None
-        model3.display_name = None
-        model3.description = "Missing fields"
-
-        # Mock the list method to return our test models
-        def mock_list():
-            return [model1, model2, model3]
-
-        monkeypatch.setattr(client._client.models, "list", mock_list)
-        models = client.list_models()
-
-        # Verify models are returned and properly mapped
-        assert len(models) == 3
-
-        # Check first model has correct fields
-        assert isinstance(models[0], ModelSummary)
-        assert models[0].id == "gemini-pro"
-        assert models[0].name == "Gemini Pro"
-        assert models[0].description == "Text model"
-
-        # Check the second model
-        assert models[1].id == "gemini-vision"
-        assert models[1].name == "Gemini Vision"
-
-        # Check third model uses defaults for missing fields
-        assert models[2].id == "unknown"
-        assert models[2].name == "Unknown Model"
-
-    def test_process_stream_event(self, chimeric_google_client):
-        """Test _process_stream_event correctly processes stream events."""
-        # Test with event that has text
-        event_with_text = Mock()
-        event_with_text.text = "hello"
-        event_with_text.model_dump = lambda: {"type": "text"}
-
-        acc, chunk = GoogleClient._process_stream_event(event_with_text, "")
-
-        assert acc == "hello"
-        assert isinstance(chunk, ChimericStreamChunk)
-        assert chunk.common.content == "hello"
-        assert chunk.common.delta == "hello"
-        assert chunk.common.metadata == {"type": "text"}
-
-        # Test with initially accumulated content
-        acc, chunk = GoogleClient._process_stream_event(event_with_text, "initial ")
-
-        assert acc == "initial hello"
-        assert chunk.common.content == "initial hello"
-        assert chunk.common.delta == "hello"
-
-        # Test with event that has no text attribute - Mock should return None when a text doesn't exist
-        event_no_text = Mock(spec=[])  # Empty spec means no attributes
-        event_no_text.model_dump = lambda: {"type": "other"}
-
-        acc, chunk = GoogleClient._process_stream_event(event_no_text, "prev ")
-
-        assert acc == "prev "  # Should remain unchanged
-        assert chunk.common.content == "prev "
-        assert chunk.common.delta == ""  # Empty delta when no text
-
-    def test_stream(self, chimeric_google_client, monkeypatch):
-        """Test that _stream correctly processes and yields stream chunks."""
-        client = chimeric_google_client
-
-        # Create test events
-        event1 = Mock(spec=GenerateContentResponse)
-        event1.text = "Hello"
-        event1.model_dump = lambda: {"part": 1}
-
-        event2 = Mock(spec=GenerateContentResponse)
-        event2.text = " world"
-        event2.model_dump = lambda: {"part": 2}
-
-        event3 = Mock(spec=GenerateContentResponse)
-        event3.text = "!"
-        event3.model_dump = lambda: {"part": 3}
-
-        # Mock _process_stream_event to track calls - note this is an instance method, not static
-        original_process = GoogleClient._process_stream_event
-        process_calls = []
-
-        def mock_process(event, acc):
-            process_calls.append((event, acc))
-            return original_process(event, acc)
-
-        monkeypatch.setattr(GoogleClient, "_process_stream_event", staticmethod(mock_process))
-
-        # Process events through _stream
-        chunks = list(client._stream([event1, event2, event3]))
-
-        # Verify correct processing sequence
-        assert len(chunks) == 3
-        assert chunks[0].common.content == "Hello"
-        assert chunks[1].common.content == "Hello world"
-        assert chunks[2].common.content == "Hello world!"
-
-        # Verify each event was processed with correct accumulated text
-        assert len(process_calls) == 3
-        assert process_calls[0][0] is event1
-        assert process_calls[0][1] == ""  # Initial accumulator is empty
-        assert process_calls[1][0] is event2
-        assert process_calls[1][1] == "Hello"  # Second event gets text from first
-        assert process_calls[2][0] is event3
-        assert process_calls[2][1] == "Hello world"  # Third event gets combined text
-
-    async def test_astream(self, chimeric_google_client, monkeypatch):
-        """Test that _astream correctly processes async stream chunks."""
-        client = chimeric_google_client
-
-        # Create test events
-        event1 = Mock()
-        event1.text = "Async"
-        event1.model_dump = lambda: {"async": 1}
-
-        event2 = Mock()
-        event2.text = " response"
-        event2.model_dump = lambda: {"async": 2}
-
-        # Create async generator
-        async def async_event_generator():
-            yield event1
-            yield event2
-
-        # Process events through _astream
-        chunks = []
-        async for chunk in client._astream(async_event_generator()):
-            chunks.append(chunk)
-
-        # Verify correct processing
-        assert len(chunks) == 2
-        assert chunks[0].common.content == "Async"
-        assert chunks[0].common.delta == "Async"
-        assert chunks[0].common.metadata == {"async": 1}
-
-        assert chunks[1].common.content == "Async response"
-        assert chunks[1].common.delta == " response"
-        assert chunks[1].common.metadata == {"async": 2}
-
-    def test_encode_tools(self, chimeric_google_client):
-        """Test that _encode_tools correctly formats tools for the Google API."""
-        client = chimeric_google_client
-
-        # Test with None tools
-        assert client._encode_tools(None) is None
-
-        # Create a tool with a function
-        def weather_function(location: str):
-            return f"Weather in {location}"
-
-        tool_with_function = Tool(
-            name="get_weather",
-            description="Get weather information",
-            function=weather_function,
-        )
-
-        # Create a tool-like object (not an instance of Tool)
-        tool_like_obj = {"name": "calculator", "description": "Calculate things"}
-
-        # Test mixed tools
-        encoded_tools = client._encode_tools([tool_with_function, tool_like_obj])
-
-        # Verify encoding
-        assert isinstance(encoded_tools, list)
-        assert len(encoded_tools) == 2
-        assert encoded_tools[0] == weather_function  # Should extract function
-        assert encoded_tools[1] == tool_like_obj  # Should keep as-is
-
-    def test_convert_usage_metadata_with_data(self, chimeric_google_client):
-        """Test _convert_usage_metadata with full metadata."""
-        # Create mock usage metadata with all fields
-        usage_meta = Mock(spec=GenerateContentResponseUsageMetadata)
-        usage_meta.prompt_token_count = 15
-        usage_meta.candidates_token_count = 25
-        usage_meta.total_token_count = 40
-        usage_meta.cache_tokens_details = {"cache": "info"}
-        usage_meta.cached_content_token_count = 5
-        usage_meta.candidates_tokens_details = {"candidates": "details"}
-        usage_meta.prompt_tokens_details = {"prompt": "details"}
-        usage_meta.thoughts_token_count = 10
-        usage_meta.tool_use_prompt_token_count = 5
-        usage_meta.tool_use_prompt_tokens_details = {"tool": "details"}
-        usage_meta.traffic_type = "INTERACTIVE"
-
-        # Convert metadata
-        usage = GoogleClient._convert_usage_metadata(usage_meta)
-
-        # Verify core fields
-        assert usage.prompt_tokens == 15
-        assert usage.completion_tokens == 25
-        assert usage.total_tokens == 40
-
-        # Verify Google-specific fields were added
-        assert usage.cache_tokens_details == {"cache": "info"}
-        assert usage.cached_content_token_count == 5
-        assert usage.candidates_tokens_details == {"candidates": "details"}
-        assert usage.prompt_tokens_details == {"prompt": "details"}
-        assert usage.thoughts_token_count == 10
-        assert usage.tool_use_prompt_token_count == 5
-        assert usage.tool_use_prompt_tokens_details == {"tool": "details"}
-        assert usage.traffic_type == "INTERACTIVE"
-
-    def test_convert_usage_metadata_edge_cases(self, chimeric_google_client):
-        """Test _convert_usage_metadata edge cases like None values and missing fields."""
-        # Test with None metadata
+
+from chimeric.providers.google import GoogleAsyncClient, GoogleClient
+from chimeric.types import Capability, Message, Tool, ToolParameters
+from chimeric.utils import StreamProcessor
+from conftest import BaseProviderTestSuite
+
+
+class TestGoogleClient(BaseProviderTestSuite):
+    """Test suite for Google sync client."""
+
+    client_class = GoogleClient
+    provider_name = "Google"
+    mock_client_path = "chimeric.providers.google.client.Client"
+
+    @property
+    def sample_response(self):
+        """Create a sample Google response."""
+        mock_response = Mock(spec=GenerateContentResponse)
+        mock_response.text = "Hello from Google"
+        mock_response.usage_metadata = Mock(spec=GenerateContentResponseUsageMetadata)
+        mock_response.usage_metadata.prompt_token_count = 10
+        mock_response.usage_metadata.candidates_token_count = 20
+        mock_response.usage_metadata.total_token_count = 30
+        return mock_response
+
+    @property
+    def sample_stream_events(self):
+        """Create sample Google stream events."""
+        events = []
+
+        # Text delta event
+        text_event = Mock()
+        text_event.text = "Hello from stream"
+        events.append(text_event)
+
+        # Empty text event
+        empty_event = Mock()
+        empty_event.text = ""
+        events.append(empty_event)
+
+        # Event with no text attribute
+        no_text_event = Mock(spec=[])
+        events.append(no_text_event)
+
+        return events
+
+    # ===== Initialization Tests =====
+
+    def test_client_initialization_success(self):
+        """Test successful client initialization with all parameters."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path) as mock_client:
+            client = self.client_class(
+                api_key="test-key", tool_manager=tool_manager, custom_param="value"
+            )
+
+            assert client.api_key == "test-key"
+            assert client.tool_manager == tool_manager
+            assert client._provider_name == self.provider_name
+            mock_client.assert_called_once_with(api_key="test-key", custom_param="value")
+
+    def test_client_initialization_minimal(self):
+        """Test client initialization with minimal parameters."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            assert client.api_key == "test-key"
+
+    # ===== Capability Tests =====
+
+    def test_capabilities(self):
+        """Test provider capabilities."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            capabilities = client._get_capabilities()
+
+            assert isinstance(capabilities, Capability)
+            assert capabilities.streaming is True
+            assert capabilities.tools is True
+
+    # ===== Model Listing Tests =====
+
+    def test_list_models_success(self):
+        """Test successful model listing."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path) as mock_client_class:
+            mock_client = Mock()
+            mock_client_class.return_value = mock_client
+
+            # Mock model list response - create object with proper attributes
+            mock_model = type(
+                "MockModel",
+                (),
+                {"name": "gemini-pro", "display_name": "Gemini Pro", "description": "Test model"},
+            )()
+            mock_client.models.list.return_value = [mock_model]
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            models = client._list_models_impl()
+
+            assert len(models) == 1
+            assert models[0].id == "gemini-pro"
+            assert models[0].name == "Gemini Pro"
+            assert models[0].description == "Test model"
+
+    def test_list_models_missing_attributes(self):
+        """Test model listing with missing attributes."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path) as mock_client_class:
+            mock_client = Mock()
+            mock_client_class.return_value = mock_client
+
+            # Mock model with missing attributes
+            mock_model = type(
+                "MockModel",
+                (),
+                {"name": None, "display_name": None, "description": "Test description"},
+            )()
+            mock_client.models.list.return_value = [mock_model]
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            models = client._list_models_impl()
+
+            assert len(models) == 1
+            assert models[0].id == "unknown"
+            assert models[0].name == "Unknown Model"
+
+    # ===== Message Formatting Tests =====
+
+    def test_messages_to_provider_format_regular(self):
+        """Test formatting regular messages."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            with (
+                patch("chimeric.providers.google.client.Part") as mock_part,
+                patch("chimeric.providers.google.client.Content") as mock_content,
+            ):
+                mock_part.from_text.return_value = Mock()
+                mock_content.return_value = Mock()
+
+                client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+                messages = [
+                    Message(role="user", content="Hello"),
+                    Message(role="assistant", content="Hi there"),
+                ]
+
+                formatted = client._messages_to_provider_format(messages)
+
+                assert len(formatted) == 2
+                # Verify Content was called with correct roles
+                calls = mock_content.call_args_list
+                assert calls[0][1]["role"] == "user"
+                assert calls[1][1]["role"] == "model"  # assistant -> model for Google
+
+    def test_messages_to_provider_format_empty_content(self):
+        """Test handling of messages with empty content."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            messages = [
+                Message(role="user", content=""),
+                Message(role="user", content="Valid content"),
+                Message(role="user", content="   "),  # whitespace only
+            ]
+
+            with (
+                patch("chimeric.providers.google.client.Part") as mock_part,
+                patch("chimeric.providers.google.client.Content") as mock_content,
+            ):
+                mock_part.from_text.return_value = Mock()
+                mock_content.return_value = Mock()
+
+                result = client._messages_to_provider_format(messages)
+
+                # Only the valid content message should generate a Content object
+                assert mock_content.call_count == 1
+
+    def test_messages_to_provider_format_list_content(self):
+        """Test conversion of messages with list content."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            messages = [
+                Message(role="user", content=["Hello", "world"]),
+                Message(role="user", content=["", "valid", "   "]),  # mixed empty/valid
+            ]
+
+            with (
+                patch("chimeric.providers.google.client.Part") as mock_part,
+                patch("chimeric.providers.google.client.Content") as mock_content,
+            ):
+                mock_part.from_text.return_value = Mock()
+                mock_content.return_value = Mock()
+
+                result = client._messages_to_provider_format(messages)
+
+                # Should create 2 Content objects
+                assert mock_content.call_count == 2
+                # First message should have 2 parts, second should have 1 part
+                first_call_parts = mock_content.call_args_list[0][1]["parts"]
+                second_call_parts = mock_content.call_args_list[1][1]["parts"]
+                assert len(first_call_parts) == 2
+                assert len(second_call_parts) == 1
+
+    def test_messages_to_provider_format_none_content(self):
+        """Test message formatting with None content."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            # Create a message-like object with None content (bypass validation)
+            class MockMessage:
+                def __init__(self, role, content):
+                    self.role = role
+                    self.content = content
+
+            message = MockMessage(role="user", content=None)
+            result = client._messages_to_provider_format([message])
+
+            assert result == []
+
+    def test_messages_to_provider_format_dict_content(self):
+        """Test conversion of messages with dict content in list."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            messages = [
+                Message(role="user", content=[{"type": "text", "text": "Hello"}, {"data": "test"}]),
+                Message(
+                    role="user", content=[{"empty": ""}, {"valid": "content"}]
+                ),  # mixed empty/valid dict
+            ]
+
+            with (
+                patch("chimeric.providers.google.client.Part") as mock_part,
+                patch("chimeric.providers.google.client.Content") as mock_content,
+            ):
+                mock_part.from_text.return_value = Mock()
+                mock_content.return_value = Mock()
+
+                result = client._messages_to_provider_format(messages)
+
+                # Should create 2 Content objects
+                assert mock_content.call_count == 2
+                # First message should have 2 parts (both dicts converted to strings)
+                # Second message should have 2 parts (both strings converted, dict {"empty": ""} becomes non-empty string)
+                first_call_parts = mock_content.call_args_list[0][1]["parts"]
+                second_call_parts = mock_content.call_args_list[1][1]["parts"]
+                assert len(first_call_parts) == 2
+                assert (
+                    len(second_call_parts) == 2
+                )  # Both dicts convert to non-empty strings when str() is applied
+
+    def test_messages_to_provider_format_dict_empty_after_strip(self):
+        """Test dict content that becomes empty after string conversion and strip."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            # Create a custom dict that converts to an empty string when str() is called
+            class EmptyStringDict(dict):
+                def __str__(self):
+                    return ""
+
+            messages = [
+                Message(role="user", content=[EmptyStringDict(), "valid content"])
+            ]
+
+            with (
+                patch("chimeric.providers.google.client.Part") as mock_part,
+                patch("chimeric.providers.google.client.Content") as mock_content,
+            ):
+                mock_part.from_text.return_value = Mock()
+                mock_content.return_value = Mock()
+
+                result = client._messages_to_provider_format(messages)
+
+                # Should create 1 Content object with 1 part (only valid content)
+                assert mock_content.call_count == 1
+                first_call_parts = mock_content.call_args_list[0][1]["parts"]
+                assert len(first_call_parts) == 1
+
+    def test_messages_to_provider_format_content_all_empty_parts(self):
+        """Test content list that results in no parts being created."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            # Create a custom dict that converts to empty string
+            class EmptyStringDict(dict):
+                def __str__(self):
+                    return ""
+
+            messages = [
+                Message(role="user", content=[EmptyStringDict(), "", "   "])  # All items become empty after strip
+            ]
+
+            with (
+                patch("chimeric.providers.google.client.Part") as mock_part,
+                patch("chimeric.providers.google.client.Content") as mock_content,
+            ):
+                mock_part.from_text.return_value = Mock()
+                mock_content.return_value = Mock()
+
+                result = client._messages_to_provider_format(messages)
+
+                # No Content objects should be created since no parts
+                assert mock_content.call_count == 0
+                assert result == []
+
+    def test_messages_to_provider_format_non_string_non_list_content(self):
+        """Test message with content that is neither string nor list."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            # Create message-like object with non-string, non-list content
+            class MockMessage:
+                def __init__(self, role, content):
+                    self.role = role
+                    self.content = content
+
+            messages = [MockMessage(role="user", content=42)]  # Integer content
+
+            result = client._messages_to_provider_format(messages)
+
+            # Should return empty list since content doesn't match str or list
+            assert result == []
+
+    # ===== Tool Formatting Tests =====
+
+    def test_tools_to_provider_format_with_tools(self):
+        """Test conversion of tools to Google format."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            def mock_func():
+                pass
+
+            tools = [
+                Tool(
+                    name="test", description="test", parameters=ToolParameters(), function=mock_func
+                )
+            ]
+
+            result = client._tools_to_provider_format(tools)
+
+            assert result is not None
+            assert len(result) == 1
+            assert result[0] == mock_func
+
+    def test_tools_to_provider_format_empty_list(self):
+        """Test handling of empty tools list."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            result = client._tools_to_provider_format([])
+
+            assert result is None
+
+    def test_tools_to_provider_format_none(self):
+        """Test handling of None tools."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            result = client._tools_to_provider_format(None)
+
+            assert result is None
+
+    # ===== API Request Tests =====
+
+    def test_make_provider_request_no_tools(self):
+        """Test making API request without tools."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path) as mock_client_class:
+            mock_client = Mock()
+            mock_client_class.return_value = mock_client
+            sample_response = self.sample_response
+            mock_client.models.generate_content.return_value = sample_response
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            response = client._make_provider_request(
+                messages=[{"role": "user", "content": "Hello"}], model="gemini-pro", stream=False
+            )
+
+            assert response is sample_response
+            mock_client.models.generate_content.assert_called_once()
+
+    def test_make_provider_request_with_tools_streaming(self):
+        """Test making streaming API request with tools."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path) as mock_client_class:
+            mock_client = Mock()
+            mock_client_class.return_value = mock_client
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            tools = [lambda: None]  # Mock function
+
+            client._make_provider_request(
+                messages=[{"role": "user", "content": "Hello"}],
+                model="gemini-pro",
+                stream=True,
+                tools=tools,
+                temperature=0.7,
+            )
+
+            mock_client.models.generate_content_stream.assert_called_once()
+
+    # ===== Stream Processing Tests =====
+
+    def test_process_stream_events_all_types(self):
+        """Test processing all types of stream events."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            processor = StreamProcessor()
+
+            chunks = []
+            for event in self.sample_stream_events:
+                chunk = client._process_provider_stream_event(event, processor)
+                if chunk:
+                    chunks.append(chunk)
+
+            # Should have one text chunk
+            assert len(chunks) == 1
+            assert chunks[0].common.delta == "Hello from stream"
+
+    def test_process_stream_event_no_text(self):
+        """Test processing stream event without text content."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            processor = StreamProcessor()
+
+            event = Mock()
+            event.text = ""
+
+            result = client._process_provider_stream_event(event, processor)
+
+            assert result is None
+
+    def test_process_stream_event_no_text_attribute(self):
+        """Test processing stream event missing text attribute."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            processor = StreamProcessor()
+
+            event = Mock(spec=[])  # No text attribute
+
+            result = client._process_provider_stream_event(event, processor)
+
+            assert result is None
+
+    # ===== Response Extraction Tests =====
+
+    def test_extract_usage_from_response(self):
+        """Test extracting usage information."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            usage = client._extract_usage_from_response(self.sample_response)
+
+            assert usage.prompt_tokens == 10
+            assert usage.completion_tokens == 20
+            assert usage.total_tokens == 30
+
+    def test_extract_usage_from_response_with_all_fields(self):
+        """Test extracting usage information with all Google-specific fields."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            # Create response with complete usage metadata
+            response = Mock(spec=GenerateContentResponse)
+            response.usage_metadata = Mock(spec=GenerateContentResponseUsageMetadata)
+            response.usage_metadata.prompt_token_count = 50
+            response.usage_metadata.candidates_token_count = 30
+            response.usage_metadata.total_token_count = 80
+            # Add all Google-specific fields
+            response.usage_metadata.cache_tokens_details = {"some": "data"}
+            response.usage_metadata.cached_content_token_count = 5
+            response.usage_metadata.candidates_tokens_details = {"details": "info"}
+            response.usage_metadata.prompt_tokens_details = {"prompt": "details"}
+            response.usage_metadata.thoughts_token_count = 3
+            response.usage_metadata.tool_use_prompt_token_count = 7
+            response.usage_metadata.tool_use_prompt_tokens_details = {"tool": "usage"}
+            response.usage_metadata.traffic_type = "premium"
+
+            usage = client._extract_usage_from_response(response)
+
+            assert usage.prompt_tokens == 50
+            assert usage.completion_tokens == 30
+            assert usage.total_tokens == 80
+            # Check extra fields
+            assert usage.cached_content_token_count == 5
+            assert usage.thoughts_token_count == 3
+
+    def test_extract_content_from_response(self):
+        """Test extracting content from Google response."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            content = client._extract_content_from_response(self.sample_response)
+
+            assert content == "Hello from Google"
+
+    def test_extract_content_from_response_no_text(self):
+        """Test content extraction when response has no text."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            response = Mock()
+            response.text = None
+
+            content = client._extract_content_from_response(response)
+
+            assert content == ""
+
+    def test_extract_tool_calls_from_response(self):
+        """Test extraction of tool calls from Google response."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            tool_calls = client._extract_tool_calls_from_response(self.sample_response)
+
+            # Google client currently returns None for tool calls (placeholder implementation)
+            assert tool_calls is None
+
+    # ===== Usage Metadata Conversion Tests =====
+
+    def test_convert_usage_metadata_complete(self):
+        """Test conversion of complete usage metadata."""
+        usage_metadata = Mock()
+        usage_metadata.prompt_token_count = 100
+        usage_metadata.candidates_token_count = 50
+        usage_metadata.total_token_count = 150
+        usage_metadata.cached_content_token_count = 10
+        usage_metadata.thoughts_token_count = 5
+
+        usage = GoogleClient._convert_usage_metadata(usage_metadata)
+
+        assert usage.prompt_tokens == 100
+        assert usage.completion_tokens == 50
+        assert usage.total_tokens == 150
+        assert hasattr(usage, "cached_content_token_count")
+        assert usage.cached_content_token_count == 10
+
+    def test_convert_usage_metadata_none(self):
+        """Test conversion of None usage metadata."""
         usage = GoogleClient._convert_usage_metadata(None)
-        assert isinstance(usage, Usage)
+
         assert usage.prompt_tokens == 0
         assert usage.completion_tokens == 0
         assert usage.total_tokens == 0
 
-        # Test with missing required fields
-        sparse_meta = Mock(spec=GenerateContentResponseUsageMetadata)
-        usage = GoogleClient._convert_usage_metadata(sparse_meta)
-        assert usage.prompt_tokens == 0
-        assert usage.completion_tokens == 0
-        assert usage.total_tokens == 0
+    def test_convert_usage_metadata_missing_fields(self):
+        """Test conversion with missing metadata fields."""
+        usage_metadata = Mock()
+        usage_metadata.prompt_token_count = 100
+        # Simulate missing attributes by raising AttributeError
+        del usage_metadata.candidates_token_count
+        del usage_metadata.total_token_count
 
-        # Test with zero/None values that should use fallbacks
-        zero_meta = Mock(spec=GenerateContentResponseUsageMetadata)
-        zero_meta.prompt_token_count = 0
-        zero_meta.candidates_token_count = None
-        zero_meta.total_token_count = 0
-        usage = GoogleClient._convert_usage_metadata(zero_meta)
-        assert usage.prompt_tokens == 0
-        assert usage.completion_tokens == 0
-        assert usage.total_tokens == 0
+        usage = GoogleClient._convert_usage_metadata(usage_metadata)
 
-        # Test when total is missing, but individual counts exist
-        partial_meta = Mock(spec=GenerateContentResponseUsageMetadata)
-        partial_meta.prompt_token_count = 10
-        partial_meta.candidates_token_count = 15
-        partial_meta.total_token_count = None
-        usage = GoogleClient._convert_usage_metadata(partial_meta)
-        assert usage.prompt_tokens == 10
+        assert usage.prompt_tokens == 100
+        assert usage.completion_tokens == 0
+        assert usage.total_tokens == 100  # Calculated from prompt + completion
+
+    def test_convert_usage_metadata_all_extra_fields(self):
+        """Test conversion with all Google-specific extra fields."""
+        usage_metadata = Mock()
+        usage_metadata.prompt_token_count = 50
+        usage_metadata.candidates_token_count = 30
+        usage_metadata.total_token_count = 80
+        # Add all Google-specific fields
+        usage_metadata.cache_tokens_details = {"some": "data"}
+        usage_metadata.cached_content_token_count = 5
+        usage_metadata.candidates_tokens_details = {"details": "info"}
+        usage_metadata.prompt_tokens_details = {"prompt": "details"}
+        usage_metadata.thoughts_token_count = 3
+        usage_metadata.tool_use_prompt_token_count = 7
+        usage_metadata.tool_use_prompt_tokens_details = {"tool": "usage"}
+        usage_metadata.traffic_type = "premium"
+
+        usage = GoogleClient._convert_usage_metadata(usage_metadata)
+
+        assert usage.prompt_tokens == 50
+        assert usage.completion_tokens == 30
+        assert usage.total_tokens == 80
+        # Check extra fields are added
+        assert hasattr(usage, "cache_tokens_details")
+        assert usage.cache_tokens_details == {"some": "data"}
+        assert usage.cached_content_token_count == 5
+        assert usage.candidates_tokens_details == {"details": "info"}
+        assert usage.prompt_tokens_details == {"prompt": "details"}
+        assert usage.thoughts_token_count == 3
+        assert usage.tool_use_prompt_token_count == 7
+        assert usage.tool_use_prompt_tokens_details == {"tool": "usage"}
+        assert usage.traffic_type == "premium"
+
+    def test_convert_usage_metadata_with_none_values(self):
+        """Test conversion with Google-specific fields that are None (should not be added)."""
+        usage_metadata = Mock()
+        usage_metadata.prompt_token_count = 25
+        usage_metadata.candidates_token_count = 15
+        usage_metadata.total_token_count = 40
+        # Add Google-specific fields with None values (should not be set on usage object)
+        usage_metadata.cache_tokens_details = None
+        usage_metadata.cached_content_token_count = None
+        usage_metadata.candidates_tokens_details = None
+        usage_metadata.prompt_tokens_details = None
+        usage_metadata.thoughts_token_count = None
+        usage_metadata.tool_use_prompt_token_count = None
+        usage_metadata.tool_use_prompt_tokens_details = None
+        usage_metadata.traffic_type = None
+
+        usage = GoogleClient._convert_usage_metadata(usage_metadata)
+
+        assert usage.prompt_tokens == 25
         assert usage.completion_tokens == 15
-        assert usage.total_tokens == 25  # Should compute sum
-
-    def test_chat_completion_impl_non_streaming(self, chimeric_google_client, monkeypatch):
-        """Test _chat_completion_impl with non-streaming response."""
-        client = chimeric_google_client
-
-        # Create a mock response
-        mock_response = MockGoogleResponse()
-
-        # Mock the client's generate_content method
-        mock_generate = Mock(return_value=mock_response)
-        client._client.models.generate_content = mock_generate
-
-        # Test the implementation
-        result = client._chat_completion_impl(
-            messages=["Hello, Gemini!"],
-            model="gemini-pro",
-            temperature=0.7,
-        )
-
-        # Verify the result
-        assert isinstance(result, ChimericCompletionResponse)
-        assert result.native is mock_response
-        assert isinstance(result.common, CompletionResponse)
-        assert result.common.content == "Hello from Gemini"
-        assert result.common.model == "gemini-pro"
-        assert result.common.usage.prompt_tokens == 10
-        assert result.common.usage.completion_tokens == 5
-        assert result.common.usage.total_tokens == 15
-        assert result.common.metadata == {"model": "gemini-pro", "dumped": True}
-
-        # Verify the client was called correctly - use ANY for the config object
-        # since it's created internally, and we can't predict its exact Mock ID
-        mock_generate.assert_called_once_with(
-            model="gemini-pro",
-            contents=["Hello, Gemini!"],
-            config=ANY,
-        )
-
-    def test_chat_completion_impl_streaming(self, chimeric_google_client, monkeypatch):
-        """Test _chat_completion_impl with streaming response."""
-        client = chimeric_google_client
-
-        # Create a mock stream response
-        mock_stream_list = [Mock(), Mock()]
-
-        # Mock the client's generate_content_stream method
-        mock_stream_generate = Mock(return_value=mock_stream_list)
-        client._client.models.generate_content_stream = mock_stream_generate
-
-        stream_input = None
-
-        def mock_stream_method(stream_obj):
-            nonlocal stream_input
-            stream_input = stream_obj
-            yield ChimericStreamChunk(
-                native=Mock(),
-                common=StreamChunk(content="Streaming", delta="Streaming", metadata={}),
-            )
-            yield ChimericStreamChunk(
-                native=Mock(),
-                common=StreamChunk(content="Streaming response", delta=" response", metadata={}),
-            )
-
-        monkeypatch.setattr(client, "_stream", mock_stream_method)
-
-        # Test the implementation
-        result = client._chat_completion_impl(
-            messages=["Stream request"],
-            model="gemini-pro",
-            stream=True,
-        )
-
-        # Verify the result is a generator
-        assert hasattr(result, "__iter__")
-
-        # Collect all chunks
-        chunks = list(result)
-        assert len(chunks) == 2
-        assert all(isinstance(chunk, ChimericStreamChunk) for chunk in chunks)
-        assert chunks[0].common.content == "Streaming"
-        assert chunks[1].common.content == "Streaming response"
-
-        # Verify the client was called correctly
-        mock_stream_generate.assert_called_once_with(
-            model="gemini-pro",
-            contents=["Stream request"],
-            config=ANY,
-        )
-
-        # Verify _stream was called with correct stream object
-        # stream_input should be the mock_stream_list returned by generate_content_stream
-        assert stream_input is mock_stream_list
-
-    def test_chat_completion_impl_with_tools(self, chimeric_google_client, monkeypatch):
-        """Test *chat*completion_impl with tools parameter."""
-        client = chimeric_google_client
-
-        # Create mock response
-        mock_response = MockGoogleResponse()
-        mock_response.text = "Function called"
-
-        # Mock generate_content
-        mock_generate = Mock(return_value=mock_response)
-        client._client.models.generate_content = mock_generate
-
-        # Test function that should be passed
-        def get_time():
-            return "10:30 AM"
-
-        # Create a tool with the function
-        tool = Tool(name="get_time", description="Get current time", function=get_time)
-
-        # Make sure encode_tools works as expected
-        original_encode = client._encode_tools
-        encode_called_with = None
-
-        def mock_encode_tools(tools):
-            nonlocal encode_called_with
-            encode_called_with = tools
-            return original_encode(tools)
-
-        monkeypatch.setattr(client, "_encode_tools", mock_encode_tools)
-
-        # Since we're calling _chat_completion_impl directly, we need to manually process tools
-        # like the chat_completion method would do
-        processed_tools = client._process_tools(auto_tool=False, tools=[tool])
-
-        # Test with processed tools
-        result = client._chat_completion_impl(
-            messages=["What time is it?"],
-            model="gemini-pro",
-            tools=processed_tools,
-            temperature=0.5,
-        )
-
-        # Verify encode_tools was called with the tool during _process_tools
-        assert encode_called_with == [tool]
-
-        # Verify the result
-        assert isinstance(result, ChimericCompletionResponse)
-        assert result.common.content == "Function called"
-        assert result.common.model == "gemini-pro"
-
-        # Verify the API was called correctly
-        mock_generate.assert_called_once()
-        call_args = mock_generate.call_args
-        assert call_args[1]["model"] == "gemini-pro"
-        assert call_args[1]["contents"] == ["What time is it?"]
-
-        # Verify tools were passed to the config
-        config = call_args[1]["config"]
-        assert config.tools is not None
-        assert len(config.tools) == 1
-        # The tool should be the function itself (after encoding)
-        assert config.tools[0] == get_time
-
-    def test_chat_completion_impl_tools_type_check(self, chimeric_google_client):
-        """Test _chat_completion_impl raises TypeError for non-list tools."""
-        client = chimeric_google_client
-
-        # Test with non-list tools
-        with pytest.raises(TypeError) as excinfo:
-            client._chat_completion_impl(
-                messages=["Test"],
-                model="gemini-pro",
-                tools={"name": "not_a_list"},  # Dictionary instead of a list
-            )
-
-        assert "Google expects tools to be a list" in str(excinfo.value)
-
-    async def test_achat_completion_impl_non_streaming(self, chimeric_google_client, monkeypatch):
-        """Test _achat_completion_impl with non-streaming response."""
-        client = chimeric_google_client
-
-        # Create mock async response
-        mock_response = MockGoogleResponse()
-        mock_response.text = "Async hello"
-
-        # Mock the async client's generate_content method
-        mock_async_generate = AsyncMock(return_value=mock_response)
-        client._async_client.models.generate_content = mock_async_generate
-
-        # Test the async implementation
-        result = await client._achat_completion_impl(
-            messages=["Async hello"],
-            model="gemini-pro",
-            temperature=0.5,
-        )
-
-        # Verify the result
-        assert isinstance(result, ChimericCompletionResponse)
-        assert result.native is mock_response
-        assert result.common.content == "Async hello"
-        assert result.common.model == "gemini-pro"
-
-        # Verify the async client was called correctly
-        mock_async_generate.assert_called_once_with(
-            model="gemini-pro",
-            contents=["Async hello"],
-            config=ANY,
-        )
-
-    async def test_achat_completion_impl_streaming(self, chimeric_google_client, monkeypatch):
-        """Test _achat_completion_impl with streaming response."""
-        client = chimeric_google_client
-
-        # Create mock async stream
-        mock_stream = Mock()
-
-        # Mock the async client's generate_content_stream method
-        mock_async_stream_generate = AsyncMock(return_value=mock_stream)
-        client._async_client.models.generate_content_stream = mock_async_stream_generate
-
-        # Mock _astream method to return an async generator
-        astream_input = None
-
-        async def mock_astream(stream_obj):
-            nonlocal astream_input
-            astream_input = stream_obj
-            yield ChimericStreamChunk(
-                native=Mock(),
-                common=StreamChunk(content="Async", delta="Async", metadata={}),
-            )
-            yield ChimericStreamChunk(
-                native=Mock(),
-                common=StreamChunk(content="Async streaming", delta=" streaming", metadata={}),
-            )
-
-        monkeypatch.setattr(client, "_astream", mock_astream)
-
-        # Test the async implementation
-        result = await client._achat_completion_impl(
-            messages=["Stream test"],
-            model="gemini-pro",
-            stream=True,
-        )
-
-        # Verify the result is an async generator
-        assert hasattr(result, "__aiter__")
-
-        # Collect all chunks
-        chunks = []
-        async for chunk in result:
-            chunks.append(chunk)
-
-        assert len(chunks) == 2
-        assert chunks[0].common.content == "Async"
-        assert chunks[1].common.content == "Async streaming"
-
-        # Verify the async client was called correctly
-        mock_async_stream_generate.assert_called_once_with(
-            model="gemini-pro",
-            contents=["Stream test"],
-            config=ANY,
-        )
-
-        # Verify _astream was called with the correct stream object
-        assert astream_input is mock_stream
-
-    async def test_achat_completion_impl_with_tools(self, chimeric_google_client, monkeypatch):
-        """Test _achat_completion_impl with tools parameter."""
-        client = chimeric_google_client
-
-        # Create mock response
-        mock_response = MockGoogleResponse()
-        mock_response.text = "Async tool response"
-
-        # Mock async generate_content
-        mock_async_generate = AsyncMock(return_value=mock_response)
-        client._async_client.models.generate_content = mock_async_generate
-
-        # Create a tool
-        tool = Tool(name="async_tool", description="Tool for testing")
-
-        def mock_tool_function() -> str:
-            return "Tool function called"
-
-        tool2 = {"name": "dict_tool", "function": mock_tool_function}  # Non-Tool object
-
-        # Test with tools
-        result = await client._achat_completion_impl(
-            messages=["Test async tools"],
-            model="gemini-pro",
-            tools=[tool, tool2],
-        )
-
-        # Verify the result
-        assert isinstance(result, ChimericCompletionResponse)
-        assert result.common.content == "Async tool response"
-
-        # Verify client was called with the correct tools configuration
-        mock_async_generate.assert_called_once()
-        call_args = mock_async_generate.call_args
-        assert len(call_args[1]["config"].tools) == 2
-
-    async def test_achat_completion_impl_tools_type_check(self, chimeric_google_client):
-        """Test _achat_completion_impl raises TypeError for non-list tools."""
-        client = chimeric_google_client
-
-        # Test with non-list tools
-        with pytest.raises(TypeError) as excinfo:
-            await client._achat_completion_impl(
-                messages=["Test"],
-                model="gemini-pro",
-                tools="not_a_list",  # String instead of a list
-            )
-
-        assert "Google expects tools to be a list" in str(excinfo.value)
-
-    def test_upload_file(self, chimeric_google_client, monkeypatch):
-        """Test successful file upload."""
-        client = chimeric_google_client
-
-        # Create a mock file
-        mock_file = MockGoogleFile()
-
-        # Mock the upload method
-        mock_upload = Mock(return_value=mock_file)
-        client._client.files.upload = mock_upload
-
-        # Test the upload
-        result = client._upload_file(path="/path/to/file.txt", mime_type="text/plain")
-
-        # Verify the result
-        assert isinstance(result, ChimericFileUploadResponse)
-        assert result.native is mock_file
-        assert isinstance(result.common, FileUploadResponse)
-        assert result.common.file_id == "file-123456"
-        assert result.common.filename == "test_file.txt"
-        assert result.common.bytes == 1024
-        assert result.common.created_at is not None
-        assert result.common.metadata == {"file_metadata": True}
-
-        # Verify file upload was called with filtered kwargs
-        mock_upload.assert_called_once_with(path="/path/to/file.txt", mime_type="text/plain")
-
-    def test_upload_file_with_missing_fields(self, chimeric_google_client, monkeypatch):
-        """Test file upload with missing metadata fields."""
-        client = chimeric_google_client
-
-        # Create a mock file with missing fields
-        mock_file = Mock()
-        mock_file.name = None
-        mock_file.display_name = None
-        mock_file.size_bytes = None
-        mock_file.create_time = None
-        mock_file.model_dump = lambda: {"sparse": True}
-
-        # Mock the upload method
-        mock_upload = Mock(return_value=mock_file)
-        client._client.files.upload = mock_upload
-
-        # Test the upload
-        result = client._upload_file(path="/path/to/file.txt")
-
-        # Verify the result uses default values for missing fields
-        common = result.common
-        assert common.file_id == "unknown"
-        assert common.filename == "unknown"
-        assert common.bytes == 0
-        assert common.created_at is None
-
-    def test_upload_file_error(self, chimeric_google_client, monkeypatch):
-        """Test file upload error handling."""
-        client = chimeric_google_client
-
-        # Mock upload to raise an error
-        def mock_upload_error(**kwargs):
-            raise ProviderError(client._provider_name)
-
-        client._client.files.upload = mock_upload_error
-
-        # Test the error is properly propagated
-        with pytest.raises(ProviderError):
-            client.upload_file(path="/nonexistent/file.txt")
-
-    def test_chat_completion_counts_errors(self, chimeric_google_client, monkeypatch):
-        """Test that chat_completion properly tracks request and error counts."""
-        client = chimeric_google_client
-
-        # Test successful request path
-        def mock_impl(messages, model, stream=False, tools=None, **kwargs):
-            return "SUCCESS"
-
-        monkeypatch.setattr(client, "_chat_completion_impl", mock_impl)
-        before_req = client.request_count
-        before_err = client.error_count
-
-        # Test successful call
-        out = client.chat_completion("Hi Gemini", "gemini-pro")
-        assert out == "SUCCESS"
-        assert client.request_count == before_req + 1
-        assert client.error_count == before_err
-
-        # Test error handling
-        def mock_error_impl(*args, **kwargs):
-            raise ValueError("Test error")
-
-        monkeypatch.setattr(client, "_chat_completion_impl", mock_error_impl)
-
-        # Should raise the error but also increment error count
-        with pytest.raises(ValueError):
-            client.chat_completion("Error test", "gemini-pro")
-
-        # Verify counts
-        assert client.request_count == before_req + 2
-        assert client.error_count == before_err + 1
-
-    async def test_achat_completion_counts_errors(self, chimeric_google_client, monkeypatch):
-        """Test that achat_completion properly tracks request and error counts."""
-        client = chimeric_google_client
-
-        # Mock successful async implementation
-        async def mock_async_impl(*args, **kwargs):
-            return "ASYNC_SUCCESS"
-
-        monkeypatch.setattr(client, "_achat_completion_impl", mock_async_impl)
-        before_req = client.request_count
-        before_err = client.error_count
-
-        # Test successful async call
-        result = await client.achat_completion("Hi async", "gemini-pro")
-        assert result == "ASYNC_SUCCESS"
-        assert client.request_count == before_req + 1
-        assert client.error_count == before_err
-
-        # Mock error implementation
-        async def mock_async_error(*args, **kwargs):
-            raise RuntimeError("Async error")
-
-        monkeypatch.setattr(client, "_achat_completion_impl", mock_async_error)
-
-        # Test error handling
-        with pytest.raises(RuntimeError):
-            await client.achat_completion("Async error test", "gemini-pro")
-
-        # Verify counts
-        assert client.request_count == before_req + 2
-        assert client.error_count == before_err + 1
-
-    def test_get_model_info(self, chimeric_google_client, monkeypatch):
-        """Test get_model_info for both found and not found models."""
-        client = chimeric_google_client
-
-        # Create mock model summaries
-        models = [
-            ModelSummary(id="gemini-pro", name="Gemini Pro", created_at=0, owned_by="Google"),
-            ModelSummary(id="gemini-vision", name="Gemini Vision", created_at=0, owned_by="Google"),
+        assert usage.total_tokens == 40
+        # None values should not be added as attributes
+        assert not hasattr(usage, "cache_tokens_details")
+        assert not hasattr(usage, "cached_content_token_count")
+        assert not hasattr(usage, "candidates_tokens_details")
+        assert not hasattr(usage, "prompt_tokens_details")
+        assert not hasattr(usage, "thoughts_token_count")
+        assert not hasattr(usage, "tool_use_prompt_token_count")
+        assert not hasattr(usage, "tool_use_prompt_tokens_details")
+        assert not hasattr(usage, "traffic_type")
+
+    def test_convert_usage_metadata_mixed_none_and_valid_values(self):
+        """Test conversion with mix of None and valid Google-specific fields."""
+        usage_metadata = Mock()
+        usage_metadata.prompt_token_count = 30
+        usage_metadata.candidates_token_count = 20
+        usage_metadata.total_token_count = 50
+        # Mix of None and valid values
+        usage_metadata.cache_tokens_details = {"valid": "data"}  # Valid
+        usage_metadata.cached_content_token_count = None  # None
+        usage_metadata.candidates_tokens_details = None  # None
+        usage_metadata.prompt_tokens_details = {"prompt": "details"}  # Valid
+        usage_metadata.thoughts_token_count = 5  # Valid
+        usage_metadata.tool_use_prompt_token_count = None  # None
+        usage_metadata.tool_use_prompt_tokens_details = None  # None
+        usage_metadata.traffic_type = "standard"  # Valid
+
+        usage = GoogleClient._convert_usage_metadata(usage_metadata)
+
+        assert usage.prompt_tokens == 30
+        assert usage.completion_tokens == 20
+        assert usage.total_tokens == 50
+        # Only non-None values should be added as attributes
+        assert hasattr(usage, "cache_tokens_details")
+        assert usage.cache_tokens_details == {"valid": "data"}
+        assert not hasattr(usage, "cached_content_token_count")
+        assert not hasattr(usage, "candidates_tokens_details")
+        assert hasattr(usage, "prompt_tokens_details")
+        assert usage.prompt_tokens_details == {"prompt": "details"}
+        assert hasattr(usage, "thoughts_token_count")
+        assert usage.thoughts_token_count == 5
+        assert not hasattr(usage, "tool_use_prompt_token_count")
+        assert not hasattr(usage, "tool_use_prompt_tokens_details")
+        assert hasattr(usage, "traffic_type")
+        assert usage.traffic_type == "standard"
+
+    def test_convert_usage_metadata_loop_coverage_explicit(self):
+        """Explicit test to ensure the loop continues for None values (covers line 563->562)."""
+        usage_metadata = Mock()
+        usage_metadata.prompt_token_count = 35
+        usage_metadata.candidates_token_count = 25
+        usage_metadata.total_token_count = 60
+        
+        # Explicitly set some fields to None to ensure the loop continues
+        usage_metadata.cache_tokens_details = None
+        usage_metadata.cached_content_token_count = None
+        usage_metadata.candidates_tokens_details = None
+        usage_metadata.prompt_tokens_details = None
+        usage_metadata.thoughts_token_count = None
+        usage_metadata.tool_use_prompt_token_count = None
+        usage_metadata.tool_use_prompt_tokens_details = None
+        usage_metadata.traffic_type = None
+
+        usage = GoogleClient._convert_usage_metadata(usage_metadata)
+
+        # Basic assertions
+        assert usage.prompt_tokens == 35
+        assert usage.completion_tokens == 25
+        assert usage.total_tokens == 60
+        
+        # Verify that all the None values were skipped by checking they don't exist as attributes
+        google_specific_fields = [
+            "cache_tokens_details",
+            "cached_content_token_count", 
+            "candidates_tokens_details",
+            "prompt_tokens_details",
+            "thoughts_token_count",
+            "tool_use_prompt_token_count",
+            "tool_use_prompt_tokens_details",
+            "traffic_type"
         ]
+        
+        for field in google_specific_fields:
+            assert not hasattr(usage, field), f"Field {field} should not exist on usage object"
 
-        # Mock list_models
-        monkeypatch.setattr(client, "list_models", lambda: models)
 
-        # Test finding existing model
-        info = client.get_model_info("gemini-pro")
-        assert isinstance(info, ModelSummary)
-        assert info.id == "gemini-pro"
-        assert info.name == "Gemini Pro"
+class TestGoogleAsyncClient(BaseProviderTestSuite):
+    """Test suite for Google async client."""
 
-        # Test error when model not found
-        with pytest.raises(ValueError) as excinfo:
-            client.get_model_info("nonexistent-model")
+    client_class = GoogleAsyncClient
+    provider_name = "Google"
+    mock_client_path = "chimeric.providers.google.client.Client"
 
-        assert "Model nonexistent-model not found" in str(excinfo.value)
+    @property
+    def sample_response(self):
+        """Create a sample Google response."""
+        mock_response = Mock(spec=GenerateContentResponse)
+        mock_response.text = "Hello from Google async"
+        mock_response.usage_metadata = Mock(spec=GenerateContentResponseUsageMetadata)
+        mock_response.usage_metadata.prompt_token_count = 15
+        mock_response.usage_metadata.candidates_token_count = 25
+        mock_response.usage_metadata.total_token_count = 40
+        return mock_response
 
-    def test_provider_name_and_repr(self, chimeric_google_client):
-        """Test that repr and str methods include provider name and request counts."""
-        client = chimeric_google_client
+    @property
+    def sample_stream_events(self):
+        """Create sample Google stream events."""
+        events = []
 
-        # Check provider name is set
-        assert client._provider_name == "Google"
+        # Text delta event
+        text_event = Mock()
+        text_event.text = "Hello from async stream"
+        events.append(text_event)
 
-        # Test repr
-        repr_str = repr(client)
-        assert "GoogleClient" in repr_str
-        assert "requests=" in repr_str
-        assert "errors=" in repr_str
+        # Empty text event
+        empty_event = Mock()
+        empty_event.text = ""
+        events.append(empty_event)
 
-        # Test str
-        str_output = str(client)
-        assert "GoogleClient" in str_output
-        assert "- Requests:" in str_output
-        assert "- Errors:" in str_output
+        return events
+
+    # ===== Async Initialization Tests =====
+
+    async def test_async_client_initialization(self):
+        """Test async client initialization."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path) as mock_client_class:
+            mock_client_instance = Mock()
+            mock_client_instance.aio = Mock()
+            mock_client_class.return_value = mock_client_instance
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            assert client.api_key == "test-key"
+            assert client._provider_name == self.provider_name
+
+    async def test_async_list_models(self):
+        """Test async model listing."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path) as mock_client_class:
+            mock_client_instance = Mock()
+            mock_async_client = AsyncMock()
+            mock_client_instance.aio = mock_async_client
+            mock_client_class.return_value = mock_client_instance
+
+            # Mock async model list
+            mock_model = type(
+                "MockModel",
+                (),
+                {"name": "gemini-pro", "display_name": "Gemini Pro", "description": "Test model"},
+            )()
+            mock_async_client.models.list.return_value = [mock_model]
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            models = await client._list_models_impl()
+
+            assert len(models) == 1
+            assert models[0].id == "gemini-pro"
+
+    async def test_async_make_request(self):
+        """Test async API request."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path) as mock_client_class:
+            mock_client_instance = Mock()
+            mock_async_client = AsyncMock()
+            mock_client_instance.aio = mock_async_client
+            mock_client_class.return_value = mock_client_instance
+
+            sample_response = self.sample_response
+            mock_async_client.models.generate_content.return_value = sample_response
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            response = await client._make_async_provider_request(
+                messages=[{"role": "user", "content": "Hello"}], model="gemini-pro", stream=False
+            )
+
+            assert response is sample_response
+
+    async def test_async_capabilities(self):
+        """Test async provider capabilities."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path) as mock_client_class:
+            mock_client_instance = Mock()
+            mock_client_instance.aio = Mock()
+            mock_client_class.return_value = mock_client_instance
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            capabilities = client._get_capabilities()
+
+            assert isinstance(capabilities, Capability)
+            assert capabilities.streaming is True
+            assert capabilities.tools is True
+
+    async def test_async_stream_processing(self):
+        """Test async stream processing."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path) as mock_client_class:
+            mock_client_instance = Mock()
+            mock_client_instance.aio = Mock()
+            mock_client_class.return_value = mock_client_instance
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            processor = StreamProcessor()
+
+            chunks = []
+            for event in self.sample_stream_events:
+                chunk = client._process_provider_stream_event(event, processor)
+                if chunk:
+                    chunks.append(chunk)
+
+            assert len(chunks) == 1
+            assert chunks[0].common.delta == "Hello from async stream"
+
+    async def test_async_usage_extraction_no_usage(self):
+        """Test async usage extraction when no usage data."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path) as mock_client_class:
+            mock_client_instance = Mock()
+            mock_client_instance.aio = Mock()
+            mock_client_class.return_value = mock_client_instance
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            response = Mock()
+            response.usage_metadata = None
+            usage = client._extract_usage_from_response(response)
+            assert usage.prompt_tokens == 0
+            assert usage.completion_tokens == 0
+            assert usage.total_tokens == 0
+
+    async def test_async_usage_extraction_with_all_fields(self):
+        """Test async usage extraction with all Google-specific fields."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path) as mock_client_class:
+            mock_client_instance = Mock()
+            mock_client_instance.aio = Mock()
+            mock_client_class.return_value = mock_client_instance
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            # Create response with complete usage metadata
+            response = Mock(spec=GenerateContentResponse)
+            response.usage_metadata = Mock(spec=GenerateContentResponseUsageMetadata)
+            response.usage_metadata.prompt_token_count = 60
+            response.usage_metadata.candidates_token_count = 40
+            response.usage_metadata.total_token_count = 100
+            # Add all Google-specific fields
+            response.usage_metadata.cache_tokens_details = {"async": "data"}
+            response.usage_metadata.cached_content_token_count = 8
+            response.usage_metadata.candidates_tokens_details = {"async_details": "info"}
+            response.usage_metadata.prompt_tokens_details = {"async_prompt": "details"}
+            response.usage_metadata.thoughts_token_count = 4
+            response.usage_metadata.tool_use_prompt_token_count = 9
+            response.usage_metadata.tool_use_prompt_tokens_details = {"async_tool": "usage"}
+            response.usage_metadata.traffic_type = "enterprise"
+
+            usage = client._extract_usage_from_response(response)
+
+            assert usage.prompt_tokens == 60
+            assert usage.completion_tokens == 40
+            assert usage.total_tokens == 100
+            # Check extra fields through actual usage method call
+            assert usage.cached_content_token_count == 8
+            assert usage.thoughts_token_count == 4
+
+    async def test_async_content_extraction_all_none(self):
+        """Test async content extraction when text is None."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path) as mock_client_class:
+            mock_client_instance = Mock()
+            mock_client_instance.aio = Mock()
+            mock_client_class.return_value = mock_client_instance
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            response = Mock()
+            response.text = None
+            content = client._extract_content_from_response(response)
+            assert content == ""
+
+    async def test_async_messages_to_provider_format_with_dict_content(self):
+        """Test async message formatting with dict content in list."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path) as mock_client_class:
+            mock_client_instance = Mock()
+            mock_client_instance.aio = Mock()
+            mock_client_class.return_value = mock_client_instance
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            messages = [
+                Message(role="user", content=[{"type": "text", "text": "Hello"}, {"data": "test"}]),
+                Message(
+                    role="assistant", content="Response"
+                ),  # Test assistant -> model role mapping
+            ]
+
+            with (
+                patch("chimeric.providers.google.client.Part") as mock_part,
+                patch("chimeric.providers.google.client.Content") as mock_content,
+            ):
+                mock_part.from_text.return_value = Mock()
+                mock_content.return_value = Mock()
+
+                result = client._messages_to_provider_format(messages)
+
+                # Should create 2 Content objects
+                assert mock_content.call_count == 2
+                # Check role mapping for assistant -> model
+                calls = mock_content.call_args_list
+                assert calls[0][1]["role"] == "user"
+                assert calls[1][1]["role"] == "model"
+
+    async def test_async_tools_to_provider_format(self):
+        """Test async tools formatting."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path) as mock_client_class:
+            mock_client_instance = Mock()
+            mock_client_instance.aio = Mock()
+            mock_client_class.return_value = mock_client_instance
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            def mock_func():
+                pass
+
+            tools = [
+                Tool(
+                    name="test", description="test", parameters=ToolParameters(), function=mock_func
+                )
+            ]
+
+            result = client._tools_to_provider_format(tools)
+
+            assert result is not None
+            assert len(result) == 1
+            assert result[0] == mock_func
+
+    async def test_async_tools_to_provider_format_empty(self):
+        """Test async tools formatting with empty list."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path) as mock_client_class:
+            mock_client_instance = Mock()
+            mock_client_instance.aio = Mock()
+            mock_client_class.return_value = mock_client_instance
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            result = client._tools_to_provider_format([])
+
+            assert result is None
+
+    async def test_async_make_request_streaming(self):
+        """Test async streaming API request."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path) as mock_client_class:
+            mock_client_instance = Mock()
+            mock_async_client = AsyncMock()
+            mock_client_instance.aio = mock_async_client
+            mock_client_class.return_value = mock_client_instance
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            tools = [lambda: None]  # Mock function
+
+            await client._make_async_provider_request(
+                messages=[{"role": "user", "content": "Hello"}],
+                model="gemini-pro",
+                stream=True,
+                tools=tools,
+                temperature=0.7,
+            )
+
+            mock_async_client.models.generate_content_stream.assert_called_once()
+
+    async def test_async_extract_tool_calls_from_response(self):
+        """Test async extraction of tool calls from Google response."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path) as mock_client_class:
+            mock_client_instance = Mock()
+            mock_client_instance.aio = Mock()
+            mock_client_class.return_value = mock_client_instance
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            tool_calls = client._extract_tool_calls_from_response(self.sample_response)
+
+            # Google async client currently returns None for tool calls (placeholder implementation)
+            assert tool_calls is None
+
+    async def test_async_messages_format_edge_cases(self):
+        """Test async message formatting edge cases to cover missing branches."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path) as mock_client_class:
+            mock_client_instance = Mock()
+            mock_client_instance.aio = Mock()
+            mock_client_class.return_value = mock_client_instance
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            # Create message-like objects for testing
+            class MockMessage:
+                def __init__(self, role, content):
+                    self.role = role
+                    self.content = content
+
+            # Test message with empty content (should be skipped)
+            messages = [MockMessage(role="user", content=None)]
+            result = client._messages_to_provider_format(messages)
+            assert result == []
+
+            # Test message with list content having dict that becomes empty string when stripped
+            messages = [MockMessage(role="user", content=[{"whitespace": "   "}])]
+
+            with (
+                patch("chimeric.providers.google.client.Part") as mock_part,
+                patch("chimeric.providers.google.client.Content") as mock_content,
+            ):
+                mock_part.from_text.return_value = Mock()
+                mock_content.return_value = Mock()
+
+                result = client._messages_to_provider_format(messages)
+
+                # Should create 1 Content object with 1 part (dict becomes non-empty when str() applied)
+                assert mock_content.call_count == 1
+
+            # Test message with list content containing string items
+            messages = [MockMessage(role="user", content=["valid string", "another string"])]
+
+            with (
+                patch("chimeric.providers.google.client.Part") as mock_part,
+                patch("chimeric.providers.google.client.Content") as mock_content,
+            ):
+                mock_part.from_text.return_value = Mock()
+                mock_content.return_value = Mock()
+
+                result = client._messages_to_provider_format(messages)
+
+                # Should create 1 Content object with 2 parts (both strings added)
+                assert mock_content.call_count == 1
+                first_call_parts = mock_content.call_args_list[0][1]["parts"]
+                assert len(first_call_parts) == 2
+
+    async def test_async_messages_to_provider_format_dict_empty_after_strip(self):
+        """Test async dict content that becomes empty after string conversion and strip."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path) as mock_client_class:
+            mock_client_instance = Mock()
+            mock_client_instance.aio = Mock()
+            mock_client_class.return_value = mock_client_instance
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            # Create a custom dict that converts to an empty string when str() is called
+            class EmptyStringDict(dict):
+                def __str__(self):
+                    return ""
+
+            messages = [
+                Message(role="user", content=[EmptyStringDict(), "valid content"])
+            ]
+
+            with (
+                patch("chimeric.providers.google.client.Part") as mock_part,
+                patch("chimeric.providers.google.client.Content") as mock_content,
+            ):
+                mock_part.from_text.return_value = Mock()
+                mock_content.return_value = Mock()
+
+                result = client._messages_to_provider_format(messages)
+
+                # Should create 1 Content object with 1 part (only valid content)
+                assert mock_content.call_count == 1
+                first_call_parts = mock_content.call_args_list[0][1]["parts"]
+                assert len(first_call_parts) == 1
+
+    async def test_async_messages_to_provider_format_content_all_empty_parts(self):
+        """Test async content list that results in no parts being created."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path) as mock_client_class:
+            mock_client_instance = Mock()
+            mock_client_instance.aio = Mock()
+            mock_client_class.return_value = mock_client_instance
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            # Create a custom dict that converts to empty string
+            class EmptyStringDict(dict):
+                def __str__(self):
+                    return ""
+
+            messages = [
+                Message(role="user", content=[EmptyStringDict(), "", "   "])  # All items become empty after strip
+            ]
+
+            with (
+                patch("chimeric.providers.google.client.Part") as mock_part,
+                patch("chimeric.providers.google.client.Content") as mock_content,
+            ):
+                mock_part.from_text.return_value = Mock()
+                mock_content.return_value = Mock()
+
+                result = client._messages_to_provider_format(messages)
+
+                # No Content objects should be created since no parts
+                assert mock_content.call_count == 0
+                assert result == []
+
+    async def test_async_messages_to_provider_format_non_string_non_list_content(self):
+        """Test async message with content that is neither string nor list."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path) as mock_client_class:
+            mock_client_instance = Mock()
+            mock_client_instance.aio = Mock()
+            mock_client_class.return_value = mock_client_instance
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            # Create message-like object with non-string, non-list content
+            class MockMessage:
+                def __init__(self, role, content):
+                    self.role = role
+                    self.content = content
+
+            messages = [MockMessage(role="user", content=42)]  # Integer content
+
+            result = client._messages_to_provider_format(messages)
+
+            # Should return empty list since content doesn't match str or list
+            assert result == []
+
+    async def test_async_messages_to_provider_format_empty_string_content(self):
+        """Test async message with string content that is empty after strip."""
+        tool_manager = self.create_tool_manager()
+
+        with patch(self.mock_client_path) as mock_client_class:
+            mock_client_instance = Mock()
+            mock_client_instance.aio = Mock()
+            mock_client_class.return_value = mock_client_instance
+
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
+            messages = [
+                Message(role="user", content=""),  # Empty string
+                Message(role="user", content="   ")  # Whitespace only
+            ]
+
+            with (
+                patch("chimeric.providers.google.client.Part") as mock_part,
+                patch("chimeric.providers.google.client.Content") as mock_content,
+            ):
+                mock_part.from_text.return_value = Mock()
+                mock_content.return_value = Mock()
+
+                result = client._messages_to_provider_format(messages)
+
+                # No Content objects should be created since strings are empty after strip
+                assert mock_content.call_count == 0
+                assert result == []
+
+    async def test_async_convert_usage_metadata_loop_coverage_explicit(self):
+        """Explicit test for async client's usage metadata loop coverage (line 563->562)."""
+        usage_metadata = Mock()
+        usage_metadata.prompt_token_count = 40
+        usage_metadata.candidates_token_count = 30
+        usage_metadata.total_token_count = 70
+        
+        # Set all Google-specific fields to None to test filtering behavior
+        usage_metadata.cache_tokens_details = None
+        usage_metadata.cached_content_token_count = None
+        usage_metadata.candidates_tokens_details = None
+        usage_metadata.prompt_tokens_details = None
+        usage_metadata.thoughts_token_count = None
+        usage_metadata.tool_use_prompt_token_count = None
+        usage_metadata.tool_use_prompt_tokens_details = None
+        usage_metadata.traffic_type = None
+
+        # Call the async client's static method directly
+        usage = GoogleAsyncClient._convert_usage_metadata(usage_metadata)
+
+        # Basic assertions
+        assert usage.prompt_tokens == 40
+        assert usage.completion_tokens == 30
+        assert usage.total_tokens == 70
+        
+        # Verify that None values were properly filtered out
+        google_specific_fields = [
+            "cache_tokens_details",
+            "cached_content_token_count", 
+            "candidates_tokens_details",
+            "prompt_tokens_details",
+            "thoughts_token_count",
+            "tool_use_prompt_token_count",
+            "tool_use_prompt_tokens_details",
+            "traffic_type"
+        ]
+        
+        for field in google_specific_fields:
+            assert not hasattr(usage, field), f"Field {field} should not exist on usage object"
