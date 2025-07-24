@@ -98,31 +98,32 @@ class GoogleClient(ChimericClient[Client, GenerateContentResponse, GenerateConte
         Returns:
             Messages in Google's expected format (list of Content objects).
         """
+
+        def process_content_item(item: Any) -> str | None:
+            """Process a single content item and return text if valid."""
+            if isinstance(item, str):
+                return item.strip() or None
+            if isinstance(item, dict):
+                return str(item).strip() or None
+            return None
+
         google_contents = []
 
         for message in messages:
-            # Skip messages with empty content
             if not message.content:
                 continue
 
-            # Convert content to parts
             parts = []
-            if isinstance(message.content, str):
-                if message.content.strip():  # Only add non-empty text
-                    parts.append(Part.from_text(text=message.content))
-            elif isinstance(message.content, list):  # type: ignore[reportUnnecessaryIsInstance]
-                for content_item in message.content:
-                    if isinstance(content_item, str) and content_item.strip():
-                        parts.append(Part.from_text(text=content_item))
-                    elif isinstance(content_item, dict):
-                        # Handle structured content - for now just convert to string
-                        text_content = str(content_item)
-                        if text_content.strip():
-                            parts.append(Part.from_text(text=text_content))
+            content_items = (
+                [message.content] if isinstance(message.content, str) else message.content
+            )
 
-            # Only create Content if we have parts
+            for content_item in content_items:
+                text_content = process_content_item(content_item)
+                if text_content:
+                    parts.append(Part.from_text(text=text_content))
+
             if parts:
-                # Map roles: assistant -> model for Google
                 google_role = "model" if message.role == "assistant" else message.role
                 google_contents.append(Content(role=google_role, parts=parts))
 
@@ -370,31 +371,32 @@ class GoogleAsyncClient(
         Returns:
             Messages in Google's expected format (list of Content objects).
         """
+
+        def process_content_item(item: Any) -> str | None:
+            """Process a single content item and return text if valid."""
+            if isinstance(item, str):
+                return item.strip() or None
+            if isinstance(item, dict):
+                return str(item).strip() or None
+            return None
+
         google_contents = []
 
         for message in messages:
-            # Skip messages with empty content
             if not message.content:
                 continue
 
-            # Convert content to parts
             parts = []
-            if isinstance(message.content, str):
-                if message.content.strip():  # Only add non-empty text
-                    parts.append(Part.from_text(text=message.content))
-            elif isinstance(message.content, list):  # type: ignore[reportUnnecessaryIsInstance]
-                for content_item in message.content:
-                    if isinstance(content_item, str) and content_item.strip():
-                        parts.append(Part.from_text(text=content_item))
-                    elif isinstance(content_item, dict):
-                        # Handle structured content - for now just convert to string
-                        text_content = str(content_item)
-                        if text_content.strip():
-                            parts.append(Part.from_text(text=text_content))
+            content_items = (
+                [message.content] if isinstance(message.content, str) else message.content
+            )
 
-            # Only create Content if we have parts
+            for content_item in content_items:
+                text_content = process_content_item(content_item)
+                if text_content:
+                    parts.append(Part.from_text(text=text_content))
+
             if parts:
-                # Map roles: assistant -> model for Google
                 google_role = "model" if message.role == "assistant" else message.role
                 google_contents.append(Content(role=google_role, parts=parts))
 

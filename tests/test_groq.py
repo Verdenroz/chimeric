@@ -309,6 +309,7 @@ class TestGroqClient(BaseProviderTestSuite):
             response.choices[0].message.tool_calls = [mock_call]
 
             tool_calls = client._extract_tool_calls_from_response(response)
+            assert tool_calls is not None
             assert len(tool_calls) == 1
             assert tool_calls[0].call_id == "call_123"
             assert tool_calls[0].name == "test_func"
@@ -636,6 +637,7 @@ class TestGroqAsyncClient(BaseProviderTestSuite):
             response.choices[0].message.tool_calls = [mock_call]
 
             tool_calls = client._extract_tool_calls_from_response(response)
+            assert tool_calls is not None
             assert len(tool_calls) == 1
             assert tool_calls[0].call_id == "async_call_123"
 

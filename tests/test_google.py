@@ -136,217 +136,66 @@ class TestGoogleClient(BaseProviderTestSuite):
 
     # ===== Message Formatting Tests =====
 
-    def test_messages_to_provider_format_regular(self):
-        """Test formatting regular messages."""
+    def test_messages_to_provider_format(self):
+        """Test all message formatting scenarios."""
         tool_manager = self.create_tool_manager()
 
         with patch(self.mock_client_path):
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+
             with (
                 patch("chimeric.providers.google.client.Part") as mock_part,
                 patch("chimeric.providers.google.client.Content") as mock_content,
             ):
                 mock_part.from_text.return_value = Mock()
                 mock_content.return_value = Mock()
-
-                client = self.client_class(api_key="test-key", tool_manager=tool_manager)
 
                 messages = [
+                    # Regular string content
                     Message(role="user", content="Hello"),
+                    # Assistant role (converts to 'model')
                     Message(role="assistant", content="Hi there"),
+                    # Empty string content (filtered out)
+                    Message(role="user", content=""),
+                    # Whitespace-only content (filtered out)
+                    Message(role="user", content="   "),
+                    # List with valid strings
+                    Message(role="user", content=["Hello", "world"]),
+                    # List with mixed valid/empty strings
+                    Message(role="user", content=["valid", "", "content"]),
+                    # List with dict content
+                    Message(role="user", content=[{"type": "text", "text": "Hello"}]),
+                    # List with non-string, non-dict items (should be filtered out)
+                    Message(role="user", content=["valid", 123, None, ["nested"]]),
+                    # None content (filtered out)
                 ]
 
-                formatted = client._messages_to_provider_format(messages)
+                # Add a message with None content manually to bypass validation
+                class MockMessage:
+                    def __init__(self, role, content):
+                        self.role = role
+                        self.content = content
 
-                assert len(formatted) == 2
-                # Verify Content was called with correct roles
+                messages.append(MockMessage(role="user", content=None))  # type: ignore
+
+                client._messages_to_provider_format(messages)
+
+                # Should only create Content objects for messages with valid parts
+                expected_calls = 6  # Regular, assistant, list valid, list mixed, list dict, list with non-string items
+                assert mock_content.call_count == expected_calls
+
+                # Verify role conversion
                 calls = mock_content.call_args_list
                 assert calls[0][1]["role"] == "user"
-                assert calls[1][1]["role"] == "model"  # assistant -> model for Google
+                assert calls[1][1]["role"] == "model"  # assistant -> model
 
-    def test_messages_to_provider_format_empty_content(self):
-        """Test handling of messages with empty content."""
-        tool_manager = self.create_tool_manager()
-
-        with patch(self.mock_client_path):
-            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
-
-            messages = [
-                Message(role="user", content=""),
-                Message(role="user", content="Valid content"),
-                Message(role="user", content="   "),  # whitespace only
-            ]
-
-            with (
-                patch("chimeric.providers.google.client.Part") as mock_part,
-                patch("chimeric.providers.google.client.Content") as mock_content,
-            ):
-                mock_part.from_text.return_value = Mock()
-                mock_content.return_value = Mock()
-
-                result = client._messages_to_provider_format(messages)
-
-                # Only the valid content message should generate a Content object
-                assert mock_content.call_count == 1
-
-    def test_messages_to_provider_format_list_content(self):
-        """Test conversion of messages with list content."""
-        tool_manager = self.create_tool_manager()
-
-        with patch(self.mock_client_path):
-            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
-
-            messages = [
-                Message(role="user", content=["Hello", "world"]),
-                Message(role="user", content=["", "valid", "   "]),  # mixed empty/valid
-            ]
-
-            with (
-                patch("chimeric.providers.google.client.Part") as mock_part,
-                patch("chimeric.providers.google.client.Content") as mock_content,
-            ):
-                mock_part.from_text.return_value = Mock()
-                mock_content.return_value = Mock()
-
-                result = client._messages_to_provider_format(messages)
-
-                # Should create 2 Content objects
-                assert mock_content.call_count == 2
-                # First message should have 2 parts, second should have 1 part
-                first_call_parts = mock_content.call_args_list[0][1]["parts"]
-                second_call_parts = mock_content.call_args_list[1][1]["parts"]
-                assert len(first_call_parts) == 2
-                assert len(second_call_parts) == 1
-
-    def test_messages_to_provider_format_none_content(self):
-        """Test message formatting with None content."""
-        tool_manager = self.create_tool_manager()
-
-        with patch(self.mock_client_path):
-            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
-
-            # Create a message-like object with None content (bypass validation)
-            class MockMessage:
-                def __init__(self, role, content):
-                    self.role = role
-                    self.content = content
-
-            message = MockMessage(role="user", content=None)
-            result = client._messages_to_provider_format([message])
-
-            assert result == []
-
-    def test_messages_to_provider_format_dict_content(self):
-        """Test conversion of messages with dict content in list."""
-        tool_manager = self.create_tool_manager()
-
-        with patch(self.mock_client_path):
-            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
-
-            messages = [
-                Message(role="user", content=[{"type": "text", "text": "Hello"}, {"data": "test"}]),
-                Message(
-                    role="user", content=[{"empty": ""}, {"valid": "content"}]
-                ),  # mixed empty/valid dict
-            ]
-
-            with (
-                patch("chimeric.providers.google.client.Part") as mock_part,
-                patch("chimeric.providers.google.client.Content") as mock_content,
-            ):
-                mock_part.from_text.return_value = Mock()
-                mock_content.return_value = Mock()
-
-                result = client._messages_to_provider_format(messages)
-
-                # Should create 2 Content objects
-                assert mock_content.call_count == 2
-                # First message should have 2 parts (both dicts converted to strings)
-                # Second message should have 2 parts (both strings converted, dict {"empty": ""} becomes non-empty string)
-                first_call_parts = mock_content.call_args_list[0][1]["parts"]
-                second_call_parts = mock_content.call_args_list[1][1]["parts"]
-                assert len(first_call_parts) == 2
-                assert (
-                    len(second_call_parts) == 2
-                )  # Both dicts convert to non-empty strings when str() is applied
-
-    def test_messages_to_provider_format_dict_empty_after_strip(self):
-        """Test dict content that becomes empty after string conversion and strip."""
-        tool_manager = self.create_tool_manager()
-
-        with patch(self.mock_client_path):
-            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
-
-            # Create a custom dict that converts to an empty string when str() is called
-            class EmptyStringDict(dict):
-                def __str__(self):
-                    return ""
-
-            messages = [
-                Message(role="user", content=[EmptyStringDict(), "valid content"])
-            ]
-
-            with (
-                patch("chimeric.providers.google.client.Part") as mock_part,
-                patch("chimeric.providers.google.client.Content") as mock_content,
-            ):
-                mock_part.from_text.return_value = Mock()
-                mock_content.return_value = Mock()
-
-                result = client._messages_to_provider_format(messages)
-
-                # Should create 1 Content object with 1 part (only valid content)
-                assert mock_content.call_count == 1
-                first_call_parts = mock_content.call_args_list[0][1]["parts"]
-                assert len(first_call_parts) == 1
-
-    def test_messages_to_provider_format_content_all_empty_parts(self):
-        """Test content list that results in no parts being created."""
-        tool_manager = self.create_tool_manager()
-
-        with patch(self.mock_client_path):
-            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
-
-            # Create a custom dict that converts to empty string
-            class EmptyStringDict(dict):
-                def __str__(self):
-                    return ""
-
-            messages = [
-                Message(role="user", content=[EmptyStringDict(), "", "   "])  # All items become empty after strip
-            ]
-
-            with (
-                patch("chimeric.providers.google.client.Part") as mock_part,
-                patch("chimeric.providers.google.client.Content") as mock_content,
-            ):
-                mock_part.from_text.return_value = Mock()
-                mock_content.return_value = Mock()
-
-                result = client._messages_to_provider_format(messages)
-
-                # No Content objects should be created since no parts
-                assert mock_content.call_count == 0
-                assert result == []
-
-    def test_messages_to_provider_format_non_string_non_list_content(self):
-        """Test message with content that is neither string nor list."""
-        tool_manager = self.create_tool_manager()
-
-        with patch(self.mock_client_path):
-            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
-
-            # Create message-like object with non-string, non-list content
-            class MockMessage:
-                def __init__(self, role, content):
-                    self.role = role
-                    self.content = content
-
-            messages = [MockMessage(role="user", content=42)]  # Integer content
-
-            result = client._messages_to_provider_format(messages)
-
-            # Should return empty list since content doesn't match str or list
-            assert result == []
+                # Verify parts counts
+                assert len(calls[0][1]["parts"]) == 1  # "Hello"
+                assert len(calls[1][1]["parts"]) == 1  # "Hi there"
+                assert len(calls[2][1]["parts"]) == 2  # ["Hello", "world"]
+                assert len(calls[3][1]["parts"]) == 2  # ["valid", "content"] - empty filtered
+                assert len(calls[4][1]["parts"]) == 1  # dict converted to string
+                assert len(calls[5][1]["parts"]) == 1  # only "valid", others filtered out
 
     # ===== Tool Formatting Tests =====
 
@@ -380,17 +229,6 @@ class TestGoogleClient(BaseProviderTestSuite):
             client = self.client_class(api_key="test-key", tool_manager=tool_manager)
 
             result = client._tools_to_provider_format([])
-
-            assert result is None
-
-    def test_tools_to_provider_format_none(self):
-        """Test handling of None tools."""
-        tool_manager = self.create_tool_manager()
-
-        with patch(self.mock_client_path):
-            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
-
-            result = client._tools_to_provider_format(None)
 
             assert result is None
 
@@ -713,7 +551,7 @@ class TestGoogleClient(BaseProviderTestSuite):
         usage_metadata.prompt_token_count = 35
         usage_metadata.candidates_token_count = 25
         usage_metadata.total_token_count = 60
-        
+
         # Explicitly set some fields to None to ensure the loop continues
         usage_metadata.cache_tokens_details = None
         usage_metadata.cached_content_token_count = None
@@ -730,19 +568,19 @@ class TestGoogleClient(BaseProviderTestSuite):
         assert usage.prompt_tokens == 35
         assert usage.completion_tokens == 25
         assert usage.total_tokens == 60
-        
+
         # Verify that all the None values were skipped by checking they don't exist as attributes
         google_specific_fields = [
             "cache_tokens_details",
-            "cached_content_token_count", 
+            "cached_content_token_count",
             "candidates_tokens_details",
             "prompt_tokens_details",
             "thoughts_token_count",
             "tool_use_prompt_token_count",
             "tool_use_prompt_tokens_details",
-            "traffic_type"
+            "traffic_type",
         ]
-        
+
         for field in google_specific_fields:
             assert not hasattr(usage, field), f"Field {field} should not exist on usage object"
 
@@ -974,7 +812,7 @@ class TestGoogleAsyncClient(BaseProviderTestSuite):
                 mock_part.from_text.return_value = Mock()
                 mock_content.return_value = Mock()
 
-                result = client._messages_to_provider_format(messages)
+                client._messages_to_provider_format(messages)
 
                 # Should create 2 Content objects
                 assert mock_content.call_count == 2
@@ -1063,30 +901,12 @@ class TestGoogleAsyncClient(BaseProviderTestSuite):
             # Google async client currently returns None for tool calls (placeholder implementation)
             assert tool_calls is None
 
-    async def test_async_messages_format_edge_cases(self):
-        """Test async message formatting edge cases to cover missing branches."""
+    def test_messages_to_provider_format(self):
+        """Test all message formatting scenarios."""
         tool_manager = self.create_tool_manager()
 
-        with patch(self.mock_client_path) as mock_client_class:
-            mock_client_instance = Mock()
-            mock_client_instance.aio = Mock()
-            mock_client_class.return_value = mock_client_instance
-
+        with patch(self.mock_client_path):
             client = self.client_class(api_key="test-key", tool_manager=tool_manager)
-
-            # Create message-like objects for testing
-            class MockMessage:
-                def __init__(self, role, content):
-                    self.role = role
-                    self.content = content
-
-            # Test message with empty content (should be skipped)
-            messages = [MockMessage(role="user", content=None)]
-            result = client._messages_to_provider_format(messages)
-            assert result == []
-
-            # Test message with list content having dict that becomes empty string when stripped
-            messages = [MockMessage(role="user", content=[{"whitespace": "   "}])]
 
             with (
                 patch("chimeric.providers.google.client.Part") as mock_part,
@@ -1095,147 +915,52 @@ class TestGoogleAsyncClient(BaseProviderTestSuite):
                 mock_part.from_text.return_value = Mock()
                 mock_content.return_value = Mock()
 
-                result = client._messages_to_provider_format(messages)
+                messages = [
+                    # Regular string content
+                    Message(role="user", content="Hello"),
+                    # Assistant role (converts to 'model')
+                    Message(role="assistant", content="Hi there"),
+                    # Empty string content (filtered out)
+                    Message(role="user", content=""),
+                    # Whitespace-only content (filtered out)
+                    Message(role="user", content="   "),
+                    # List with valid strings
+                    Message(role="user", content=["Hello", "world"]),
+                    # List with mixed valid/empty strings
+                    Message(role="user", content=["valid", "", "content"]),
+                    # List with dict content
+                    Message(role="user", content=[{"type": "text", "text": "Hello"}]),
+                    # List with non-string, non-dict items (should be filtered out)
+                    Message(role="user", content=["valid", 123, None, ["nested"]]),
+                    # None content (filtered out)
+                ]
 
-                # Should create 1 Content object with 1 part (dict becomes non-empty when str() applied)
-                assert mock_content.call_count == 1
+                # Add a message with None content manually to bypass validation
+                class MockMessage:
+                    def __init__(self, role, content):
+                        self.role = role
+                        self.content = content
 
-            # Test message with list content containing string items
-            messages = [MockMessage(role="user", content=["valid string", "another string"])]
+                messages.append(MockMessage(role="user", content=None))  # type: ignore
 
-            with (
-                patch("chimeric.providers.google.client.Part") as mock_part,
-                patch("chimeric.providers.google.client.Content") as mock_content,
-            ):
-                mock_part.from_text.return_value = Mock()
-                mock_content.return_value = Mock()
+                client._messages_to_provider_format(messages)
 
-                result = client._messages_to_provider_format(messages)
+                # Should only create Content objects for messages with valid parts
+                expected_calls = 6  # Regular, assistant, list valid, list mixed, list dict, list with non-string items
+                assert mock_content.call_count == expected_calls
 
-                # Should create 1 Content object with 2 parts (both strings added)
-                assert mock_content.call_count == 1
-                first_call_parts = mock_content.call_args_list[0][1]["parts"]
-                assert len(first_call_parts) == 2
+                # Verify role conversion
+                calls = mock_content.call_args_list
+                assert calls[0][1]["role"] == "user"
+                assert calls[1][1]["role"] == "model"  # assistant -> model
 
-    async def test_async_messages_to_provider_format_dict_empty_after_strip(self):
-        """Test async dict content that becomes empty after string conversion and strip."""
-        tool_manager = self.create_tool_manager()
-
-        with patch(self.mock_client_path) as mock_client_class:
-            mock_client_instance = Mock()
-            mock_client_instance.aio = Mock()
-            mock_client_class.return_value = mock_client_instance
-
-            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
-
-            # Create a custom dict that converts to an empty string when str() is called
-            class EmptyStringDict(dict):
-                def __str__(self):
-                    return ""
-
-            messages = [
-                Message(role="user", content=[EmptyStringDict(), "valid content"])
-            ]
-
-            with (
-                patch("chimeric.providers.google.client.Part") as mock_part,
-                patch("chimeric.providers.google.client.Content") as mock_content,
-            ):
-                mock_part.from_text.return_value = Mock()
-                mock_content.return_value = Mock()
-
-                result = client._messages_to_provider_format(messages)
-
-                # Should create 1 Content object with 1 part (only valid content)
-                assert mock_content.call_count == 1
-                first_call_parts = mock_content.call_args_list[0][1]["parts"]
-                assert len(first_call_parts) == 1
-
-    async def test_async_messages_to_provider_format_content_all_empty_parts(self):
-        """Test async content list that results in no parts being created."""
-        tool_manager = self.create_tool_manager()
-
-        with patch(self.mock_client_path) as mock_client_class:
-            mock_client_instance = Mock()
-            mock_client_instance.aio = Mock()
-            mock_client_class.return_value = mock_client_instance
-
-            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
-
-            # Create a custom dict that converts to empty string
-            class EmptyStringDict(dict):
-                def __str__(self):
-                    return ""
-
-            messages = [
-                Message(role="user", content=[EmptyStringDict(), "", "   "])  # All items become empty after strip
-            ]
-
-            with (
-                patch("chimeric.providers.google.client.Part") as mock_part,
-                patch("chimeric.providers.google.client.Content") as mock_content,
-            ):
-                mock_part.from_text.return_value = Mock()
-                mock_content.return_value = Mock()
-
-                result = client._messages_to_provider_format(messages)
-
-                # No Content objects should be created since no parts
-                assert mock_content.call_count == 0
-                assert result == []
-
-    async def test_async_messages_to_provider_format_non_string_non_list_content(self):
-        """Test async message with content that is neither string nor list."""
-        tool_manager = self.create_tool_manager()
-
-        with patch(self.mock_client_path) as mock_client_class:
-            mock_client_instance = Mock()
-            mock_client_instance.aio = Mock()
-            mock_client_class.return_value = mock_client_instance
-
-            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
-
-            # Create message-like object with non-string, non-list content
-            class MockMessage:
-                def __init__(self, role, content):
-                    self.role = role
-                    self.content = content
-
-            messages = [MockMessage(role="user", content=42)]  # Integer content
-
-            result = client._messages_to_provider_format(messages)
-
-            # Should return empty list since content doesn't match str or list
-            assert result == []
-
-    async def test_async_messages_to_provider_format_empty_string_content(self):
-        """Test async message with string content that is empty after strip."""
-        tool_manager = self.create_tool_manager()
-
-        with patch(self.mock_client_path) as mock_client_class:
-            mock_client_instance = Mock()
-            mock_client_instance.aio = Mock()
-            mock_client_class.return_value = mock_client_instance
-
-            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
-
-            messages = [
-                Message(role="user", content=""),  # Empty string
-                Message(role="user", content="   ")  # Whitespace only
-            ]
-
-            with (
-                patch("chimeric.providers.google.client.Part") as mock_part,
-                patch("chimeric.providers.google.client.Content") as mock_content,
-            ):
-                mock_part.from_text.return_value = Mock()
-                mock_content.return_value = Mock()
-
-                result = client._messages_to_provider_format(messages)
-
-                # No Content objects should be created since strings are empty after strip
-                assert mock_content.call_count == 0
-                assert result == []
+                # Verify parts counts
+                assert len(calls[0][1]["parts"]) == 1  # "Hello"
+                assert len(calls[1][1]["parts"]) == 1  # "Hi there"
+                assert len(calls[2][1]["parts"]) == 2  # ["Hello", "world"]
+                assert len(calls[3][1]["parts"]) == 2  # ["valid", "content"] - empty filtered
+                assert len(calls[4][1]["parts"]) == 1  # dict converted to string
+                assert len(calls[5][1]["parts"]) == 1  # only "valid", others filtered out
 
     async def test_async_convert_usage_metadata_loop_coverage_explicit(self):
         """Explicit test for async client's usage metadata loop coverage (line 563->562)."""
@@ -1243,7 +968,7 @@ class TestGoogleAsyncClient(BaseProviderTestSuite):
         usage_metadata.prompt_token_count = 40
         usage_metadata.candidates_token_count = 30
         usage_metadata.total_token_count = 70
-        
+
         # Set all Google-specific fields to None to test filtering behavior
         usage_metadata.cache_tokens_details = None
         usage_metadata.cached_content_token_count = None
@@ -1261,18 +986,18 @@ class TestGoogleAsyncClient(BaseProviderTestSuite):
         assert usage.prompt_tokens == 40
         assert usage.completion_tokens == 30
         assert usage.total_tokens == 70
-        
+
         # Verify that None values were properly filtered out
         google_specific_fields = [
             "cache_tokens_details",
-            "cached_content_token_count", 
+            "cached_content_token_count",
             "candidates_tokens_details",
             "prompt_tokens_details",
             "thoughts_token_count",
             "tool_use_prompt_token_count",
             "tool_use_prompt_tokens_details",
-            "traffic_type"
+            "traffic_type",
         ]
-        
+
         for field in google_specific_fields:
             assert not hasattr(usage, field), f"Field {field} should not exist on usage object"

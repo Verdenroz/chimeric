@@ -1,9 +1,10 @@
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
-from anthropic.types import Message, MessageStreamEvent
+from anthropic.types import Message
 
 from chimeric.providers.anthropic import AnthropicAsyncClient, AnthropicClient
-from chimeric.types import Capability, Message as ChimericMessage, Tool, ToolCall, ToolExecutionResult, ToolParameters
+from chimeric.types import Capability, Tool, ToolCall, ToolExecutionResult, ToolParameters
+from chimeric.types import Message as ChimericMessage
 from chimeric.utils import StreamProcessor
 from conftest import BaseProviderTestSuite
 
@@ -69,7 +70,7 @@ class TestAnthropicClient(BaseProviderTestSuite):
         args_delta2 = Mock()
         args_delta2.type = "content_block_delta"
         args_delta2.index = 0
-        args_delta2.configure_mock(**{"delta.partial_json": '0}'})
+        args_delta2.configure_mock(**{"delta.partial_json": "0}"})
         events.append(args_delta2)
 
         # Tool call complete
@@ -96,16 +97,14 @@ class TestAnthropicClient(BaseProviderTestSuite):
                 api_key="test-key",
                 tool_manager=tool_manager,
                 base_url="https://custom.api.com",
-                timeout=30
+                timeout=30,
             )
 
             assert client.api_key == "test-key"
             assert client.tool_manager == tool_manager
             assert client._provider_name == self.provider_name
             mock_anthropic.assert_called_once_with(
-                api_key="test-key",
-                base_url="https://custom.api.com",
-                timeout=30
+                api_key="test-key", base_url="https://custom.api.com", timeout=30
             )
 
     def test_client_initialization_minimal(self):
@@ -156,13 +155,13 @@ class TestAnthropicClient(BaseProviderTestSuite):
             # Mock model list response
             mock_timestamp = Mock()
             mock_timestamp.timestamp.return_value = 1709251200.0  # Feb 29, 2024
-            
+
             mock_model = Mock()
             mock_model.id = "claude-3-sonnet-20240229"
             mock_model.display_name = "Claude 3 Sonnet"
             mock_model.created_at = mock_timestamp
             mock_model.model_dump.return_value = {"id": "claude-3-sonnet-20240229"}
-            
+
             mock_models_response = Mock(data=[mock_model])
             mock_client.models.list.return_value = mock_models_response
 
@@ -185,7 +184,7 @@ class TestAnthropicClient(BaseProviderTestSuite):
 
             messages = [
                 ChimericMessage(role="user", content="Hello"),
-                ChimericMessage(role="assistant", content="Hi there")
+                ChimericMessage(role="assistant", content="Hi there"),
             ]
 
             formatted = client._messages_to_provider_format(messages)
@@ -204,7 +203,7 @@ class TestAnthropicClient(BaseProviderTestSuite):
             messages = [
                 ChimericMessage(role="system", content="You are helpful"),
                 ChimericMessage(role="user", content="Hello"),
-                ChimericMessage(role="assistant", content="Hi there")
+                ChimericMessage(role="assistant", content="Hi there"),
             ]
 
             formatted = client._messages_to_provider_format(messages)
@@ -227,9 +226,9 @@ class TestAnthropicClient(BaseProviderTestSuite):
                 Tool(
                     name="test_tool",
                     description="Test tool",
-                    parameters=ToolParameters(type="object", properties={"x": {"type": "number"}})
+                    parameters=ToolParameters(type="object", properties={"x": {"type": "number"}}),
                 ),
-                Tool(name="simple_tool", description="Simple", parameters=None)
+                Tool(name="simple_tool", description="Simple", parameters=None),
             ]
 
             formatted = client._tools_to_provider_format(tools)
@@ -256,7 +255,7 @@ class TestAnthropicClient(BaseProviderTestSuite):
             response = client._make_provider_request(
                 messages=[{"role": "user", "content": "Hello"}],
                 model="claude-3-sonnet-20240229",
-                stream=False
+                stream=False,
             )
 
             assert response is sample_response
@@ -265,6 +264,7 @@ class TestAnthropicClient(BaseProviderTestSuite):
             # Verify NOT_GIVEN was used for tools
             call_args = mock_client.messages.create.call_args
             from anthropic import NOT_GIVEN
+
             assert call_args.kwargs["tools"] is NOT_GIVEN
 
     def test_make_provider_request_with_tools_streaming(self):
@@ -283,7 +283,7 @@ class TestAnthropicClient(BaseProviderTestSuite):
                 model="claude-3-sonnet-20240229",
                 stream=True,
                 tools=tools,
-                temperature=0.7
+                temperature=0.7,
             )
 
             mock_client.messages.create.assert_called_once_with(
@@ -292,7 +292,7 @@ class TestAnthropicClient(BaseProviderTestSuite):
                 stream=True,
                 tools=tools,
                 temperature=0.7,
-                max_tokens=4096
+                max_tokens=4096,
             )
 
     # ===== Stream Processing Tests =====
@@ -310,7 +310,7 @@ class TestAnthropicClient(BaseProviderTestSuite):
             text_event.type = "content_block_delta"
             text_event.delta = Mock()
             text_event.delta.text = "Hello"
-            
+
             # Create message stop event
             message_stop = Mock()
             message_stop.type = "message_stop"
@@ -320,7 +320,7 @@ class TestAnthropicClient(BaseProviderTestSuite):
             chunk = client._process_provider_stream_event(text_event, processor)
             if chunk:
                 chunks.append(chunk)
-            
+
             # Process completion event
             chunk = client._process_provider_stream_event(message_stop, processor)
             if chunk:
@@ -351,15 +351,15 @@ class TestAnthropicClient(BaseProviderTestSuite):
             args_delta = Mock()
             args_delta.type = "content_block_delta"
             args_delta.index = 0
-            args_delta.delta = Mock(spec=['partial_json'])  # Only partial_json attribute
+            args_delta.delta = Mock(spec=["partial_json"])  # Only partial_json attribute
             args_delta.delta.partial_json = '{"x": 1'
 
             # More arguments
             args_delta2 = Mock()
             args_delta2.type = "content_block_delta"
             args_delta2.index = 0
-            args_delta2.delta = Mock(spec=['partial_json'])  # Only partial_json attribute
-            args_delta2.delta.partial_json = '0}'
+            args_delta2.delta = Mock(spec=["partial_json"])  # Only partial_json attribute
+            args_delta2.delta.partial_json = "0}"
 
             # Tool call complete
             tool_stop = Mock()
@@ -509,7 +509,7 @@ class TestAnthropicClient(BaseProviderTestSuite):
             response_multi = Mock()
             response_multi.content = [
                 Mock(type="text", text="Hello"),
-                Mock(type="text", text=" world")
+                Mock(type="text", text=" world"),
             ]
 
             content_multi = client._extract_content_from_response(response_multi)
@@ -600,7 +600,11 @@ class TestAnthropicClient(BaseProviderTestSuite):
             assistant_response.content = [tool_block]
 
             tool_calls = [ToolCall(call_id="call_123", name="test_tool", arguments='{"x": 10}')]
-            tool_results = [ToolExecutionResult(call_id="call_123", name="test_tool", arguments='{"x": 10}', result="Result: 10")]
+            tool_results = [
+                ToolExecutionResult(
+                    call_id="call_123", name="test_tool", arguments='{"x": 10}', result="Result: 10"
+                )
+            ]
 
             messages = [{"role": "user", "content": "Hello"}]
             updated = client._update_messages_with_tool_calls(
@@ -628,7 +632,7 @@ class TestAnthropicClient(BaseProviderTestSuite):
                     name="error_tool",
                     arguments='{"x": 10}',
                     error="Tool failed",
-                    is_error=True
+                    is_error=True,
                 )
             ]
 
@@ -663,7 +667,11 @@ class TestAnthropicClient(BaseProviderTestSuite):
             assistant_response.content = [text_block, tool_block]
 
             tool_calls = [ToolCall(call_id="call_123", name="test_tool", arguments='{"x": 10}')]
-            tool_results = [ToolExecutionResult(call_id="call_123", name="test_tool", arguments='{"x": 10}', result="Result: 10")]
+            tool_results = [
+                ToolExecutionResult(
+                    call_id="call_123", name="test_tool", arguments='{"x": 10}', result="Result: 10"
+                )
+            ]
 
             messages = [{"role": "user", "content": "Hello"}]
             updated = client._update_messages_with_tool_calls(
@@ -710,11 +718,20 @@ class TestAnthropicClient(BaseProviderTestSuite):
             # Streaming response WITH accumulated_content
             assistant_response = Mock()
             assistant_response.accumulated_content = "Let me help you."
-            if hasattr(assistant_response, 'content'):
+            if hasattr(assistant_response, "content"):
                 del assistant_response.content
 
-            tool_calls = [ToolCall(call_id="call_789", name="helper_tool", arguments='{"action": "help"}')]
-            tool_results = [ToolExecutionResult(call_id="call_789", name="helper_tool", arguments='{"action": "help"}', result="Success")]
+            tool_calls = [
+                ToolCall(call_id="call_789", name="helper_tool", arguments='{"action": "help"}')
+            ]
+            tool_results = [
+                ToolExecutionResult(
+                    call_id="call_789",
+                    name="helper_tool",
+                    arguments='{"action": "help"}',
+                    result="Success",
+                )
+            ]
 
             messages = []
             updated = client._update_messages_with_tool_calls(
@@ -731,13 +748,19 @@ class TestAnthropicClient(BaseProviderTestSuite):
             # Streaming response WITHOUT accumulated_content
             assistant_response2 = Mock()
             # Explicitly remove accumulated_content to test the false branch
-            if hasattr(assistant_response2, 'accumulated_content'):
+            if hasattr(assistant_response2, "accumulated_content"):
                 del assistant_response2.accumulated_content
-            if hasattr(assistant_response2, 'content'):
+            if hasattr(assistant_response2, "content"):
                 del assistant_response2.content
 
-            tool_calls2 = [ToolCall(call_id="call_999", name="no_text_tool", arguments='{"test": true}')]
-            tool_results2 = [ToolExecutionResult(call_id="call_999", name="no_text_tool", arguments='{"test": true}', result="OK")]
+            tool_calls2 = [
+                ToolCall(call_id="call_999", name="no_text_tool", arguments='{"test": true}')
+            ]
+            tool_results2 = [
+                ToolExecutionResult(
+                    call_id="call_999", name="no_text_tool", arguments='{"test": true}', result="OK"
+                )
+            ]
 
             messages2 = []
             updated2 = client._update_messages_with_tool_calls(
@@ -753,11 +776,20 @@ class TestAnthropicClient(BaseProviderTestSuite):
             # Streaming response WITH accumulated_content but empty string
             assistant_response3 = Mock()
             assistant_response3.accumulated_content = ""  # Empty string should be skipped
-            if hasattr(assistant_response3, 'content'):
+            if hasattr(assistant_response3, "content"):
                 del assistant_response3.content
 
-            tool_calls3 = [ToolCall(call_id="call_empty", name="empty_tool", arguments='{"empty": true}')]
-            tool_results3 = [ToolExecutionResult(call_id="call_empty", name="empty_tool", arguments='{"empty": true}', result="Empty OK")]
+            tool_calls3 = [
+                ToolCall(call_id="call_empty", name="empty_tool", arguments='{"empty": true}')
+            ]
+            tool_results3 = [
+                ToolExecutionResult(
+                    call_id="call_empty",
+                    name="empty_tool",
+                    arguments='{"empty": true}',
+                    result="Empty OK",
+                )
+            ]
 
             messages3 = []
             updated3 = client._update_messages_with_tool_calls(
@@ -767,7 +799,9 @@ class TestAnthropicClient(BaseProviderTestSuite):
             # Check streaming response with empty accumulated_content - should only have tool blocks
             assistant_msg3 = updated3[0]
             assert assistant_msg3["role"] == "assistant"
-            assert len(assistant_msg3["content"]) == 1  # Only tool blocks, no text since content is empty
+            assert (
+                len(assistant_msg3["content"]) == 1
+            )  # Only tool blocks, no text since content is empty
             assert assistant_msg3["content"][0]["type"] == "tool_use"
 
     def test_update_messages_with_invalid_tool_arguments(self):
@@ -780,12 +814,16 @@ class TestAnthropicClient(BaseProviderTestSuite):
             # Streaming response without content attribute, but with accumulated content
             assistant_response = Mock()
             assistant_response.accumulated_content = ""  # Empty string
-            if hasattr(assistant_response, 'content'):
+            if hasattr(assistant_response, "content"):
                 del assistant_response.content
 
             # Tool call with invalid JSON arguments
             tool_calls = [ToolCall(call_id="call_bad", name="bad_tool", arguments="invalid_json")]
-            tool_results = [ToolExecutionResult(call_id="call_bad", name="bad_tool", arguments="invalid_json", result="Fixed")]
+            tool_results = [
+                ToolExecutionResult(
+                    call_id="call_bad", name="bad_tool", arguments="invalid_json", result="Fixed"
+                )
+            ]
 
             messages = []
             updated = client._update_messages_with_tool_calls(
@@ -845,10 +883,7 @@ class TestAnthropicAsyncClient(BaseProviderTestSuite):
         tool_manager = self.create_tool_manager()
 
         with patch(self.mock_async_client_path):
-            client = self.client_class(
-                api_key="test-key",
-                tool_manager=tool_manager
-            )
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
 
             assert client.api_key == "test-key"
             assert client._provider_name == self.provider_name
@@ -887,13 +922,13 @@ class TestAnthropicAsyncClient(BaseProviderTestSuite):
             # Mock async model list
             mock_timestamp = Mock()
             mock_timestamp.timestamp.return_value = 1709251200.0  # Feb 29, 2024
-            
+
             mock_model = Mock()
             mock_model.id = "claude-3-opus-20240229"
             mock_model.display_name = "Claude 3 Opus"
             mock_model.created_at = mock_timestamp
             mock_model.model_dump.return_value = {"id": "claude-3-opus-20240229"}
-            
+
             mock_models_response = Mock(data=[mock_model])
             mock_client.models.list.return_value = mock_models_response
 
@@ -917,7 +952,7 @@ class TestAnthropicAsyncClient(BaseProviderTestSuite):
             response = await client._make_async_provider_request(
                 messages=[{"role": "user", "content": "Hello"}],
                 model="claude-3-sonnet-20240229",
-                stream=False
+                stream=False,
             )
 
             assert response is sample_response
@@ -933,9 +968,9 @@ class TestAnthropicAsyncClient(BaseProviderTestSuite):
                 Tool(
                     name="test_tool",
                     description="Test tool",
-                    parameters=ToolParameters(type="object", properties={})
+                    parameters=ToolParameters(type="object", properties={}),
                 ),
-                Tool(name="simple_tool", description="Simple", parameters=None)
+                Tool(name="simple_tool", description="Simple", parameters=None),
             ]
 
             formatted = client._tools_to_provider_format(tools)
@@ -978,7 +1013,7 @@ class TestAnthropicAsyncClient(BaseProviderTestSuite):
             messages = [
                 ChimericMessage(role="system", content="System message"),
                 ChimericMessage(role="user", content="User message"),
-                ChimericMessage(role="assistant", content="Assistant message")
+                ChimericMessage(role="assistant", content="Assistant message"),
             ]
             formatted = client._messages_to_provider_format(messages)
             assert len(formatted) == 2  # System message filtered out
@@ -1028,10 +1063,7 @@ class TestAnthropicAsyncClient(BaseProviderTestSuite):
 
             # Multiple text blocks
             response2 = Mock()
-            response2.content = [
-                Mock(type="text", text="Multi"),
-                Mock(type="text", text="ple")
-            ]
+            response2.content = [Mock(type="text", text="Multi"), Mock(type="text", text="ple")]
             content2 = client._extract_content_from_response(response2)
             assert content2 == "Multiple"
 
@@ -1104,13 +1136,15 @@ class TestAnthropicAsyncClient(BaseProviderTestSuite):
             assistant_response = Mock()
             assistant_response.content = [text_block, tool_block]
 
-            tool_calls = [ToolCall(call_id="call_async_456", name="async_tool", arguments='{"param": "test"}')]
+            tool_calls = [
+                ToolCall(call_id="call_async_456", name="async_tool", arguments='{"param": "test"}')
+            ]
             tool_results = [
                 ToolExecutionResult(
                     call_id="call_async_456",
-                    name="async_tool", 
+                    name="async_tool",
                     arguments='{"param": "test"}',
-                    result="Tool executed successfully"
+                    result="Tool executed successfully",
                 )
             ]
 
@@ -1166,7 +1200,7 @@ class TestAnthropicAsyncClient(BaseProviderTestSuite):
             args_delta = Mock()
             args_delta.type = "content_block_delta"
             args_delta.index = 1
-            args_delta.delta = Mock(spec=['partial_json'])
+            args_delta.delta = Mock(spec=["partial_json"])
             args_delta.delta.partial_json = '{"async": true}'
 
             # Tool call complete
@@ -1214,8 +1248,14 @@ class TestAnthropicAsyncClient(BaseProviderTestSuite):
             del assistant_response.content  # Trigger streaming path
 
             # Test invalid JSON arguments
-            tool_calls = [ToolCall(call_id="async_call", name="async_tool", arguments="{invalid json")]
-            tool_results = [ToolExecutionResult(call_id="async_call", name="async_tool", arguments="{invalid json", result="OK")]
+            tool_calls = [
+                ToolCall(call_id="async_call", name="async_tool", arguments="{invalid json")
+            ]
+            tool_results = [
+                ToolExecutionResult(
+                    call_id="async_call", name="async_tool", arguments="{invalid json", result="OK"
+                )
+            ]
 
             messages = []
             updated = client._update_messages_with_tool_calls(
@@ -1224,17 +1264,28 @@ class TestAnthropicAsyncClient(BaseProviderTestSuite):
 
             assistant_msg = updated[0]
             assert assistant_msg["content"][0]["text"] == "Async response"
-            assert assistant_msg["content"][1]["input"] == {}  # Invalid JSON should become empty dict
+            assert (
+                assistant_msg["content"][1]["input"] == {}
+            )  # Invalid JSON should become empty dict
 
             # Async streaming response WITHOUT accumulated_content
             assistant_response2 = Mock()
-            if hasattr(assistant_response2, 'accumulated_content'):
+            if hasattr(assistant_response2, "accumulated_content"):
                 del assistant_response2.accumulated_content
-            if hasattr(assistant_response2, 'content'):
+            if hasattr(assistant_response2, "content"):
                 del assistant_response2.content
 
-            tool_calls2 = [ToolCall(call_id="async_no_content", name="async_tool", arguments='{"test": 1}')]
-            tool_results2 = [ToolExecutionResult(call_id="async_no_content", name="async_tool", arguments='{"test": 1}', result="No content OK")]
+            tool_calls2 = [
+                ToolCall(call_id="async_no_content", name="async_tool", arguments='{"test": 1}')
+            ]
+            tool_results2 = [
+                ToolExecutionResult(
+                    call_id="async_no_content",
+                    name="async_tool",
+                    arguments='{"test": 1}',
+                    result="No content OK",
+                )
+            ]
 
             updated2 = client._update_messages_with_tool_calls(
                 [], assistant_response2, tool_calls2, tool_results2
@@ -1248,11 +1299,20 @@ class TestAnthropicAsyncClient(BaseProviderTestSuite):
             # Async streaming response WITH accumulated_content but empty string
             assistant_response3 = Mock()
             assistant_response3.accumulated_content = ""  # Empty string should be skipped
-            if hasattr(assistant_response3, 'content'):
+            if hasattr(assistant_response3, "content"):
                 del assistant_response3.content
 
-            tool_calls3 = [ToolCall(call_id="async_empty", name="async_tool", arguments='{"empty": true}')]
-            tool_results3 = [ToolExecutionResult(call_id="async_empty", name="async_tool", arguments='{"empty": true}', result="Empty async OK")]
+            tool_calls3 = [
+                ToolCall(call_id="async_empty", name="async_tool", arguments='{"empty": true}')
+            ]
+            tool_results3 = [
+                ToolExecutionResult(
+                    call_id="async_empty",
+                    name="async_tool",
+                    arguments='{"empty": true}',
+                    result="Empty async OK",
+                )
+            ]
 
             updated3 = client._update_messages_with_tool_calls(
                 [], assistant_response3, tool_calls3, tool_results3

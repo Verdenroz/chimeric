@@ -1,7 +1,7 @@
 from unittest.mock import AsyncMock, Mock, patch
 
 from chimeric.providers.grok import GrokAsyncClient, GrokClient
-from chimeric.types import Capability, Message, Tool, ToolParameters, ToolCall, ToolExecutionResult
+from chimeric.types import Capability, Message, Tool, ToolExecutionResult, ToolParameters
 from chimeric.utils import StreamProcessor
 from conftest import BaseProviderTestSuite
 
@@ -32,17 +32,17 @@ class TestGrokClient(BaseProviderTestSuite):
         with patch(self.mock_client_path) as mock_client_class:
             mock_client = Mock()
             mock_client_class.return_value = mock_client
-            
+
             client = self.client_class(api_key="test-key", tool_manager=tool_manager)
             assert client.api_key == "test-key"
             assert client._provider_name == self.provider_name
-            
+
             capabilities = client._get_capabilities()
             assert isinstance(capabilities, Capability)
             assert capabilities.streaming is True
             assert capabilities.tools is True
 
-    def test_initialization_edge_cases(self):
+    def test_initialization_clients(self):
         """Test initialization and type methods."""
         tool_manager = self.create_tool_manager()
 
@@ -54,9 +54,10 @@ class TestGrokClient(BaseProviderTestSuite):
             # Test _get_client_type
             client_type = client._get_client_type()
             assert client_type is not None
-            
+
             # Test _init_client with kwargs
             from chimeric.providers.grok.client import Client
+
             result = client._init_client(Client, base_url="https://api.x.ai", timeout=30)
             assert result is not None
 
@@ -77,7 +78,7 @@ class TestGrokClient(BaseProviderTestSuite):
             mock_model.created = Mock()
             mock_model.created.seconds = 1234567890
             mock_client.models.list_language_models.return_value = [mock_model]
-            
+
             models = client._list_models_impl()
             assert len(models) == 2
             assert models[0].id == "grok-beta"
@@ -117,11 +118,15 @@ class TestGrokClient(BaseProviderTestSuite):
             mock_model.aliases = ["grok-2", "grok-v2"]
             mock_model.created = Mock()
             mock_model.created.seconds = 1640995200
-            
+
             mock_client.models.list_language_models.return_value = [mock_model]
-            
+
             models = client._list_models_impl()
+            assert isinstance(models, list)
             assert len(models) == 3  # Main model + 2 aliases
+            assert isinstance(models[0].metadata, dict)
+            assert isinstance(models[1].metadata, dict)
+            assert isinstance(models[2].metadata, dict)
             assert models[0].id == "grok-full"
             assert models[0].metadata["version"] == "2.0"
             assert models[0].metadata["max_prompt_length"] == 8192
@@ -131,52 +136,58 @@ class TestGrokClient(BaseProviderTestSuite):
         """Test message format conversion."""
         tool_manager = self.create_tool_manager()
 
-        with patch(self.mock_client_path):
-            with (
-                patch("chimeric.providers.grok.client.user") as mock_user,
-                patch("chimeric.providers.grok.client.system") as mock_system,
-                patch("chimeric.providers.grok.client.assistant") as mock_assistant,
-            ):
-                mock_user.return_value = Mock()
-                mock_system.return_value = Mock()
-                mock_assistant.return_value = Mock()
+        with (
+            patch(self.mock_client_path),
+            patch("chimeric.providers.grok.client.user") as mock_user,
+            patch("chimeric.providers.grok.client.system") as mock_system,
+            patch("chimeric.providers.grok.client.assistant") as mock_assistant,
+        ):
+            mock_user.return_value = Mock()
+            mock_system.return_value = Mock()
+            mock_assistant.return_value = Mock()
 
-                client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
 
-                # Test all role mappings and list content conversion
-                messages = [
-                    Message(role="user", content="Hello"),
-                    Message(role="system", content="System"),
-                    Message(role="assistant", content="Assistant"),
-                    Message(role="unknown", content=["List", "content"]),  # Unknown role + list
-                    Message(role="user", content="String content"),  # Non-list content
-                ]
-                result = client._messages_to_provider_format(messages)
-                assert len(result) == 5
+            # Test all role mappings and list content conversion
+            messages = [
+                Message(role="user", content="Hello"),
+                Message(role="system", content="System"),
+                Message(role="assistant", content="Assistant"),
+                Message(role="unknown", content=["List", "content"]),  # Unknown role + list
+                Message(role="user", content="String content"),  # Non-list content
+            ]
+            result = client._messages_to_provider_format(messages)
+            assert len(result) == 5
 
     def test_tool_format_conversion(self):
         """Test tool format conversion."""
         tool_manager = self.create_tool_manager()
 
-        with patch(self.mock_client_path):
-            with patch("chimeric.providers.grok.client.tool") as mock_tool:
-                mock_tool.return_value = Mock()
-                client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+        with (
+            patch(self.mock_client_path),
+            patch("chimeric.providers.grok.client.tool") as mock_tool,
+        ):
+            mock_tool.return_value = Mock()
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
 
-                def mock_func():
-                    pass
+            def mock_func():
+                pass
 
-                # Tool with parameters
-                params = ToolParameters()
-                params.properties = {"x": {"type": "int"}}
-                tools = [Tool(name="test_tool", description="Test", parameters=params, function=mock_func)]
-                result = client._tools_to_provider_format(tools)
-                assert len(result) == 1
+            # Tool with parameters
+            params = ToolParameters()
+            params.properties = {"x": {"type": "int"}}
+            tools = [
+                Tool(name="test_tool", description="Test", parameters=params, function=mock_func)
+            ]
+            result = client._tools_to_provider_format(tools)
+            assert len(result) == 1
 
-                # Tool with None parameters
-                tools = [Tool(name="test_tool", description="Test", parameters=None, function=mock_func)]
-                result = client._tools_to_provider_format(tools)
-                assert len(result) == 1
+            # Tool with None parameters
+            tools = [
+                Tool(name="test_tool", description="Test", parameters=None, function=mock_func)
+            ]
+            result = client._tools_to_provider_format(tools)
+            assert len(result) == 1
 
     def test_make_provider_request(self):
         """Test _make_provider_request method."""
@@ -200,7 +211,7 @@ class TestGrokClient(BaseProviderTestSuite):
             # Streaming request
             def mock_stream():
                 yield (Mock(), Mock())
-            
+
             mock_chat.stream.return_value = mock_stream()
             result = client._make_provider_request(
                 messages=[Mock()], model="grok-beta", stream=True
@@ -211,11 +222,7 @@ class TestGrokClient(BaseProviderTestSuite):
             # Request with tools and kwargs - need fresh mock
             mock_chat.sample.return_value = self.sample_response
             result = client._make_provider_request(
-                messages=[Mock()], 
-                model="grok-beta", 
-                stream=False,
-                tools=[Mock()],
-                temperature=0.7
+                messages=[Mock()], model="grok-beta", stream=False, tools=[Mock()], temperature=0.7
             )
             assert mock_client.chat.create.called
 
@@ -226,13 +233,13 @@ class TestGrokClient(BaseProviderTestSuite):
         with patch(self.mock_client_path):
             client = self.client_class(api_key="test-key", tool_manager=tool_manager)
             processor = StreamProcessor()
-            
+
             # Test with content
             mock_response = Mock()
             mock_chunk = Mock()
             mock_chunk.content = "Stream content"
             client._process_provider_stream_event((mock_response, mock_chunk), processor)
-            
+
             # Test with None content
             mock_chunk.content = None
             client._process_provider_stream_event((mock_response, mock_chunk), processor)
@@ -289,8 +296,9 @@ class TestGrokClient(BaseProviderTestSuite):
             mock_call.function.name = "test_func"
             mock_call.function.arguments = '{"x": 5}'
             response.tool_calls = [mock_call]
-            
+
             tool_calls = client._extract_tool_calls_from_response(response)
+            assert isinstance(tool_calls, list)
             assert len(tool_calls) == 1
 
             # None tool calls
@@ -314,7 +322,7 @@ class TestGrokClient(BaseProviderTestSuite):
 
             with patch("chimeric.providers.grok.client.tool_result") as mock_tool_result:
                 mock_tool_result.return_value = Mock()
-                
+
                 mock_chat = Mock()
                 mock_client.chat.create.return_value = mock_chat
                 mock_chat.append = Mock()
@@ -337,30 +345,39 @@ class TestGrokClient(BaseProviderTestSuite):
 
                 mock_chat.sample.side_effect = [first_response, final_response]
 
-                with patch.object(client, '_execute_tool_calls') as mock_execute:
-                    mock_execute.return_value = [ToolExecutionResult(
-                        name="test_tool", arguments='{"x": 5}', call_id="call_123", result="success", is_error=False
-                    )]
+                with patch.object(client, "_execute_tool_calls") as mock_execute:
+                    mock_execute.return_value = [
+                        ToolExecutionResult(
+                            name="test_tool",
+                            arguments='{"x": 5}',
+                            call_id="call_123",
+                            result="success",
+                            is_error=False,
+                        )
+                    ]
 
                     result = client._handle_tool_calling_completion(
-                        messages=[Mock()],
-                        model="grok-beta",
-                        tools=[Mock()]
+                        messages=[Mock()], model="grok-beta", tools=[Mock()]
                     )
 
                     assert result is not None
                     assert mock_chat.sample.call_count == 2
-                    
+
                     # Test error case
-                    mock_execute.return_value = [ToolExecutionResult(
-                        name="test_tool", arguments='{"x": 5}', call_id="call_123", result=None, is_error=True, error="Test error"
-                    )]
-                    
+                    mock_execute.return_value = [
+                        ToolExecutionResult(
+                            name="test_tool",
+                            arguments='{"x": 5}',
+                            call_id="call_123",
+                            result=None,
+                            is_error=True,
+                            error="Test error",
+                        )
+                    ]
+
                     mock_chat.sample.side_effect = [first_response, final_response]
                     result = client._handle_tool_calling_completion(
-                        messages=[Mock()],
-                        model="grok-beta",
-                        tools=[Mock()]
+                        messages=[Mock()], model="grok-beta", tools=[Mock()]
                     )
                     assert result is not None
 
@@ -375,7 +392,7 @@ class TestGrokClient(BaseProviderTestSuite):
 
             with patch("chimeric.providers.grok.client.tool_result") as mock_tool_result:
                 mock_tool_result.return_value = Mock()
-                
+
                 mock_chat = Mock()
                 mock_client.chat.create.return_value = mock_chat
                 mock_chat.append = Mock()
@@ -400,11 +417,16 @@ class TestGrokClient(BaseProviderTestSuite):
 
                 mock_chat.stream.return_value = mock_stream_generator()
 
-                with patch.object(client, '_execute_tool_calls') as mock_execute:
-                    mock_execute.return_value = [ToolExecutionResult(
-                        name="stream_tool", arguments='{"param": "value"}', 
-                        call_id="stream_call", result="success", is_error=False
-                    )]
+                with patch.object(client, "_execute_tool_calls") as mock_execute:
+                    mock_execute.return_value = [
+                        ToolExecutionResult(
+                            name="stream_tool",
+                            arguments='{"param": "value"}',
+                            call_id="stream_call",
+                            result="success",
+                            is_error=False,
+                        )
+                    ]
 
                     processor = StreamProcessor()
                     stream_gen = client._handle_streaming_tool_calls(
@@ -412,9 +434,9 @@ class TestGrokClient(BaseProviderTestSuite):
                         processor=processor,
                         messages=[Mock()],
                         model="grok-beta",
-                        tools=[Mock()]
+                        tools=[Mock()],
                     )
-                    
+
                     chunks = list(stream_gen)
                     assert len(chunks) >= 0
 
@@ -431,14 +453,14 @@ class TestGrokClient(BaseProviderTestSuite):
             client.tool_manager = None
             mock_chat = Mock()
             mock_client.chat.create.return_value = mock_chat
-            
+
             response_with_tools = Mock()
             response_with_tools.tool_calls = [Mock()]
             response_with_tools.tool_calls[0].id = "call_no_manager"
             response_with_tools.tool_calls[0].function = Mock()
             response_with_tools.tool_calls[0].function.name = "test_tool"
             response_with_tools.tool_calls[0].function.arguments = '{"x": 1}'
-            
+
             final_response = Mock()
             final_response.content = "Done without tool manager"
             final_response.tool_calls = None
@@ -446,35 +468,33 @@ class TestGrokClient(BaseProviderTestSuite):
             final_response.usage.prompt_tokens = 1
             final_response.usage.completion_tokens = 2
             final_response.usage.total_tokens = 3
-            
+
             mock_chat.sample.side_effect = [response_with_tools, final_response]
-            
+
             result = client._handle_tool_calling_completion(
-                messages=[Mock()],
-                model="grok-beta",
-                tools=[Mock()]
+                messages=[Mock()], model="grok-beta", tools=[Mock()]
             )
             assert result is not None
-            
+
             # Test _handle_streaming_tool_calls without tool_manager
             def mock_stream_generator():
                 yield (Mock(), Mock(content="Stream chunk"))
-            
+
             mock_chat.stream.return_value = mock_stream_generator()
             mock_chat.sample.side_effect = [response_with_tools, final_response]
-            
+
             processor = StreamProcessor()
             stream_gen = client._handle_streaming_tool_calls(
                 stream=Mock(),
                 processor=processor,
                 messages=[Mock()],
                 model="grok-beta",
-                tools=[Mock()]
+                tools=[Mock()],
             )
-            
+
             chunks = list(stream_gen)
             assert len(chunks) >= 0
-            
+
             # Reset tool_manager for other tests
             client.tool_manager = tool_manager
 
@@ -489,7 +509,7 @@ class TestGrokClient(BaseProviderTestSuite):
 
             with patch("chimeric.providers.grok.client.tool_result") as mock_tool_result:
                 mock_tool_result.return_value = Mock()
-                
+
                 mock_chat = Mock()
                 mock_client.chat.create.return_value = mock_chat
                 mock_chat.append = Mock()
@@ -512,17 +532,21 @@ class TestGrokClient(BaseProviderTestSuite):
 
                 mock_chat.sample.side_effect = [first_response, final_response]
 
-                with patch.object(client, '_execute_tool_calls') as mock_execute:
+                with patch.object(client, "_execute_tool_calls") as mock_execute:
                     # Test error result with None result
-                    mock_execute.return_value = [ToolExecutionResult(
-                        name="error_tool", arguments='{"x": 5}', call_id="call_error_test", 
-                        result=None, is_error=True, error=None
-                    )]
+                    mock_execute.return_value = [
+                        ToolExecutionResult(
+                            name="error_tool",
+                            arguments='{"x": 5}',
+                            call_id="call_error_test",
+                            result=None,
+                            is_error=True,
+                            error=None,
+                        )
+                    ]
 
                     result = client._handle_tool_calling_completion(
-                        messages=[Mock()],
-                        model="grok-beta",
-                        tools=[Mock()]
+                        messages=[Mock()], model="grok-beta", tools=[Mock()]
                     )
                     assert result is not None
 
@@ -538,7 +562,7 @@ class TestGrokClient(BaseProviderTestSuite):
                 messages=original_messages,
                 assistant_response=Mock(),
                 tool_calls=[Mock()],
-                tool_results=[Mock()]
+                tool_results=[Mock()],
             )
             assert result is original_messages
 
@@ -573,9 +597,9 @@ class TestGrokClient(BaseProviderTestSuite):
                 processor=processor,
                 messages=[Mock()],
                 model="grok-beta",
-                tools=[Mock()]
+                tools=[Mock()],
             )
-            
+
             chunks = list(stream_gen)
             assert len(chunks) >= 0
 
@@ -609,7 +633,7 @@ class TestGrokAsyncClient(BaseProviderTestSuite):
 
             assert client.api_key == "test-key"
             assert client._provider_name == self.provider_name
-            
+
             capabilities = client._get_capabilities()
             assert isinstance(capabilities, Capability)
             assert capabilities.streaming is True
@@ -627,12 +651,13 @@ class TestGrokAsyncClient(BaseProviderTestSuite):
             # Test _get_async_client_type
             client_type = client._get_async_client_type()
             assert client_type is not None
-            
+
             # Test _init_async_client
             from chimeric.providers.grok.client import AsyncClient
+
             result = client._init_async_client(AsyncClient, base_url="https://api.x.ai")
             assert result is not None
-            
+
             # Test capabilities
             capabilities = client._get_capabilities()
             assert capabilities.streaming is True
@@ -671,11 +696,11 @@ class TestGrokAsyncClient(BaseProviderTestSuite):
             mock_model.name = "grok-no-created"
             mock_model.aliases = []
             # Explicitly remove created attribute
-            if hasattr(mock_model, 'created'):
+            if hasattr(mock_model, "created"):
                 del mock_model.created
-            
+
             mock_client.models.list_language_models = AsyncMock(return_value=[mock_model])
-            
+
             models = await client._list_models_impl()
             assert len(models) == 1
             assert models[0].id == "grok-no-created"
@@ -708,7 +733,7 @@ class TestGrokAsyncClient(BaseProviderTestSuite):
             result = await client._make_async_provider_request(
                 messages=[Mock()], model="grok-async", stream=True, tools=None
             )
-            
+
             chunks = []
             async for chunk in result:
                 chunks.append(chunk)
@@ -728,11 +753,8 @@ class TestGrokAsyncClient(BaseProviderTestSuite):
             mock_chat.sample = AsyncMock(return_value=self.sample_response)
 
             # Test with tools (tool_choice auto is set in implementation)
-            result = await client._make_async_provider_request(
-                messages=[Mock()], 
-                model="grok-async", 
-                stream=False, 
-                tools=[Mock()]
+            await client._make_async_provider_request(
+                messages=[Mock()], model="grok-async", stream=False, tools=[Mock()]
             )
             assert mock_chat.sample.called
 
@@ -747,7 +769,7 @@ class TestGrokAsyncClient(BaseProviderTestSuite):
 
             with patch("chimeric.providers.grok.client.tool_result") as mock_tool_result:
                 mock_tool_result.return_value = Mock()
-                
+
                 mock_chat = Mock()
                 mock_client.chat.create.return_value = mock_chat
                 mock_chat.append = Mock()
@@ -769,15 +791,21 @@ class TestGrokAsyncClient(BaseProviderTestSuite):
 
                 mock_chat.sample = AsyncMock(side_effect=[first_response, final_response])
 
-                with patch.object(client, '_execute_tool_calls', new_callable=AsyncMock) as mock_execute:
-                    mock_execute.return_value = [ToolExecutionResult(
-                        name="async_tool", arguments='{"y": 10}', call_id="call_async", result="async_success", is_error=False
-                    )]
+                with patch.object(
+                    client, "_execute_tool_calls", new_callable=AsyncMock
+                ) as mock_execute:
+                    mock_execute.return_value = [
+                        ToolExecutionResult(
+                            name="async_tool",
+                            arguments='{"y": 10}',
+                            call_id="call_async",
+                            result="async_success",
+                            is_error=False,
+                        )
+                    ]
 
                     result = await client._handle_tool_calling_completion(
-                        messages=[Mock()],
-                        model="grok-async",
-                        tools=[Mock()]
+                        messages=[Mock()], model="grok-async", tools=[Mock()]
                     )
 
                     assert result is not None
@@ -794,7 +822,7 @@ class TestGrokAsyncClient(BaseProviderTestSuite):
 
             with patch("chimeric.providers.grok.client.tool_result") as mock_tool_result:
                 mock_tool_result.return_value = Mock()
-                
+
                 mock_chat = Mock()
                 mock_client.chat.create.return_value = mock_chat
                 mock_chat.append = Mock()
@@ -820,9 +848,9 @@ class TestGrokAsyncClient(BaseProviderTestSuite):
                     processor=processor,
                     messages=[Mock()],
                     model="grok-async",
-                    tools=[Mock()]
+                    tools=[Mock()],
                 )
-                
+
                 chunks = []
                 async for chunk in stream_gen:
                     chunks.append(chunk)
@@ -840,7 +868,7 @@ class TestGrokAsyncClient(BaseProviderTestSuite):
 
             with patch("chimeric.providers.grok.client.tool_result") as mock_tool_result:
                 mock_tool_result.return_value = Mock()
-                
+
                 mock_chat = Mock()
                 mock_client.chat.create.return_value = mock_chat
                 mock_chat.append = Mock()
@@ -862,7 +890,7 @@ class TestGrokAsyncClient(BaseProviderTestSuite):
                 mock_chat.sample = AsyncMock(side_effect=[response_with_tools, final_response])
 
                 # Mock tool execution to cover lines 768-772
-                with patch.object(client, '_execute_tool_calls') as mock_execute:
+                with patch.object(client, "_execute_tool_calls") as mock_execute:
                     mock_execute.return_value = [Mock(result="Tool executed", is_error=False)]
 
                     # Mock final streaming
@@ -877,9 +905,9 @@ class TestGrokAsyncClient(BaseProviderTestSuite):
                         processor=processor,
                         messages=[Mock()],
                         model="grok-async",
-                        tools=[Mock()]
+                        tools=[Mock()],
                     )
-                    
+
                     chunks = []
                     async for chunk in stream_gen:
                         chunks.append(chunk)
@@ -893,37 +921,39 @@ class TestGrokAsyncClient(BaseProviderTestSuite):
         """Test async message and tool format conversion."""
         tool_manager = self.create_tool_manager()
 
-        with patch(self.mock_client_path):
-            with (
-                patch("chimeric.providers.grok.client.user") as mock_user,
-                patch("chimeric.providers.grok.client.system") as mock_system,
-                patch("chimeric.providers.grok.client.assistant") as mock_assistant,
-                patch("chimeric.providers.grok.client.tool") as mock_tool,
-            ):
-                mock_user.return_value = Mock()
-                mock_system.return_value = Mock()
-                mock_assistant.return_value = Mock()
-                mock_tool.return_value = Mock()
+        with (
+            patch(self.mock_client_path),
+            patch("chimeric.providers.grok.client.user") as mock_user,
+            patch("chimeric.providers.grok.client.system") as mock_system,
+            patch("chimeric.providers.grok.client.assistant") as mock_assistant,
+            patch("chimeric.providers.grok.client.tool") as mock_tool,
+        ):
+            mock_user.return_value = Mock()
+            mock_system.return_value = Mock()
+            mock_assistant.return_value = Mock()
+            mock_tool.return_value = Mock()
 
-                client = self.client_class(api_key="test-key", tool_manager=tool_manager)
+            client = self.client_class(api_key="test-key", tool_manager=tool_manager)
 
-                # Test message conversion
-                messages = [
-                    Message(role="user", content="Hello"),
-                    Message(role="system", content=["System", "list"]),
-                ]
-                result = client._messages_to_provider_format(messages)
-                assert len(result) == 2
+            # Test message conversion
+            messages = [
+                Message(role="user", content="Hello"),
+                Message(role="system", content=["System", "list"]),
+            ]
+            result = client._messages_to_provider_format(messages)
+            assert len(result) == 2
 
-                # Test tool conversion  
-                def mock_func():
-                    pass
+            # Test tool conversion
+            def mock_func():
+                pass
 
-                params = ToolParameters()
-                params.properties = {"x": {"type": "int"}}
-                tools = [Tool(name="test_tool", description="Test", parameters=params, function=mock_func)]
-                result = client._tools_to_provider_format(tools)
-                assert len(result) == 1
+            params = ToolParameters()
+            params.properties = {"x": {"type": "int"}}
+            tools = [
+                Tool(name="test_tool", description="Test", parameters=params, function=mock_func)
+            ]
+            result = client._tools_to_provider_format(tools)
+            assert len(result) == 1
 
     async def test_async_extraction_methods(self):
         """Test async extraction methods."""
@@ -948,8 +978,9 @@ class TestGrokAsyncClient(BaseProviderTestSuite):
             mock_call.function.name = "async_test_func"
             mock_call.function.arguments = '{"x": 10}'
             response.tool_calls = [mock_call]
-            
+
             tool_calls = client._extract_tool_calls_from_response(response)
+            assert isinstance(tool_calls, list)
             assert len(tool_calls) == 1
             assert tool_calls[0].call_id == "async_call_123"
 
@@ -962,11 +993,7 @@ class TestGrokAsyncClient(BaseProviderTestSuite):
 
             # Test with dict usage format
             response = Mock()
-            response.usage = {
-                "prompt_tokens": 25, 
-                "completion_tokens": 35, 
-                "total_tokens": 60
-            }
+            response.usage = {"prompt_tokens": 25, "completion_tokens": 35, "total_tokens": 60}
             usage = client._extract_usage_from_response(response)
             assert usage.prompt_tokens == 25
             assert usage.completion_tokens == 35
@@ -1022,8 +1049,9 @@ class TestGrokAsyncClient(BaseProviderTestSuite):
             mock_call.function.name = "async_test_function"
             mock_call.function.arguments = '{"param": "async_value"}'
             response.tool_calls = [mock_call]
-            
+
             tool_calls = client._extract_tool_calls_from_response(response)
+            assert isinstance(tool_calls, list)
             assert len(tool_calls) == 1
             assert tool_calls[0].call_id == "async_test_call"
             assert tool_calls[0].name == "async_test_function"
@@ -1041,14 +1069,14 @@ class TestGrokAsyncClient(BaseProviderTestSuite):
             client.tool_manager = None
             mock_chat = Mock()
             mock_client.chat.create.return_value = mock_chat
-            
+
             response_with_tools = Mock()
             response_with_tools.tool_calls = [Mock()]
             response_with_tools.tool_calls[0].id = "async_call_no_manager"
             response_with_tools.tool_calls[0].function = Mock()
             response_with_tools.tool_calls[0].function.name = "async_test_tool"
             response_with_tools.tool_calls[0].function.arguments = '{"y": 2}'
-            
+
             final_response = Mock()
             final_response.content = "Async done without tool manager"
             final_response.tool_calls = None
@@ -1056,37 +1084,35 @@ class TestGrokAsyncClient(BaseProviderTestSuite):
             final_response.usage.prompt_tokens = 5
             final_response.usage.completion_tokens = 8
             final_response.usage.total_tokens = 13
-            
+
             mock_chat.sample = AsyncMock(side_effect=[response_with_tools, final_response])
-            
+
             result = await client._handle_tool_calling_completion(
-                messages=[Mock()],
-                model="grok-async",
-                tools=[Mock()]
+                messages=[Mock()], model="grok-async", tools=[Mock()]
             )
             assert result is not None
-            
+
             # Test _handle_streaming_tool_calls without tool_manager
             async def mock_stream_generator():
                 yield (Mock(), Mock(content="Async stream chunk"))
-            
+
             mock_chat.stream = Mock(return_value=mock_stream_generator())
             mock_chat.sample = AsyncMock(side_effect=[response_with_tools, final_response])
-            
+
             processor = StreamProcessor()
             stream_gen = client._handle_streaming_tool_calls(
                 stream=Mock(),
                 processor=processor,
                 messages=[Mock()],
                 model="grok-async",
-                tools=[Mock()]
+                tools=[Mock()],
             )
-            
+
             chunks = []
             async for chunk in stream_gen:
                 chunks.append(chunk)
             assert len(chunks) >= 0
-            
+
             # Reset tool_manager for other tests
             client.tool_manager = tool_manager
 
@@ -1101,7 +1127,7 @@ class TestGrokAsyncClient(BaseProviderTestSuite):
 
             with patch("chimeric.providers.grok.client.tool_result") as mock_tool_result:
                 mock_tool_result.return_value = Mock()
-                
+
                 mock_chat = Mock()
                 mock_client.chat.create.return_value = mock_chat
                 mock_chat.append = Mock()
@@ -1124,17 +1150,23 @@ class TestGrokAsyncClient(BaseProviderTestSuite):
 
                 mock_chat.sample = AsyncMock(side_effect=[first_response, final_response])
 
-                with patch.object(client, '_execute_tool_calls', new_callable=AsyncMock) as mock_execute:
+                with patch.object(
+                    client, "_execute_tool_calls", new_callable=AsyncMock
+                ) as mock_execute:
                     # Test error result with None result and None error
-                    mock_execute.return_value = [ToolExecutionResult(
-                        name="async_error_tool", arguments='{"y": 10}', call_id="async_call_error_test", 
-                        result=None, is_error=True, error=None
-                    )]
+                    mock_execute.return_value = [
+                        ToolExecutionResult(
+                            name="async_error_tool",
+                            arguments='{"y": 10}',
+                            call_id="async_call_error_test",
+                            result=None,
+                            is_error=True,
+                            error=None,
+                        )
+                    ]
 
                     result = await client._handle_tool_calling_completion(
-                        messages=[Mock()],
-                        model="grok-async",
-                        tools=[Mock()]
+                        messages=[Mock()], model="grok-async", tools=[Mock()]
                     )
                     assert result is not None
 
@@ -1150,7 +1182,7 @@ class TestGrokAsyncClient(BaseProviderTestSuite):
                 messages=original_messages,
                 assistant_response=Mock(),
                 tool_calls=[Mock()],
-                tool_results=[Mock()]
+                tool_results=[Mock()],
             )
             assert result is original_messages
             assert client._provider_name == self.provider_name
@@ -1162,14 +1194,14 @@ class TestGrokAsyncClient(BaseProviderTestSuite):
         with patch(self.mock_client_path):
             client = self.client_class(api_key="test-key", tool_manager=tool_manager)
             processor = StreamProcessor()
-            
+
             # Test with content
             mock_response = Mock()
             mock_chunk = Mock()
             mock_chunk.content = "Async stream content"
             result = client._process_provider_stream_event((mock_response, mock_chunk), processor)
             assert result is not None
-            
+
             # Test with None content
             mock_chunk.content = None
             result = client._process_provider_stream_event((mock_response, mock_chunk), processor)
@@ -1206,9 +1238,9 @@ class TestGrokAsyncClient(BaseProviderTestSuite):
                 processor=processor,
                 messages=[Mock()],
                 model="grok-async",
-                tools=[Mock()]
+                tools=[Mock()],
             )
-            
+
             chunks = []
             async for chunk in stream_gen:
                 chunks.append(chunk)

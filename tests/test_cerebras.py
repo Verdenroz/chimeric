@@ -1,7 +1,8 @@
 from unittest.mock import Mock, patch
 
 from chimeric.providers.cerebras import CerebrasAsyncClient, CerebrasClient
-from chimeric.types import Capability, Message as ChimericMessage, Tool, ToolCall, ToolExecutionResult, ToolParameters
+from chimeric.types import Capability, Tool, ToolCall, ToolExecutionResult, ToolParameters
+from chimeric.types import Message as ChimericMessage
 from chimeric.utils import StreamProcessor
 from conftest import BaseProviderTestSuite
 
@@ -149,7 +150,7 @@ class TestCerebrasClient(BaseProviderTestSuite):
             mock_client.return_value = mock_instance
 
             # Mock model without optional attributes
-            mock_model = Mock(spec=['id'])  # Only has id attribute
+            mock_model = Mock(spec=["id"])  # Only has id attribute
             mock_model.id = "llama3.1-70b"
             # No owned_by or created attributes
 
@@ -192,10 +193,7 @@ class TestCerebrasClient(BaseProviderTestSuite):
 
             # Test with ToolParameters
             params = ToolParameters(
-                type="object",
-                properties={"x": {"type": "integer"}},
-                required=["x"],
-                strict=True
+                type="object", properties={"x": {"type": "integer"}}, required=["x"], strict=True
             )
             tool = Tool(name="test_tool", description="Test tool", parameters=params)
 
@@ -233,19 +231,11 @@ class TestCerebrasClient(BaseProviderTestSuite):
             tools = [{"type": "function", "function": {"name": "test"}}]
 
             client._make_provider_request(
-                messages=messages,
-                model="llama3.1-8b",
-                stream=False,
-                tools=tools,
-                temperature=0.7
+                messages=messages, model="llama3.1-8b", stream=False, tools=tools, temperature=0.7
             )
 
             mock_instance.chat.completions.create.assert_called_once_with(
-                model="llama3.1-8b",
-                messages=messages,
-                stream=False,
-                tools=tools,
-                temperature=0.7
+                model="llama3.1-8b", messages=messages, stream=False, tools=tools, temperature=0.7
             )
 
     def test_process_stream_events_all_types(self):
@@ -509,6 +499,7 @@ class TestCerebrasClient(BaseProviderTestSuite):
             response.choices[0].message.tool_calls = [tool_call]
 
             tool_calls = client._extract_tool_calls_from_response(response)
+            assert isinstance(tool_calls, list)
             assert len(tool_calls) == 1
             assert tool_calls[0].call_id == "call_123"
             assert tool_calls[0].name == "test_tool"
@@ -552,12 +543,11 @@ class TestCerebrasClient(BaseProviderTestSuite):
             messages = [{"role": "user", "content": "Hello"}]
             assistant_response = Mock()
             tool_calls = [ToolCall(call_id="call_123", name="test_tool", arguments='{"x": 10}')]
-            tool_results = [ToolExecutionResult(
-                call_id="call_123",
-                name="test_tool",
-                arguments='{"x": 10}',
-                result="Result: 10"
-            )]
+            tool_results = [
+                ToolExecutionResult(
+                    call_id="call_123", name="test_tool", arguments='{"x": 10}', result="Result: 10"
+                )
+            ]
 
             updated = client._update_messages_with_tool_calls(
                 messages, assistant_response, tool_calls, tool_results
@@ -580,13 +570,15 @@ class TestCerebrasClient(BaseProviderTestSuite):
             messages = []
             assistant_response = Mock()
             tool_calls = [ToolCall(call_id="call_error", name="error_tool", arguments='{"x": 5}')]
-            tool_results = [ToolExecutionResult(
-                call_id="call_error",
-                name="error_tool",
-                arguments='{"x": 5}',
-                error="Tool failed",
-                is_error=True
-            )]
+            tool_results = [
+                ToolExecutionResult(
+                    call_id="call_error",
+                    name="error_tool",
+                    arguments='{"x": 5}',
+                    error="Tool failed",
+                    is_error=True,
+                )
+            ]
 
             updated = client._update_messages_with_tool_calls(
                 messages, assistant_response, tool_calls, tool_results
@@ -679,11 +671,11 @@ class TestCerebrasAsyncClient(BaseProviderTestSuite):
 
             mock_response = Mock()
             mock_response.data = [mock_model]
-            
+
             # Create async mock for the list method
             async def async_list():
                 return mock_response
-            
+
             mock_instance.models.list = async_list
 
             client = self.client_class(api_key="test-key", tool_manager=tool_manager)
@@ -704,17 +696,14 @@ class TestCerebrasAsyncClient(BaseProviderTestSuite):
             # Create async mock for the create method
             async def async_create(**kwargs):
                 return Mock()
-            
+
             mock_instance.chat.completions.create = async_create
 
             client = self.client_class(api_key="test-key", tool_manager=tool_manager)
 
             messages = [{"role": "user", "content": "Async hello"}]
             result = await client._make_async_provider_request(
-                messages=messages,
-                model="llama3.1-8b",
-                stream=True,
-                temperature=0.5
+                messages=messages, model="llama3.1-8b", stream=True, temperature=0.5
             )
 
             # Verify the result is returned
@@ -812,6 +801,7 @@ class TestCerebrasAsyncClient(BaseProviderTestSuite):
             response.choices[0].message.tool_calls = [tool_call]
 
             tool_calls = client._extract_tool_calls_from_response(response)
+            assert isinstance(tool_calls, list)
             assert len(tool_calls) == 1
             assert tool_calls[0].call_id == "async_call_456"
             assert tool_calls[0].name == "async_test_tool"
@@ -826,12 +816,14 @@ class TestCerebrasAsyncClient(BaseProviderTestSuite):
             messages = [{"role": "user", "content": "Async test"}]
             assistant_response = Mock()
             tool_calls = [ToolCall(call_id="async_call", name="async_tool", arguments='{"x": 30}')]
-            tool_results = [ToolExecutionResult(
-                call_id="async_call",
-                name="async_tool",
-                arguments='{"x": 30}',
-                result="Async result: 30"
-            )]
+            tool_results = [
+                ToolExecutionResult(
+                    call_id="async_call",
+                    name="async_tool",
+                    arguments='{"x": 30}',
+                    result="Async result: 30",
+                )
+            ]
 
             updated = client._update_messages_with_tool_calls(
                 messages, assistant_response, tool_calls, tool_results
@@ -929,7 +921,7 @@ class TestCerebrasAsyncClient(BaseProviderTestSuite):
             chunk1 = client._process_provider_stream_event(event1, processor)
             assert chunk1 is None
 
-            # Test Case 2: Tool call with function but no arguments
+            # Tool call with function but no arguments
             event2 = Mock()
             event2.choices = [Mock()]
             event2.choices[0].delta = Mock()
