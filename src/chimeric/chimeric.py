@@ -139,6 +139,7 @@ class Chimeric:
             cohere_api_key,
             grok_api_key,
             groq_api_key,
+            **kwargs,
         )
 
         # Auto-detect providers from environment variables.
@@ -153,6 +154,7 @@ class Chimeric:
         cohere_api_key: str | None = None,
         grok_api_key: str | None = None,
         groq_api_key: str | None = None,
+        **kwargs: Any,
     ) -> None:
         """Initializes providers from explicitly provided API keys.
 
@@ -164,6 +166,7 @@ class Chimeric:
             cohere_api_key: Cohere API key.
             grok_api_key: Grok API key.
             groq_api_key: Groq API key.
+            **kwargs: Additional provider-specific configuration parameters.
         """
         provider_configs: list[tuple[Provider, str | None]] = [
             (Provider.OPENAI, openai_api_key),
@@ -178,8 +181,12 @@ class Chimeric:
         # Initialize providers that have API keys provided.
         for provider, api_key in provider_configs:
             if api_key is not None:
-                self._add_provider(provider, api_key=api_key, tool_manager=self._tool_manager)
-                self._add_async_provider(provider, api_key=api_key, tool_manager=self._tool_manager)
+                self._add_provider(
+                    provider, api_key=api_key, tool_manager=self._tool_manager, **kwargs
+                )
+                self._add_async_provider(
+                    provider, api_key=api_key, tool_manager=self._tool_manager, **kwargs
+                )
 
     def _detect_providers_from_environment(self, kwargs: dict[str, Any]) -> None:
         """Auto-detects available providers from environment variables.
@@ -230,7 +237,8 @@ class Chimeric:
             ChimericError: If provider initialization fails.
         """
         if provider not in PROVIDER_CLIENTS:
-            raise ProviderNotFoundError(f"Provider {provider.value} not supported")
+            available = [p.value for p in PROVIDER_CLIENTS]
+            raise ProviderNotFoundError(provider.value, available)
 
         try:
             client_class = PROVIDER_CLIENTS[provider]
@@ -262,7 +270,8 @@ class Chimeric:
             ChimericError: If provider initialization fails.
         """
         if provider not in ASYNC_PROVIDER_CLIENTS:
-            raise ProviderNotFoundError(f"Async provider {provider.value} not supported")
+            available = [p.value for p in ASYNC_PROVIDER_CLIENTS]
+            raise ProviderNotFoundError(f"Async provider {provider.value}", available)
 
         try:
             async_client_class = ASYNC_PROVIDER_CLIENTS[provider]
@@ -301,7 +310,7 @@ class Chimeric:
         except Exception as e:
             raise ProviderError(
                 provider=provider.value,
-                message="Failed to list models",
+                message=None,
                 error=e,
             ) from e
 
@@ -538,7 +547,13 @@ class Chimeric:
                 # Skip providers that fail due to connection or API issues
                 continue
 
-        raise ModelNotSupportedError(model=model, provider=None, supported_models=available_models)
+        # If only one provider, include it in the error for more specific messaging
+        provider_name = (
+            next(iter(self.providers.keys())).value if len(self.providers) == 1 else None
+        )
+        raise ModelNotSupportedError(
+            model=model, provider=provider_name, supported_models=available_models
+        )
 
     def list_models(self, provider: str | None = None) -> list[ModelSummary]:
         """Lists available models from specified provider or all providers.
@@ -585,24 +600,13 @@ class Chimeric:
                 continue
         return all_models
 
-    def get_capabilities(self, provider: str | None = None) -> Capability:
-        """Gets capabilities for a specific provider or merged capabilities.
-
-        Args:
-            provider: Optional provider name to get capabilities for.
+    @property
+    def capabilities(self) -> Capability:
+        """Gets merged capabilities from all configured providers.
 
         Returns:
-            Capability object with supported features.
-
-        Raises:
-            ProviderNotFoundError: If the specified provider is not configured.
+            Capability object with union of all provider features.
         """
-        if provider:
-            provider_enum = Provider(provider.lower())
-            if provider_enum not in self.providers:
-                raise ProviderNotFoundError(f"Provider {provider} not configured")
-            return self.providers[provider_enum].capabilities
-
         # Merge capabilities from all providers (union of all features).
         merged_values = {
             "multimodal": False,
@@ -621,6 +625,27 @@ class Chimeric:
 
         # Create a new instance with the merged values
         return Capability(**merged_values)
+
+    def get_capabilities(self, provider: str | None = None) -> Capability:
+        """Gets capabilities for a specific provider or merged capabilities.
+
+        Args:
+            provider: Optional provider name to get capabilities for.
+
+        Returns:
+            Capability object with supported features.
+
+        Raises:
+            ProviderNotFoundError: If the specified provider is not configured.
+        """
+        if provider:
+            provider_enum = Provider(provider.lower())
+            if provider_enum not in self.providers:
+                raise ProviderNotFoundError(f"Provider {provider} not configured")
+            return self.providers[provider_enum].capabilities
+
+        # Use the property for merged capabilities
+        return self.capabilities
 
     def get_provider_client(self, provider: str) -> ChimericClient[Any, Any, Any]:
         """Gets direct access to a provider's client instance.
