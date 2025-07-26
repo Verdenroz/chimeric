@@ -332,7 +332,7 @@ class TestCreateCompletionResponse:
 
 
 class TestNormalizeMessages:
-    """Test normalize_messages function for missing coverage."""
+    """Test normalize_messages function."""
 
     def test_normalize_single_message_object(self):
         """Test normalizing a single Message object."""
@@ -399,7 +399,7 @@ class TestNormalizeMessages:
 
 
 class TestCreateStreamChunk:
-    """Test create_stream_chunk function for missing coverage."""
+    """Test create_stream_chunk function"""
 
     def test_create_stream_chunk_without_content_delta(self):
         """Test create_stream_chunk when content_delta is None."""

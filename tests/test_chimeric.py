@@ -5,6 +5,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from chimeric.base import ChimericAsyncClient, ChimericClient
 from chimeric.chimeric import ASYNC_PROVIDER_CLIENTS, PROVIDER_CLIENTS, Chimeric
 from chimeric.exceptions import (
     ChimericError,
@@ -25,18 +26,53 @@ from chimeric.types import (
 )
 
 
-class MockProviderClient:
+class MockProviderClient(ChimericClient[Any, Any, Any]):
     """Mock provider client for testing."""
 
     def __init__(self, api_key: str, tool_manager: ToolManager, **kwargs: Any) -> None:
         self.api_key = api_key
         self.tool_manager = tool_manager
         self.init_kwargs = kwargs
-        self.request_count = 0
-        self.error_count = 0
+        self._request_count = 0
+        self._error_count = 0
         self._capabilities = Capability(
             multimodal=True, streaming=True, tools=True, agents=False, files=False
         )
+
+    def _get_client_type(self) -> type:
+        return Mock
+
+    def _init_client(self, client_type: type, **kwargs: Any) -> Any:
+        return Mock()
+
+    def _get_capabilities(self) -> Capability:
+        return self._capabilities
+
+    def _list_models_impl(self) -> list[ModelSummary]:
+        return self.list_models()
+
+    def _messages_to_provider_format(self, messages: list[Any]) -> Any:
+        return messages
+
+    def _tools_to_provider_format(self, tools: list[Any]) -> Any:
+        return tools
+
+    def _make_provider_request(
+        self, messages: Any, model: str, stream: bool, tools: Any = None, **kwargs: Any
+    ) -> Any:
+        return Mock()
+
+    def _process_provider_stream_event(self, event: Any, processor: Any) -> Any:
+        return None
+
+    def _extract_usage_from_response(self, response: Any) -> Usage:
+        return Usage(prompt_tokens=10, completion_tokens=20, total_tokens=30)
+
+    def _extract_content_from_response(self, response: Any) -> str:
+        return "Mock response"
+
+    def _extract_tool_calls_from_response(self, response: Any) -> list[Any] | None:
+        return None
 
     @property
     def capabilities(self) -> Capability:
@@ -58,7 +94,7 @@ class MockProviderClient:
         **kwargs: Any,
     ) -> ChimericCompletionResponse[Any] | Generator[ChimericStreamChunk[Any], None, None]:
         self.last_request_kwargs = kwargs
-        self.request_count += 1
+        self._request_count += 1
 
         if stream:
             return self._create_mock_stream()
@@ -82,18 +118,53 @@ class MockProviderClient:
             yield ChimericStreamChunk(native=native_chunk, common=common_chunk)
 
 
-class MockAsyncProviderClient:
+class MockAsyncProviderClient(ChimericAsyncClient[Any, Any, Any]):
     """Mock async provider client for testing."""
 
     def __init__(self, api_key: str, tool_manager: ToolManager, **kwargs: Any) -> None:
         self.api_key = api_key
         self.tool_manager = tool_manager
         self.init_kwargs = kwargs
-        self.request_count = 0
-        self.error_count = 0
+        self._request_count = 0
+        self._error_count = 0
         self._capabilities = Capability(
             multimodal=False, streaming=True, tools=False, agents=True, files=True
         )
+
+    def _get_async_client_type(self) -> type:
+        return Mock
+
+    def _init_async_client(self, async_client_type: type, **kwargs: Any) -> Any:
+        return Mock()
+
+    def _get_capabilities(self) -> Capability:
+        return self._capabilities
+
+    async def _list_models_impl(self) -> list[ModelSummary]:
+        return await self.list_models()
+
+    def _messages_to_provider_format(self, messages: list[Any]) -> Any:
+        return messages
+
+    def _tools_to_provider_format(self, tools: list[Any]) -> Any:
+        return tools
+
+    async def _make_async_provider_request(
+        self, messages: Any, model: str, stream: bool, tools: Any = None, **kwargs: Any
+    ) -> Any:
+        return Mock()
+
+    def _process_provider_stream_event(self, event: Any, processor: Any) -> Any:
+        return None
+
+    def _extract_usage_from_response(self, response: Any) -> Usage:
+        return Usage(prompt_tokens=15, completion_tokens=25, total_tokens=40)
+
+    def _extract_content_from_response(self, response: Any) -> str:
+        return "Async mock response"
+
+    def _extract_tool_calls_from_response(self, response: Any) -> list[Any] | None:
+        return None
 
     @property
     def capabilities(self) -> Capability:
@@ -115,7 +186,7 @@ class MockAsyncProviderClient:
         **kwargs: Any,
     ) -> ChimericCompletionResponse[Any] | AsyncGenerator[ChimericStreamChunk[Any], None]:
         self.last_request_kwargs = kwargs
-        self.request_count += 1
+        self._request_count += 1
 
         if stream:
             return self._create_mock_async_stream()
@@ -586,7 +657,7 @@ class TestGenerationMethods:
         ):
             chimeric = Chimeric(openai_api_key="test-key")
 
-            kwargs = {
+            kwargs: dict[str, Any] = {
                 "temperature": 0.7,
                 "max_tokens": 100,
                 "custom_param": "test_value",
@@ -677,7 +748,7 @@ class TestGenerationMethods:
         ):
             chimeric = Chimeric(openai_api_key="test-key")
 
-            kwargs = {
+            kwargs: dict[str, Any] = {
                 "temperature": 0.8,
                 "max_tokens": 200,
                 "stream_options": {"include_usage": True},
@@ -790,8 +861,8 @@ class TestProviderAccess:
                 self.api_key = kwargs.get("api_key", "test")
                 self.tool_manager = kwargs.get("tool_manager")
                 self.init_kwargs = kwargs
-                self.request_count = 0
-                self.error_count = 0
+                self._request_count = 0
+                self._error_count = 0
                 self._capabilities = Capability(
                     multimodal=False, streaming=True, tools=False, agents=True, files=True
                 )
@@ -911,7 +982,7 @@ class TestToolIntegration:
             chimeric = Chimeric(openai_api_key="test-key")
 
             @chimeric.tool()
-            def test_function(x: int) -> str:
+            def test_function(x: int) -> str:  # type: ignore[reportUnusedFunction]
                 """Test function."""
                 return f"Result: {x}"
 
@@ -930,7 +1001,7 @@ class TestToolIntegration:
             chimeric = Chimeric(openai_api_key="test-key")
 
             @chimeric.tool(name="custom_tool", description="Custom description")
-            def test_function(x: int) -> str:
+            def test_function(x: int) -> str:  # type: ignore[reportUnusedFunction]
                 return f"Result: {x}"
 
             tools = chimeric.tools
@@ -948,11 +1019,11 @@ class TestToolIntegration:
 
             # Register multiple tools
             @chimeric.tool()
-            def tool1(x: int) -> str:
+            def tool1(x: int) -> str:  # type: ignore[reportUnusedFunction]
                 return str(x)
 
             @chimeric.tool()
-            def tool2(y: str) -> int:
+            def tool2(y: str) -> int:  # type: ignore[reportUnusedFunction]
                 return len(y)
 
             tools = chimeric.tools

@@ -22,7 +22,7 @@ from chimeric.types import (
 from chimeric.utils import StreamProcessor, create_stream_chunk
 
 
-class ConcreteTestClient(ChimericClient):
+class ConcreteTestClient(ChimericClient[Any, Any, Any]):
     """Concrete implementation for testing base class functionality."""
 
     def __init__(self, api_key: str, tool_manager: ToolManager, **kwargs: Any) -> None:
@@ -129,7 +129,7 @@ class ConcreteTestClient(ChimericClient):
         return ["alias-1", "alias-2"]
 
 
-class ConcreteTestAsyncClient(ChimericAsyncClient):
+class ConcreteTestAsyncClient(ChimericAsyncClient[Any, Any, Any]):
     """Concrete async implementation for testing base class functionality."""
 
     def __init__(self, api_key: str, tool_manager: ToolManager, **kwargs: Any) -> None:
@@ -323,7 +323,6 @@ class TestChimericClientBase:
         assert chunks[0].common.delta == "chunk 0"
         assert chunks[2].common.finish_reason == "stop"
 
-        # Test StreamChunk.__str__ method
         chunk_str = str(chunks[0].common)
         assert "chunk 0" in chunk_str
 
@@ -333,7 +332,7 @@ class TestChimericClientBase:
 
         # Register a test tool
         @tool_manager.register
-        def test_tool(x: int) -> str:
+        def test_tool(x: int) -> str:  # type: ignore[reportUnusedFunction]
             return f"Result: {x}"
 
         client = ConcreteTestClient("test-key", tool_manager)
@@ -372,7 +371,7 @@ class TestChimericClientBase:
         tool_manager = ToolManager()
 
         @tool_manager.register
-        def math_tool(a: int, b: int) -> str:
+        def math_tool(a: int, b: int) -> str:  # type: ignore[reportUnusedFunction]
             return f"Sum: {a + b}"
 
         client = ConcreteTestClient("test-key", tool_manager)
@@ -443,7 +442,7 @@ class TestChimericClientBase:
         client._make_provider_request = mock_request
         client._process_provider_stream_event = mock_process_event
 
-        # This should trigger the tool execution path (lines 494-519)
+        # This should trigger the tool execution path
         stream = client.chat_completion(
             messages="Calculate 3 + 5",
             model="test-model",
@@ -540,7 +539,7 @@ class TestChimericClientBase:
         tool_manager = ToolManager()
 
         @tool_manager.register
-        def test_tool() -> str:
+        def test_tool() -> str:  # type: ignore[reportUnusedFunction]
             return "result"
 
         client = ConcreteTestClient("test-key", tool_manager)
@@ -556,10 +555,9 @@ class TestChimericClientBase:
                 response.content = ""
                 response.tool_calls = [ToolCall(call_id="1", name="test_tool", arguments="{}")]
                 return response
-            else:
-                response.content = "Final response"
-                response.tool_calls = None
-                return response
+            response.content = "Final response"
+            response.tool_calls = None
+            return response
 
         # Mock to return None usage to trigger the False branch
         def mock_extract_usage(response):
@@ -591,7 +589,7 @@ class TestChimericClientBase:
             event.delta = None
             event.finish_reason = None
             yield event
-            
+
             # Event that will result in actual chunk
             event2 = Mock()
             event2.delta = "content"
@@ -602,17 +600,17 @@ class TestChimericClientBase:
         def mock_process_event(event, processor):
             if event.delta is None and event.finish_reason is None:
                 return None  # This will make `if chunk:` False
-            else:
-                return create_stream_chunk(
-                    native_event=event, processor=processor, content_delta=event.delta, finish_reason=event.finish_reason
-                )
+            return create_stream_chunk(
+                native_event=event,
+                processor=processor,
+                content_delta=event.delta,
+                finish_reason=event.finish_reason,
+            )
 
-        client._make_provider_request = lambda *args, **kwargs: stream_with_none()
+        client._make_provider_request = lambda *args, **kwargs: stream_with_none()  # type: ignore
         client._process_provider_stream_event = mock_process_event
 
-        stream = client.chat_completion(
-            messages="test", model="test-model", stream=True
-        )
+        stream = client.chat_completion(messages="test", model="test-model", stream=True)
 
         chunks = list(stream)
         # Should only get the non-None chunk
@@ -651,7 +649,7 @@ class TestChimericClientBase:
             class NonCoroutineClose(ConcreteTestAsyncClient):
                 def _init_async_client(self, async_client_type, **kwargs):
                     client = AsyncMock()
-                    
+
                     # Create aclose that returns a non-coroutine
                     def non_coroutine_close():
                         return "closed"  # Not a coroutine
@@ -672,7 +670,7 @@ class TestChimericClientBase:
             tool_manager = ToolManager()
 
             @tool_manager.register
-            async def async_test_tool() -> str:
+            async def async_test_tool() -> str:  # type: ignore[reportUnusedFunction]
                 return "result"
 
             client = ConcreteTestAsyncClient("test-key", tool_manager)
@@ -686,12 +684,13 @@ class TestChimericClientBase:
                 response = Mock()
                 if call_count == 1:
                     response.content = ""
-                    response.tool_calls = [ToolCall(call_id="1", name="async_test_tool", arguments="{}")]
+                    response.tool_calls = [
+                        ToolCall(call_id="1", name="async_test_tool", arguments="{}")
+                    ]
                     return response
-                else:
-                    response.content = "Final response"
-                    response.tool_calls = None
-                    return response
+                response.content = "Final response"
+                response.tool_calls = None
+                return response
 
             # Mock to return None usage to trigger the False branch
             def mock_extract_usage(response):
@@ -728,7 +727,7 @@ class TestChimericClientBase:
                 event.delta = None
                 event.finish_reason = None
                 yield event
-                
+
                 # Event that will result in actual chunk
                 event2 = Mock()
                 event2.delta = "content"
@@ -739,10 +738,12 @@ class TestChimericClientBase:
             def mock_process_event(event, processor):
                 if event.delta is None and event.finish_reason is None:
                     return None  # This will make `if chunk:` False
-                else:
-                    return create_stream_chunk(
-                        native_event=event, processor=processor, content_delta=event.delta, finish_reason=event.finish_reason
-                    )
+                return create_stream_chunk(
+                    native_event=event,
+                    processor=processor,
+                    content_delta=event.delta,
+                    finish_reason=event.finish_reason,
+                )
 
             async def mock_request(*args, **kwargs):
                 return stream_with_none()
@@ -750,12 +751,10 @@ class TestChimericClientBase:
             client._make_async_provider_request = mock_request
             client._process_provider_stream_event = mock_process_event
 
-            stream = await client.chat_completion(
-                messages="test", model="test-model", stream=True
-            )
+            stream = await client.chat_completion(messages="test", model="test-model", stream=True)
 
             chunks = []
-            async for chunk in stream:
+            async for chunk in stream:  # type: ignore
                 chunks.append(chunk)
 
             # Should only get the non-None chunk
@@ -830,22 +829,24 @@ class TestChimericClientBase:
 
         # Test with invalid JSON arguments
         @tool_manager.register
-        def test_tool(x: int) -> str:
+        def test_tool(x: int) -> str:  # type: ignore[reportUnusedFunction]
             return f"Result: {x}"
 
         tool_call = ToolCall(call_id="2", name="test_tool", arguments="invalid json")
         result = client._execute_tool_call(tool_call)
         assert result.is_error
+        assert result.error is not None
         assert "Tool execution failed" in result.error
 
         # Test with tool execution failure
         @tool_manager.register
-        def failing_tool() -> str:
+        def failing_tool() -> str:  # type: ignore[reportUnusedFunction]
             raise RuntimeError("Tool failed")
 
         tool_call = ToolCall(call_id="3", name="failing_tool", arguments="{}")
         result = client._execute_tool_call(tool_call)
         assert result.is_error
+        assert result.error is not None
         assert "Tool execution failed" in result.error
 
     def test_async_tool_execution(self):
@@ -855,7 +856,7 @@ class TestChimericClientBase:
 
         # Register an async tool
         @tool_manager.register
-        async def async_tool(x: int) -> str:
+        async def async_tool(x: int) -> str:  # type: ignore[reportUnusedFunction]
             await asyncio.sleep(0.01)
             return f"Async result: {x}"
 
@@ -873,12 +874,12 @@ class TestChimericClientBase:
         call_order = []
 
         @tool_manager.register
-        def tool1(x: int) -> str:
+        def tool1(x: int) -> str:  # type: ignore[reportUnusedFunction]
             call_order.append(f"tool1-{x}")
             return f"Result1: {x}"
 
         @tool_manager.register
-        def tool2(y: str) -> str:
+        def tool2(y: str) -> str:  # type: ignore[reportUnusedFunction]
             call_order.append(f"tool2-{y}")
             return f"Result2: {y}"
 
@@ -996,6 +997,7 @@ class TestChimericClientBase:
         results = client._execute_tool_calls([tool_call])
         assert len(results) == 1
         assert results[0].is_error
+        assert results[0].error is not None
         assert "No tool registered with name" in results[0].error
 
     def test_chat_completion_with_usage_accumulation(self):
@@ -1003,7 +1005,7 @@ class TestChimericClientBase:
         tool_manager = ToolManager()
 
         @tool_manager.register
-        def test_tool(x: int) -> str:
+        def test_tool(x: int) -> str:  # type: ignore[reportUnusedFunction]
             return f"Result: {x}"
 
         client = ConcreteTestClient("test-key", tool_manager)
@@ -1056,7 +1058,7 @@ class TestChimericClientBase:
         tool_manager = ToolManager()
 
         @tool_manager.register
-        def simple_tool() -> str:
+        def simple_tool() -> str:  # type: ignore[reportUnusedFunction]
             return "simple"
 
         client = ConcreteTestClient("test-key", tool_manager)
@@ -1068,7 +1070,7 @@ class TestChimericClientBase:
             event.finish_reason = "stop"
             yield event
 
-        client._make_provider_request = lambda *args, **kwargs: simple_stream()
+        client._make_provider_request = lambda *args, **kwargs: simple_stream()  # type: ignore
 
         # Stream with tools registered but no tool calls made
         stream = client.chat_completion(
@@ -1086,7 +1088,7 @@ class TestChimericClientBase:
         tool_manager = ToolManager()
 
         @tool_manager.register
-        def final_tool() -> str:
+        def final_tool() -> str:  # type: ignore[reportUnusedFunction]
             return "final result"
 
         client = ConcreteTestClient("test-key", tool_manager)
@@ -1146,7 +1148,7 @@ class TestChimericClientBase:
         tool_manager = ToolManager()
 
         @tool_manager.register
-        def test_tool() -> str:
+        def test_tool() -> str:  # type: ignore[reportUnusedFunction]
             return "result"
 
         client = ConcreteTestClient("test-key", tool_manager)
@@ -1201,7 +1203,7 @@ class TestChimericClientBase:
         tool_manager = ToolManager()
 
         @tool_manager.register
-        def simple_tool() -> str:
+        def simple_tool() -> str:  # type: ignore[reportUnusedFunction]
             return "done"
 
         client = ConcreteTestClient("test-key", tool_manager)
@@ -1213,7 +1215,7 @@ class TestChimericClientBase:
             event.finish_reason = "stop"
             yield event
 
-        client._make_provider_request = lambda *args, **kwargs: simple_stream()
+        client._make_provider_request = lambda *args, **kwargs: simple_stream()  # type: ignore
 
         # Stream with tools available but no tool calls triggered
         stream = client.chat_completion(
@@ -1368,7 +1370,7 @@ class TestChimericAsyncClientBase:
         stream = await client.chat_completion(messages="Hello", model="test-model", stream=True)
 
         chunks = []
-        async for chunk in stream:
+        async for chunk in stream:  # type: ignore
             chunks.append(chunk)
 
         assert len(chunks) == 3
@@ -1382,11 +1384,11 @@ class TestChimericAsyncClientBase:
 
         # Register both sync and async tools
         @tool_manager.register
-        def sync_tool(x: int) -> str:
+        def sync_tool(x: int) -> str:  # type: ignore[reportUnusedFunction]
             return f"Sync: {x}"
 
         @tool_manager.register
-        async def async_tool(x: int) -> str:
+        async def async_tool(x: int) -> str:  # type: ignore[reportUnusedFunction]
             await asyncio.sleep(0.01)
             return f"Async: {x}"
 
@@ -1408,7 +1410,7 @@ class TestChimericAsyncClientBase:
         execution_times = []
 
         @tool_manager.register
-        async def slow_tool(x: int) -> str:
+        async def slow_tool(x: int) -> str:  # type: ignore[reportUnusedFunction]
             start = asyncio.get_event_loop().time()
             await asyncio.sleep(0.05)
             execution_times.append((x, asyncio.get_event_loop().time() - start))
@@ -1434,7 +1436,7 @@ class TestChimericAsyncClientBase:
         tool_manager = ToolManager()
 
         @tool_manager.register
-        async def get_weather(city: str) -> str:
+        async def get_weather(city: str) -> str:  # type: ignore[reportUnusedFunction]
             return f"Weather in {city}: Sunny, 72°F"
 
         client = ConcreteTestAsyncClient("test-key", tool_manager)
@@ -1479,7 +1481,7 @@ class TestChimericAsyncClientBase:
         tool_manager = ToolManager()
 
         @tool_manager.register
-        async def simple_tool() -> str:
+        async def simple_tool() -> str:  # type: ignore[reportUnusedFunction]
             return "tool result"
 
         client = ConcreteTestAsyncClient("test-key", tool_manager)
@@ -1505,7 +1507,7 @@ class TestChimericAsyncClientBase:
         )
 
         chunks = []
-        async for chunk in stream:
+        async for chunk in stream:  # type: ignore
             chunks.append(chunk)
 
         assert len(chunks) >= 1
@@ -1555,7 +1557,7 @@ class TestChimericAsyncClientBase:
         client = ConcreteTestAsyncClient("test-key", tool_manager)
 
         @tool_manager.register
-        async def failing_tool() -> str:
+        async def failing_tool() -> str:  # type: ignore[reportUnusedFunction]
             raise ValueError("Tool error")
 
         calls = [
@@ -1567,7 +1569,9 @@ class TestChimericAsyncClientBase:
 
         assert len(results) == 2
         assert all(r.is_error for r in results)
+        assert results[0].error is not None
         assert "Tool error" in results[0].error
+        assert results[1].error is not None
         assert "No tool registered with name" in results[1].error
 
     async def test_async_client_string_representation(self):
@@ -1588,7 +1592,7 @@ class TestChimericAsyncClientBase:
         tool_manager = ToolManager()
 
         @tool_manager.register
-        async def weather_tool(city: str) -> str:
+        async def weather_tool(city: str) -> str:  # type: ignore[reportUnusedFunction]
             return f"Weather in {city}: Sunny"
 
         client = ConcreteTestAsyncClient("test-key", tool_manager)
@@ -1660,7 +1664,7 @@ class TestChimericAsyncClientBase:
         tool_manager = ToolManager()
 
         @tool_manager.register
-        async def simple_tool() -> str:
+        async def simple_tool() -> str:  # type: ignore[reportUnusedFunction]
             return "done"
 
         client = ConcreteTestAsyncClient("test-key", tool_manager)
@@ -1686,7 +1690,7 @@ class TestChimericAsyncClientBase:
         )
 
         chunks = []
-        async for chunk in stream:
+        async for chunk in stream:  # type: ignore
             chunks.append(chunk)
         assert len(chunks) >= 1
 
@@ -1695,7 +1699,7 @@ class TestChimericAsyncClientBase:
         tool_manager = ToolManager()
 
         @tool_manager.register
-        async def async_math_tool(x: int, y: int) -> str:
+        async def async_math_tool(x: int, y: int) -> str:  # type: ignore[reportUnusedFunction]
             return f"Product: {x * y}"
 
         client = ConcreteTestAsyncClient("test-key", tool_manager)
@@ -1766,7 +1770,7 @@ class TestChimericAsyncClientBase:
         client._make_async_provider_request = mock_request
         client._process_provider_stream_event = mock_process_event
 
-        # This should trigger the async tool execution path (lines 1245-1279)
+        # This should trigger the async tool execution path
         stream = await client.chat_completion(
             messages="Calculate 3 * 4",
             model="test-model",
@@ -1775,7 +1779,7 @@ class TestChimericAsyncClientBase:
         )
 
         chunks = []
-        async for chunk in stream:
+        async for chunk in stream:  # type: ignore
             chunks.append(chunk)
 
         # Should get chunks from the continuation stream after tool execution

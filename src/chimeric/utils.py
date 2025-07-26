@@ -161,6 +161,14 @@ def create_stream_chunk(
     """Creates a standardized stream chunk."""
     if content_delta is not None:
         chunk = processor.process_content_delta(content_delta)
+        # If we also have a finish_reason, update the chunk
+        if finish_reason is not None:
+            chunk = StreamChunk(
+                content=chunk.content,
+                delta=chunk.delta,
+                finish_reason=finish_reason,
+                metadata=chunk.metadata,
+            )
     else:
         chunk = StreamChunk(
             content=processor.state.accumulated_content,
