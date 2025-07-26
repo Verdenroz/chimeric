@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 from collections.abc import Callable, Iterable
 from enum import Enum
 from typing import Any, Generic, TypeAlias, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
-from typing_extensions import TypedDict
 
 __all__ = [
     "Capability",
@@ -11,13 +12,6 @@ __all__ = [
     "ChimericStreamChunk",
     "CompletionResponse",
     "Input",
-    "JSONSchemaArray",
-    "JSONSchemaBoolean",
-    "JSONSchemaInteger",
-    "JSONSchemaNumber",
-    "JSONSchemaObject",
-    "JSONSchemaString",
-    "JSONSchemaType",
     "Message",
     "Metadata",
     "ModelSummary",
@@ -39,7 +33,6 @@ NativeCompletionType = TypeVar("NativeCompletionType")
 NativeStreamType = TypeVar("NativeStreamType")
 
 # Generic type aliases
-Input: TypeAlias = str | dict[str, Any] | list[Any]
 Tools: TypeAlias = Iterable[Any] | None
 Metadata: TypeAlias = dict[str, Any]
 
@@ -63,8 +56,12 @@ class Message(BaseModel):
     role: str
     content: str | list[Any]
     name: str | None = None
-    tool_calls: list["ToolCall"] | None = None
+    tool_calls: list[ToolCall] | None = None
     tool_call_id: str | None = None
+
+
+# Input type alias for all possible user inputs to generate methods
+Input: TypeAlias = str | dict[str, Any] | list[Any] | Message | list[Message]
 
 
 ###################
@@ -297,139 +294,6 @@ class ToolExecutionResult(BaseModel):
     result: str | None = None
     error: str | None = None
     is_error: bool = False
-
-
-###################
-# JSON SCHEMA TYPES
-###################
-
-
-class JSONSchemaType(TypedDict, total=False):
-    """Base for JSON schema fragments, defining common properties.
-
-    Attributes:
-        type: The fundamental JSON schema data type (e.g., "string", "number", "object", "array", "boolean", "null").
-        description: A human-readable explanation of the schema element's purpose.
-        required: Indicates if this element is mandatory within its parent object schema.
-    """
-
-    type: str
-    description: str
-    required: bool
-
-
-class JSONSchemaString(JSONSchemaType, total=False):
-    """Schema for string values, extending JSONSchemaType.
-
-    Attributes:
-        enum: An optional list of allowed string values.
-        format: An optional hint about the string's format (e.g., "date-time", "email", "uri", "uuid").
-        default: An optional default value for the string if not provided.
-        pattern: An optional regular expression that the string must match.
-        minLength: An optional non-negative integer specifying the minimum string length.
-        maxLength: An optional non-negative integer specifying the maximum string length.
-        nullable: Boolean indicating if `null` is an allowed value for this string.
-    """
-
-    enum: list[str]
-    format: str
-    default: str
-    pattern: str
-    minLength: int
-    maxLength: int
-    nullable: bool
-
-
-class JSONSchemaNumber(JSONSchemaType, total=False):
-    """Schema for numeric values (float or double), extending JSONSchemaType.
-
-    Attributes:
-        minimum: An optional inclusive lower bound for the number.
-        maximum: An optional inclusive upper bound for the number.
-        exclusiveMinimum: An optional exclusive lower bound for the number.
-        exclusiveMaximum: An optional exclusive upper bound for the number.
-        multipleOf: An optional value that the number must be a multiple of.
-        default: An optional default value for the number if not provided.
-        nullable: Boolean indicating if `null` is an allowed value for this number.
-    """
-
-    minimum: float
-    maximum: float
-    exclusiveMinimum: float
-    exclusiveMaximum: float
-    multipleOf: float
-    default: float
-    nullable: bool
-
-
-class JSONSchemaInteger(JSONSchemaType, total=False):
-    """Schema for integer values, extending JSONSchemaType.
-
-    Attributes:
-        minimum: An optional inclusive lower bound for the integer.
-        maximum: An optional inclusive upper bound for the integer.
-        exclusiveMinimum: An optional exclusive lower bound for the integer.
-        exclusiveMaximum: An optional exclusive upper bound for the integer.
-        multipleOf: An optional value that the integer must be a multiple of.
-        default: An optional default value for the integer if not provided.
-        nullable: Boolean indicating if `null` is an allowed value for this integer.
-    """
-
-    minimum: int
-    maximum: int
-    exclusiveMinimum: int
-    exclusiveMaximum: int
-    multipleOf: int
-    default: int
-    nullable: bool
-
-
-class JSONSchemaBoolean(JSONSchemaType, total=False):
-    """Schema for boolean values, extending JSONSchemaType.
-
-    Attributes:
-        default: An optional default boolean value if not provided.
-        nullable: Boolean indicating if `null` is an allowed value for this boolean field.
-    """
-
-    default: bool
-    nullable: bool
-
-
-class JSONSchemaArray(JSONSchemaType, total=False):
-    """Schema for array values, extending JSONSchemaType.
-
-    Attributes:
-        items: A JSON Schema (or list of schemas for tuple validation) that defines the type of items in the array.
-        minItems: An optional non-negative integer specifying the minimum number of items in the array.
-        maxItems: An optional non-negative integer specifying the maximum number of items in the array.
-        uniqueItems: An optional boolean indicating whether all items in the array must be unique.
-        default: An optional default array value if not provided.
-        nullable: Boolean indicating if `null` is an allowed value for this array.
-    """
-
-    items: dict[str, Any] | list[dict[str, Any]]
-    minItems: int
-    maxItems: int
-    uniqueItems: bool
-    default: list[Any]
-    nullable: bool
-
-
-class JSONSchemaObject(JSONSchemaType, total=False):
-    """Schema for object values, extending JSONSchemaType.
-
-    Attributes:
-        properties: A dictionary mapping property names to their respective JSON Schema definitions.
-        additionalProperties: A boolean or a JSON Schema that defines how additional properties (not in `properties`) are handled.
-        default: An optional default object value if not provided.
-        nullable: Boolean indicating if `null` is an allowed value for this object.
-    """
-
-    properties: dict[str, dict[str, Any]]
-    additionalProperties: bool
-    default: dict[str, Any]
-    nullable: bool
 
 
 ###################
