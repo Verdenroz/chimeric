@@ -292,7 +292,7 @@ class ChimericClient(
 
         tool = self.tool_manager.get_tool(call.name)
         if not tool or not callable(tool.function):
-            raise ToolRegistrationError(f"Tool '{call.name}' is not callable")
+            raise ToolRegistrationError(tool_name=call.name, reason="Tool function is not callable")
 
         try:
             args = json.loads(call.arguments) if call.arguments else {}
@@ -305,12 +305,6 @@ class ChimericClient(
 
             result.result = str(execution_result)
 
-        except json.JSONDecodeError as e:
-            result.error = f"Invalid JSON arguments: {e}"
-            result.is_error = True
-        except ToolRegistrationError as e:
-            result.error = str(e)
-            result.is_error = True
         except Exception as e:
             result.error = f"Tool execution failed: {e}"
             result.is_error = True
@@ -324,30 +318,29 @@ class ChimericClient(
             calls: A list of ToolCall objects to execute.
 
         Returns:
-            A list of ToolExecutionResult objects.
+            A list of ToolExecutionResult objects in the same order as input calls.
         """
         if not calls:
             return []
 
-        results = []
+        results: list[ToolExecutionResult] = [None] * len(calls)  # type: ignore  # Pre-allocate results list to maintain order
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            future_to_call = {
-                executor.submit(self._execute_tool_call, call): call for call in calls
+            future_to_index = {
+                executor.submit(self._execute_tool_call, call): i for i, call in enumerate(calls)
             }
-            for future in concurrent.futures.as_completed(future_to_call):
-                call = future_to_call[future]
+            for future in concurrent.futures.as_completed(future_to_index):
+                index = future_to_index[future]
+                call = calls[index]
                 try:
                     result = future.result()
-                    results.append(result)
+                    results[index] = result
                 except Exception as e:
-                    results.append(
-                        ToolExecutionResult(
-                            call_id=call.call_id,
-                            name=call.name,
-                            arguments=call.arguments,
-                            error=str(e),
-                            is_error=True,
-                        )
+                    results[index] = ToolExecutionResult(
+                        call_id=call.call_id,
+                        name=call.name,
+                        arguments=call.arguments,
+                        error=str(e),
+                        is_error=True,
                     )
         return results
 
@@ -1048,7 +1041,7 @@ class ChimericAsyncClient(
 
         tool = self.tool_manager.get_tool(call.name)
         if not tool or not callable(tool.function):
-            raise ToolRegistrationError(f"Tool '{call.name}' is not callable")
+            raise ToolRegistrationError(tool_name=call.name, reason="Tool function is not callable")
 
         try:
             args = json.loads(call.arguments) if call.arguments else {}
@@ -1061,12 +1054,6 @@ class ChimericAsyncClient(
 
             result.result = str(execution_result)
 
-        except json.JSONDecodeError as e:
-            result.error = f"Invalid JSON arguments: {e}"
-            result.is_error = True
-        except ToolRegistrationError as e:
-            result.error = str(e)
-            result.is_error = True
         except Exception as e:
             result.error = f"Tool execution failed: {e}"
             result.is_error = True
@@ -1386,6 +1373,7 @@ class ChimericAsyncClient(
                 model=model,
             )
         except Exception as e:
+            self._error_count += 1
             provider_name = (
                 self._provider_name if hasattr(self, "_provider_name") else self.__class__.__name__
             )

@@ -108,9 +108,9 @@ class ProviderError(ChimericError):
 
     def __init__(
         self,
+        error: Exception,
         provider: str,
         message: str | None = None,
-        error: Exception | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize the error.
@@ -123,10 +123,7 @@ class ProviderError(ChimericError):
         """
         # Generate message if not provided
         if message is None:
-            if error:
-                message = f"Provider '{provider}' failed: {error!s}"
-            else:
-                message = f"Provider '{provider}' failed"
+            message = f"Provider '{provider}' failed: {error!s}"
         else:
             message = f"Provider '{provider}': {message}"
 
