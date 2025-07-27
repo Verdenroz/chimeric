@@ -31,6 +31,7 @@ from .types import (
 from .utils import (
     StreamProcessor,
     create_completion_response,
+    filter_init_kwargs,
     normalize_messages,
     normalize_tools,
 )
@@ -86,8 +87,11 @@ class ChimericClient(
         # Get client type and initialize client
         client_type = self._get_client_type()
 
+        # Filter kwargs for this provider
+        filtered_kwargs = filter_init_kwargs(client_type, **kwargs)
+
         # Initialize client
-        self._client: ClientType = self._init_client(client_type, **kwargs)
+        self._client: ClientType = self._init_client(client_type, **filtered_kwargs)
         self._capabilities = self._get_capabilities()
 
     # ====================================================================
@@ -833,8 +837,11 @@ class ChimericAsyncClient(
         # Get client type and initialize client
         client_type = self._get_async_client_type()
 
+        # Filter kwargs for this provider
+        filtered_kwargs = filter_init_kwargs(client_type, **kwargs)
+
         # Initialize client
-        self._async_client: ClientType = self._init_async_client(client_type, **kwargs)
+        self._async_client: ClientType = self._init_async_client(client_type, **filtered_kwargs)
         self._capabilities = self._get_capabilities()
 
     # ====================================================================

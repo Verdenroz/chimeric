@@ -86,6 +86,8 @@ class ModelNotSupportedError(ChimericError):
         message = f"Model '{model}' is not supported"
         if provider:
             message += f" by provider '{provider}'"
+        if supported_models:
+            message += f". Supported models: {', '.join(supported_models)}"
 
         details = {
             "requested_model": model,

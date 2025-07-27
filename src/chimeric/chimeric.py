@@ -609,11 +609,8 @@ class Chimeric:
         """
         # Merge capabilities from all providers (union of all features).
         merged_values = {
-            "multimodal": False,
             "streaming": False,
             "tools": False,
-            "agents": False,
-            "files": False,
         }
 
         # Collect capabilities from all providers
