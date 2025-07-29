@@ -1,16 +1,10 @@
-from collections.abc import AsyncGenerator, Callable, Generator
 import os
+from collections.abc import AsyncGenerator, Callable, Generator
 from typing import Any
 
 from .base import ChimericAsyncClient, ChimericClient
 from .exceptions import ChimericError, ModelNotSupportedError, ProviderError, ProviderNotFoundError
-from .providers.anthropic.client import AnthropicAsyncClient, AnthropicClient
-from .providers.cerebras.client import CerebrasAsyncClient, CerebrasClient
-from .providers.cohere.client import CohereAsyncClient, CohereClient
-from .providers.google.client import GoogleAsyncClient, GoogleClient
-from .providers.grok.client import GrokAsyncClient, GrokClient
-from .providers.groq.client import GroqAsyncClient, GroqClient
-from .providers.openai.client import OpenAIAsyncClient, OpenAIClient
+# Conditionally import provider clients based on available dependencies
 from .tools import ToolManager
 from .types import (
     Capability,
@@ -30,27 +24,47 @@ __all__ = [
     "Chimeric",
 ]
 
-# Mapping of provider enums to their corresponding client classes.
-PROVIDER_CLIENTS: dict[Provider, type[ChimericClient[Any, Any, Any]]] = {
-    Provider.OPENAI: OpenAIClient,
-    Provider.ANTHROPIC: AnthropicClient,
-    Provider.GOOGLE: GoogleClient,
-    Provider.CEREBRAS: CerebrasClient,
-    Provider.COHERE: CohereClient,
-    Provider.GROK: GrokClient,
-    Provider.GROQ: GroqClient,
-}
 
-# Mapping of provider enums to their corresponding async client classes.
-ASYNC_PROVIDER_CLIENTS: dict[Provider, type[ChimericAsyncClient[Any, Any, Any]]] = {
-    Provider.OPENAI: OpenAIAsyncClient,
-    Provider.ANTHROPIC: AnthropicAsyncClient,
-    Provider.GOOGLE: GoogleAsyncClient,
-    Provider.CEREBRAS: CerebrasAsyncClient,
-    Provider.COHERE: CohereAsyncClient,
-    Provider.GROK: GrokAsyncClient,
-    Provider.GROQ: GroqAsyncClient,
-}
+# Build provider mappings conditionally based on available dependencies
+def _build_provider_mappings():
+    """Build provider client mappings, including only providers with available dependencies."""
+    sync_clients = {}
+    async_clients = {}
+
+    # Define all possible providers with their import paths
+    provider_imports = {
+        Provider.OPENAI: ("chimeric.providers.openai.client", "OpenAIClient", "OpenAIAsyncClient"),
+        Provider.ANTHROPIC: (
+            "chimeric.providers.anthropic.client",
+            "AnthropicClient",
+            "AnthropicAsyncClient",
+        ),
+        Provider.GOOGLE: ("chimeric.providers.google.client", "GoogleClient", "GoogleAsyncClient"),
+        Provider.CEREBRAS: (
+            "chimeric.providers.cerebras.client",
+            "CerebrasClient",
+            "CerebrasAsyncClient",
+        ),
+        Provider.COHERE: ("chimeric.providers.cohere.client", "CohereClient", "CohereAsyncClient"),
+        Provider.GROK: ("chimeric.providers.grok.client", "GrokClient", "GrokAsyncClient"),
+        Provider.GROQ: ("chimeric.providers.groq.client", "GroqClient", "GroqAsyncClient"),
+    }
+
+    # Try to import each provider and add to mappings if successful
+    for provider, (module_path, sync_class, async_class) in provider_imports.items():
+        try:
+            module = __import__(module_path, fromlist=[sync_class, async_class])
+            sync_clients[provider] = getattr(module, sync_class)
+            async_clients[provider] = getattr(module, async_class)
+        except (ImportError, ModuleNotFoundError):
+            # Skip providers with missing dependencies
+            continue
+
+    return sync_clients, async_clients
+
+
+# Build the provider mappings with only available providers
+PROVIDER_CLIENTS, ASYNC_PROVIDER_CLIENTS = _build_provider_mappings()
 
 
 class Chimeric:
@@ -210,6 +224,10 @@ class Chimeric:
             if provider in self.providers:
                 continue  # Skip if already configured from explicit parameters.
 
+            # Skip if provider dependencies are not available
+            if provider not in PROVIDER_CLIENTS:
+                continue
+
             for env_var in env_vars:
                 env_value = os.environ.get(env_var)
                 if env_value:
@@ -279,8 +297,9 @@ class Chimeric:
 
             self.async_providers[provider] = async_client
 
-        except (ImportError, ModuleNotFoundError, ValueError) as e:
-            raise ChimericError(f"Failed to initialize async provider {provider.value}: {e}") from e
+        except (ImportError, ModuleNotFoundError, ValueError):
+            # Skip providers with missing dependencies instead of crashing
+            pass
 
     def _populate_models_for_provider(
         self, provider: Provider, client: ChimericClient[Any, Any, Any]
