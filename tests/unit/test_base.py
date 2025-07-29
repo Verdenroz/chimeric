@@ -254,9 +254,8 @@ class TestChimericClientBase:
 
         assert client.supports_tools() is True
         assert client.supports_streaming() is True
-        assert client.capabilities.multimodal is True
-        assert client.capabilities.agents is False
-        assert client.capabilities.files is False
+        assert client.capabilities.streaming is True
+        assert client.capabilities.tools is True
 
     def test_list_models_with_aliases(self):
         """Test list_models includes both API models and aliases."""
@@ -1233,7 +1232,6 @@ class TestChimericClientBase:
         sync_client = ConcreteTestClient("test-key", ToolManager())
         capabilities = sync_client.capabilities
         assert capabilities is not None
-        assert capabilities.multimodal is True
         assert capabilities.streaming is True
         assert capabilities.tools is True
 

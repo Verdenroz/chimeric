@@ -7,6 +7,7 @@ from chimeric.types import (
 from chimeric.utils import (
     StreamProcessor,
     create_completion_response,
+    filter_init_kwargs,
     normalize_tools,
 )
 
@@ -421,3 +422,131 @@ class TestCreateStreamChunk:
         assert chunk.common.content == "existing content"
         assert chunk.common.finish_reason == "stop"
         assert chunk.common.metadata == {"custom": "meta"}
+
+
+class TestFilterInitKwargs:
+    """Test filter_init_kwargs function."""
+
+    def test_filter_valid_kwargs(self):
+        """Test filtering with valid kwargs."""
+
+        class TestClient:
+            def __init__(self, api_key: str, base_url: str | None, timeout: int = 30):
+                pass
+
+        kwargs = {
+            "api_key": "test-key",
+            "base_url": "https://api.example.com",
+            "timeout": 60,
+            "invalid_param": "should_be_filtered",
+        }
+
+        filtered = filter_init_kwargs(TestClient, **kwargs)
+
+        expected = {"api_key": "test-key", "base_url": "https://api.example.com", "timeout": 60}
+        assert filtered == expected
+
+    def test_filter_empty_kwargs(self):
+        """Test filtering with empty kwargs."""
+
+        class TestClient:
+            def __init__(self, api_key: str):
+                pass
+
+        filtered = filter_init_kwargs(TestClient)
+        assert filtered == {}
+
+    def test_filter_no_valid_kwargs(self):
+        """Test filtering when no kwargs are valid."""
+
+        class TestClient:
+            def __init__(self, api_key: str):
+                pass
+
+        kwargs = {"invalid_param1": "value1", "invalid_param2": "value2"}
+
+        filtered = filter_init_kwargs(TestClient, **kwargs)
+        assert filtered == {}
+
+    def test_filter_with_mock_object(self):
+        """Test filtering with mock objects during testing."""
+        from unittest.mock import Mock
+
+        mock_client = Mock()
+        mock_client._mock_name = "MockClient"
+
+        kwargs = {"api_key": "test-key", "invalid_param": "should_be_kept_for_mock"}
+
+        filtered = filter_init_kwargs(mock_client, **kwargs)
+        # With mocks, all kwargs should be returned
+        assert filtered == kwargs
+
+    def test_filter_with_mock_type_in_name(self):
+        """Test filtering when client type contains 'Mock' in type name."""
+        from unittest.mock import MagicMock
+
+        mock_client = MagicMock()
+
+        kwargs = {
+            "api_key": "test-key",
+            "base_url": "https://api.example.com",
+            "invalid_param": "should_be_kept_for_mock",
+        }
+
+        filtered = filter_init_kwargs(mock_client, **kwargs)
+        # With mocks, all kwargs should be returned
+        assert filtered == kwargs
+
+    def test_filter_with_exception_handling(self):
+        """Test filtering when signature introspection fails."""
+
+        # Create a class that will cause signature inspection to fail
+        class ProblematicClient:
+            # This will cause issues with signature introspection
+            def __init__(self, *args, **kwargs):
+                pass
+
+        # Override __init__ to make it problematic for introspection
+        ProblematicClient.__init__ = None
+
+        kwargs = {"api_key": "test-key", "base_url": "https://api.example.com"}
+
+        # Should return all kwargs when introspection fails
+        filtered = filter_init_kwargs(ProblematicClient, **kwargs)
+        assert filtered == kwargs
+
+    def test_filter_complex_signature(self):
+        """Test filtering with complex constructor signature."""
+
+        class ComplexClient:
+            def __init__(
+                self,
+                api_key: str,
+                base_url: str | None,
+                headers: dict | None,
+                timeout: int = 30,
+                retries: int = 3,
+                **extra_kwargs,
+            ):
+                pass
+
+        kwargs = {
+            "api_key": "test-key",
+            "base_url": "https://api.example.com",
+            "timeout": 60,
+            "headers": {"Content-Type": "application/json"},
+            "retries": 5,
+            "invalid_param": "should_be_filtered",
+            "another_invalid": "also_filtered",
+        }
+
+        filtered = filter_init_kwargs(ComplexClient, **kwargs)
+
+        expected = {
+            "api_key": "test-key",
+            "base_url": "https://api.example.com",
+            "timeout": 60,
+            "headers": {"Content-Type": "application/json"},
+            "retries": 5,
+        }
+        assert filtered == expected

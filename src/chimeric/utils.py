@@ -217,9 +217,7 @@ def filter_init_kwargs(client_type: type, **kwargs: Any) -> dict[str, Any]:
         valid_params = set(signature.parameters.keys()) - {"self"}
 
         # Filter kwargs to only include valid parameters
-        filtered = {k: v for k, v in kwargs.items() if k in valid_params}
-
-        return filtered
+        return {k: v for k, v in kwargs.items() if k in valid_params}
     except Exception:
         # If introspection fails, return all kwargs to be safe during testing
         return kwargs
