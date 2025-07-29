@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import asyncio
 from collections.abc import AsyncGenerator, Generator
 import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 import contextlib
 from datetime import datetime
 import inspect
@@ -303,7 +304,19 @@ class ChimericClient(
 
             # Check if the tool function is async
             if inspect.iscoroutinefunction(tool.function):
-                execution_result = asyncio.run(tool.function(**args))
+                # For sync context, we need to run async functions in a new thread
+
+                def run_async_in_thread():
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    try:
+                        return loop.run_until_complete(tool.function(**args))
+                    finally:
+                        loop.close()
+
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(run_async_in_thread)
+                    execution_result = future.result()
             else:
                 execution_result = tool.function(**args)
 
@@ -839,6 +852,14 @@ class ChimericAsyncClient(
 
         # Filter kwargs for this provider
         filtered_kwargs = filter_init_kwargs(client_type, **kwargs)
+
+        # Initialize client with event loop safety
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            # No event loop available, create and set one
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
 
         # Initialize client
         self._async_client: ClientType = self._init_async_client(client_type, **filtered_kwargs)
