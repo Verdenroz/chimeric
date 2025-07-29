@@ -523,7 +523,7 @@ class TestFilterInitKwargs:
                 self,
                 api_key: str,
                 base_url: str | None,
-                headers: dict | None,
+                headers: dict[str, str] | None,
                 timeout: int = 30,
                 retries: int = 3,
                 **extra_kwargs,

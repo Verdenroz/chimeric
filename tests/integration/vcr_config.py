@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import vcr
+from vcr.record_mode import RecordMode
 
 
 def get_vcr() -> vcr.VCR:
@@ -51,7 +52,7 @@ def get_vcr() -> vcr.VCR:
             "access_token",
         ],
         # Recording configuration
-        record_mode="new_episodes",  # Record new episodes if not found
+        record_mode=RecordMode.NEW_EPISODES,  # Record new episodes if not found
         # Decode compressed responses for better cassette readability
         decode_compressed_response=True,
         # Configure serializer for better cassette format
@@ -66,12 +67,10 @@ def _filter_request(request):
     """Filter and sanitize request data before recording."""
     # Note: Header filtering is handled by VCR's filter_headers configuration
     # This function is available for additional request body filtering if needed
-    
+
     # Filter request body if it contains sensitive information
     if hasattr(request, "body") and request.body:
-        body_str = (
-            request.body.decode("utf-8") if isinstance(request.body, bytes) else str(request.body)
-        )
+        pass
         # Add request body filtering here if needed in the future
         # For now, header filtering is sufficient
 

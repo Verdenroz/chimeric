@@ -36,7 +36,7 @@ class ConcreteTestClient(ChimericClient[Any, Any, Any]):
         return client_type()
 
     def _get_capabilities(self) -> Capability:
-        return Capability(multimodal=True, streaming=True, tools=True, agents=False, files=False)
+        return Capability(streaming=True, tools=True)
 
     def _list_models_impl(self) -> list[ModelSummary]:
         return [
@@ -143,7 +143,7 @@ class ConcreteTestAsyncClient(ChimericAsyncClient[Any, Any, Any]):
         return async_client_type()
 
     def _get_capabilities(self) -> Capability:
-        return Capability(multimodal=False, streaming=True, tools=True, agents=True, files=True)
+        return Capability(streaming=True, tools=True)
 
     async def _list_models_impl(self) -> list[ModelSummary]:
         return [
@@ -788,9 +788,7 @@ class TestChimericClientBase:
         client = ConcreteTestClient("test-key", ToolManager())
 
         # Override capabilities
-        client._capabilities = Capability(
-            multimodal=False, streaming=False, tools=False, agents=False, files=False
-        )
+        client._capabilities = Capability(streaming=False, tools=False)
 
         # Test streaming when not supported
         with pytest.raises(ChimericError, match="does not support streaming"):
@@ -1810,9 +1808,7 @@ class TestChimericAsyncClientBase:
         client = ConcreteTestAsyncClient("test-key", ToolManager())
 
         # Override capabilities to disable streaming and tools
-        client._capabilities = Capability(
-            multimodal=False, streaming=False, tools=False, agents=False, files=False
-        )
+        client._capabilities = Capability(streaming=False, tools=False)
 
         # Test streaming when not supported
         with pytest.raises(ChimericError, match="does not support streaming"):

@@ -52,11 +52,7 @@ ChunkType = TypeVar("ChunkType")
 
 class ChimericClient(
     ABC,
-    Generic[
-        ClientType,
-        CompletionResponseType,
-        ChunkType,
-    ],
+    Generic[ClientType, CompletionResponseType, ChunkType],
 ):
     """Abstract base class for synchronous LLM provider clients.
 
@@ -310,7 +306,8 @@ class ChimericClient(
                     loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(loop)
                     try:
-                        return loop.run_until_complete(tool.function(**args))
+                        # This will run the async function in the new event loop
+                        return loop.run_until_complete(tool.function(**args))  # type: ignore[reportOptionalCall]
                     finally:
                         loop.close()
 

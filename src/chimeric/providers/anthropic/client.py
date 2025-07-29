@@ -219,7 +219,9 @@ class AnthropicClient(ChimericClient[Anthropic, Message, MessageStreamEvent]):
             with excellent performance on complex analysis and coding tasks.
         """
         # Build params with only valid Anthropic parameters
-        max_tokens = kwargs.pop("max_tokens", 4096)  # Default max tokens if not provided (needs to be set)
+        max_tokens = kwargs.pop(
+            "max_tokens", 4096
+        )  # Default max tokens if not provided (needs to be set)
         params = {
             "model": model,
             "messages": messages,
@@ -541,7 +543,9 @@ class AnthropicAsyncClient(ChimericAsyncClient[AsyncAnthropic, Message, MessageS
     ) -> Any:
         """Makes the actual async API request to Anthropic."""
         # Build params with only valid Anthropic parameters
-        max_tokens = kwargs.pop("max_tokens", 4096)  # Default max tokens if not provided (needs to be set)
+        max_tokens = kwargs.pop(
+            "max_tokens", 4096
+        )  # Default max tokens if not provided (needs to be set)
         params = {
             "model": model,
             "messages": messages,

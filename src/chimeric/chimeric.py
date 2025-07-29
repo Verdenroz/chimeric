@@ -1,9 +1,10 @@
-import os
 from collections.abc import AsyncGenerator, Callable, Generator
+import os
 from typing import Any
 
 from .base import ChimericAsyncClient, ChimericClient
 from .exceptions import ChimericError, ModelNotSupportedError, ProviderError, ProviderNotFoundError
+
 # Conditionally import provider clients based on available dependencies
 from .tools import ToolManager
 from .types import (
@@ -26,7 +27,7 @@ __all__ = [
 
 
 # Build provider mappings conditionally based on available dependencies
-def _build_provider_mappings():
+def _build_provider_mappings() -> tuple[dict[Provider, type], dict[Provider, type]]:
     """Build provider client mappings, including only providers with available dependencies."""
     sync_clients = {}
     async_clients = {}

@@ -1,3 +1,5 @@
+from collections.abc import AsyncGenerator
+
 import pytest
 
 from chimeric import Chimeric
@@ -87,7 +89,7 @@ def test_openai_sync_tools_non_streaming(api_keys):
         tool_calls = {"add": 0, "subtract": 0, "joke": 0}
 
         @chimeric.tool()
-        def add(x: int, y: int) -> int:
+        def add(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
             """
             Adds two numbers together.
             Args:
@@ -102,7 +104,7 @@ def test_openai_sync_tools_non_streaming(api_keys):
             return x + y
 
         @chimeric.tool()
-        def subtract(x: int, y: int) -> int:
+        def subtract(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
             """
             Subtracts the second number from the first.
             Args:
@@ -117,7 +119,7 @@ def test_openai_sync_tools_non_streaming(api_keys):
             return x - y
 
         @chimeric.tool()
-        def joke() -> str:
+        def joke() -> str:  # type: ignore[reportUnusedFunction]
             """
             Returns a joke.
             """
@@ -158,7 +160,7 @@ def test_openai_sync_tools_streaming(api_keys):
         tool_calls = {"add": 0, "subtract": 0, "joke": 0}
 
         @chimeric.tool()
-        def add(x: int, y: int) -> int:
+        def add(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
             """
             Adds two numbers together.
             Args:
@@ -173,7 +175,7 @@ def test_openai_sync_tools_streaming(api_keys):
             return x + y
 
         @chimeric.tool()
-        def subtract(x: int, y: int) -> int:
+        def subtract(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
             """
             Subtracts the second number from the first.
             Args:
@@ -188,7 +190,7 @@ def test_openai_sync_tools_streaming(api_keys):
             return x - y
 
         @chimeric.tool()
-        def joke() -> str:
+        def joke() -> str:  # type: ignore[reportUnusedFunction]
             """
             Returns a joke.
             """
@@ -206,9 +208,7 @@ def test_openai_sync_tools_streaming(api_keys):
         assert response is not None
         chunks = list(response)
         assert len(chunks) > 0
-        content_chunks = [
-            chunk for chunk in chunks if hasattr(chunk, "content") and chunk.content
-        ]
+        content_chunks = [chunk for chunk in chunks if hasattr(chunk, "content") and chunk.content]
         assert len(content_chunks) > 0, "At least some chunks should have content"
 
         # Verify tools were actually called
@@ -236,7 +236,7 @@ async def test_openai_async_tools_streaming(api_keys):
         tool_calls = {"add": 0, "subtract": 0, "joke": 0}
 
         @chimeric.tool()
-        def add(x: int, y: int) -> int:
+        def add(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
             """
             Adds two numbers together.
             Args:
@@ -251,7 +251,7 @@ async def test_openai_async_tools_streaming(api_keys):
             return x + y
 
         @chimeric.tool()
-        def subtract(x: int, y: int) -> int:
+        def subtract(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
             """
             Subtracts the second number from the first.
             Args:
@@ -266,7 +266,7 @@ async def test_openai_async_tools_streaming(api_keys):
             return x - y
 
         @chimeric.tool()
-        def joke() -> str:
+        def joke() -> str:  # type: ignore[reportUnusedFunction]
             """
             Returns a joke.
             """
@@ -282,6 +282,9 @@ async def test_openai_async_tools_streaming(api_keys):
 
         # Collect all chunks and verify at least some have content
         assert response is not None
+        assert isinstance(response, AsyncGenerator), (
+            "Response should be an AsyncGenerator when streaming"
+        )
         chunks = [chunk async for chunk in response]
         assert len(chunks) > 0
         content_chunks = [chunk for chunk in chunks if chunk.content]
@@ -312,7 +315,7 @@ async def test_openai_async_tools_non_streaming(api_keys):
         tool_calls = {"add": 0, "subtract": 0, "joke": 0}
 
         @chimeric.tool()
-        def add(x: int, y: int) -> int:
+        def add(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
             """
             Adds two numbers together.
             Args:
@@ -327,7 +330,7 @@ async def test_openai_async_tools_non_streaming(api_keys):
             return x + y
 
         @chimeric.tool()
-        def subtract(x: int, y: int) -> int:
+        def subtract(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
             """
             Subtracts the second number from the first.
             Args:
@@ -342,7 +345,7 @@ async def test_openai_async_tools_non_streaming(api_keys):
             return x - y
 
         @chimeric.tool()
-        def joke() -> str:
+        def joke() -> str:  # type: ignore[reportUnusedFunction]
             """
             Returns a joke.
             """

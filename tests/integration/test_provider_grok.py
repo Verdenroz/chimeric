@@ -11,7 +11,7 @@ from chimeric.exceptions import ProviderError
 @pytest.mark.grok
 def test_grok_model_listing(api_keys):
     """Test Grok model listing functionality.
-    
+
     Note: This test makes real API calls as VCR cannot record gRPC interactions.
     """
     if "grok_api_key" not in api_keys:
@@ -33,7 +33,7 @@ def test_grok_model_listing(api_keys):
 @pytest.mark.grok
 def test_grok_sync_generation(api_keys):
     """Test Grok synchronous generation functionality.
-    
+
     Note: This test makes real API calls as VCR cannot record gRPC interactions.
     """
     if "grok_api_key" not in api_keys:
@@ -56,7 +56,7 @@ def test_grok_sync_generation(api_keys):
 @pytest.mark.asyncio
 async def test_grok_async_generation(api_keys):
     """Test Grok asynchronous generation functionality.
-    
+
     Note: This test makes real API calls as VCR cannot record gRPC interactions.
     """
     if "grok_api_key" not in api_keys:
@@ -78,7 +78,7 @@ async def test_grok_async_generation(api_keys):
 @pytest.mark.grok
 def test_grok_sync_tools_streaming(api_keys):
     """Test Grok sync generation with tools (streaming).
-    
+
     Note: This test makes real API calls as VCR cannot record gRPC interactions.
     """
     if "grok_api_key" not in api_keys:
@@ -91,7 +91,7 @@ def test_grok_sync_tools_streaming(api_keys):
     tool_calls = {"add": 0, "subtract": 0, "joke": 0}
 
     @chimeric.tool()
-    def add(x: int, y: int) -> int:
+    def add(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
         """
         Adds two numbers together.
         Args:
@@ -106,7 +106,7 @@ def test_grok_sync_tools_streaming(api_keys):
         return x + y
 
     @chimeric.tool()
-    def subtract(x: int, y: int) -> int:
+    def subtract(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
         """
         Subtracts the second number from the first.
         Args:
@@ -121,7 +121,7 @@ def test_grok_sync_tools_streaming(api_keys):
         return x - y
 
     @chimeric.tool()
-    def joke() -> str:
+    def joke() -> str:  # type: ignore[reportUnusedFunction]
         """
         Returns a joke.
         """
@@ -139,9 +139,7 @@ def test_grok_sync_tools_streaming(api_keys):
     assert response is not None
     chunks = list(response)
     assert len(chunks) > 0
-    content_chunks = [
-        chunk for chunk in chunks if hasattr(chunk, "content") and chunk.content
-    ]
+    content_chunks = [chunk for chunk in chunks if hasattr(chunk, "content") and chunk.content]
     assert len(content_chunks) > 0, "At least some chunks should have content"
 
     # Verify tools were actually called
@@ -157,7 +155,7 @@ def test_grok_sync_tools_streaming(api_keys):
 @pytest.mark.asyncio
 async def test_grok_async_tools_non_streaming(api_keys):
     """Test Grok async generation with tools (non-streaming).
-    
+
     Note: This test makes real API calls as VCR cannot record gRPC interactions.
     """
     if "grok_api_key" not in api_keys:
@@ -170,7 +168,7 @@ async def test_grok_async_tools_non_streaming(api_keys):
     tool_calls = {"add": 0, "subtract": 0, "joke": 0}
 
     @chimeric.tool()
-    def add(x: int, y: int) -> int:
+    def add(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
         """
         Adds two numbers together.
         Args:
@@ -185,7 +183,7 @@ async def test_grok_async_tools_non_streaming(api_keys):
         return x + y
 
     @chimeric.tool()
-    def subtract(x: int, y: int) -> int:
+    def subtract(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
         """
         Subtracts the second number from the first.
         Args:
@@ -200,7 +198,7 @@ async def test_grok_async_tools_non_streaming(api_keys):
         return x - y
 
     @chimeric.tool()
-    def joke() -> str:
+    def joke() -> str:  # type: ignore[reportUnusedFunction]
         """
         Returns a joke.
         """
@@ -229,7 +227,7 @@ async def test_grok_async_tools_non_streaming(api_keys):
 @pytest.mark.grok
 def test_grok_init_kwargs_propagation(api_keys):
     """Test Grok kwargs propagation through the stack with fake cross-provider params.
-    
+
     Note: This test makes real API calls as VCR cannot record gRPC interactions.
     """
     if "grok_api_key" not in api_keys:
@@ -262,7 +260,7 @@ def test_grok_init_kwargs_propagation(api_keys):
 @pytest.mark.grok
 def test_grok_invalid_generate_kwargs_raises_provider_error(api_keys):
     """Test that invalid kwargs in generate raise ProviderError.
-    
+
     Note: This test makes real API calls as VCR cannot record gRPC interactions.
     """
     if "grok_api_key" not in api_keys:

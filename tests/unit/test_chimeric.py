@@ -35,9 +35,7 @@ class MockProviderClient(ChimericClient[Any, Any, Any]):
         self.init_kwargs = kwargs
         self._request_count = 0
         self._error_count = 0
-        self._capabilities = Capability(
-            streaming=True, tools=True
-        )
+        self._capabilities = Capability(streaming=True, tools=True)
 
     def _get_client_type(self) -> type:
         return Mock
@@ -58,7 +56,7 @@ class MockProviderClient(ChimericClient[Any, Any, Any]):
         return tools
 
     def _make_provider_request(
-            self, messages: Any, model: str, stream: bool, tools: Any = None, **kwargs: Any
+        self, messages: Any, model: str, stream: bool, tools: Any = None, **kwargs: Any
     ) -> Any:
         return Mock()
 
@@ -85,13 +83,13 @@ class MockProviderClient(ChimericClient[Any, Any, Any]):
         ]
 
     def chat_completion(
-            self,
-            messages: Any,
-            model: str,
-            stream: bool = False,
-            tools: Any = None,
-            auto_tool: bool = True,
-            **kwargs: Any,
+        self,
+        messages: Any,
+        model: str,
+        stream: bool = False,
+        tools: Any = None,
+        auto_tool: bool = True,
+        **kwargs: Any,
     ) -> ChimericCompletionResponse[Any] | Generator[ChimericStreamChunk[Any], None, None]:
         self.last_request_kwargs = kwargs
         self._request_count += 1
@@ -127,9 +125,7 @@ class MockAsyncProviderClient(ChimericAsyncClient[Any, Any, Any]):
         self.init_kwargs = kwargs
         self._request_count = 0
         self._error_count = 0
-        self._capabilities = Capability(
-            multimodal=False, streaming=True, tools=False, agents=True, files=True
-        )
+        self._capabilities = Capability(streaming=True, tools=False)
 
     def _get_async_client_type(self) -> type:
         return Mock
@@ -150,7 +146,7 @@ class MockAsyncProviderClient(ChimericAsyncClient[Any, Any, Any]):
         return tools
 
     async def _make_async_provider_request(
-            self, messages: Any, model: str, stream: bool, tools: Any = None, **kwargs: Any
+        self, messages: Any, model: str, stream: bool, tools: Any = None, **kwargs: Any
     ) -> Any:
         return Mock()
 
@@ -177,13 +173,13 @@ class MockAsyncProviderClient(ChimericAsyncClient[Any, Any, Any]):
         ]
 
     async def chat_completion(
-            self,
-            messages: Any,
-            model: str,
-            stream: bool = False,
-            tools: Any = None,
-            auto_tool: bool = True,
-            **kwargs: Any,
+        self,
+        messages: Any,
+        model: str,
+        stream: bool = False,
+        tools: Any = None,
+        auto_tool: bool = True,
+        **kwargs: Any,
     ) -> ChimericCompletionResponse[Any] | AsyncGenerator[ChimericStreamChunk[Any], None]:
         self.last_request_kwargs = kwargs
         self._request_count += 1
@@ -397,8 +393,8 @@ class TestChimericInitialization:
             # Add one provider back to test the available providers message
             PROVIDER_CLIENTS[Provider.OPENAI] = original_providers[Provider.OPENAI]
             with pytest.raises(
-                    ProviderNotFoundError,
-                    match="Provider 'fake_provider' not found or configured.*Available providers:",
+                ProviderNotFoundError,
+                match="Provider 'fake_provider' not found or configured.*Available providers:",
             ):
                 chimeric._add_provider(fake_provider, api_key="test")
         finally:
@@ -625,7 +621,7 @@ class TestModelSelection:
 
             # Test async provider not configured
             with pytest.raises(
-                    ProviderNotFoundError, match="Async provider anthropic not configured"
+                ProviderNotFoundError, match="Async provider anthropic not configured"
             ):
                 chimeric._select_async_provider("any-model", "anthropic")
 
@@ -871,9 +867,7 @@ class TestProviderAccess:
                 self.init_kwargs = kwargs
                 self._request_count = 0
                 self._error_count = 0
-                self._capabilities = Capability(
-                    streaming=True, tools=False
-                )
+                self._capabilities = Capability(streaming=True, tools=False)
 
             @property
             def capabilities(self) -> Capability:
@@ -1278,7 +1272,7 @@ class TestErrorScenarios:
 
             # Try to use anthropic async which isn't configured
             with pytest.raises(
-                    ProviderNotFoundError, match="Async provider anthropic not configured"
+                ProviderNotFoundError, match="Async provider anthropic not configured"
             ):
                 chimeric._select_async_provider("test-model", provider="anthropic")
 
@@ -1340,33 +1334,32 @@ class TestProviderMappingConstruction:
     def test_build_provider_mappings_success(self):
         """Test successful provider mapping construction."""
         from chimeric.chimeric import _build_provider_mappings
-        
+
         # Mock successful imports
         mock_openai_module = Mock()
         mock_openai_module.OpenAIClient = MockProviderClient
         mock_openai_module.OpenAIAsyncClient = MockAsyncProviderClient
-        
+
         mock_anthropic_module = Mock()
-        mock_anthropic_module.AnthropicClient = MockProviderClient  
+        mock_anthropic_module.AnthropicClient = MockProviderClient
         mock_anthropic_module.AnthropicAsyncClient = MockAsyncProviderClient
 
         def mock_import(module_path, fromlist=None):
             if module_path == "chimeric.providers.openai.client":
                 return mock_openai_module
-            elif module_path == "chimeric.providers.anthropic.client":
+            if module_path == "chimeric.providers.anthropic.client":
                 return mock_anthropic_module
-            else:
-                raise ImportError(f"No module named {module_path}")
+            raise ImportError(f"No module named {module_path}")
 
-        with patch('builtins.__import__', side_effect=mock_import):
+        with patch("builtins.__import__", side_effect=mock_import):
             sync_clients, async_clients = _build_provider_mappings()
-            
+
             # Should have imported successful providers
             assert Provider.OPENAI in sync_clients
             assert Provider.ANTHROPIC in sync_clients
             assert Provider.OPENAI in async_clients
             assert Provider.ANTHROPIC in async_clients
-            
+
             # Should not have providers that failed to import
             assert Provider.GOOGLE not in sync_clients
             assert Provider.GOOGLE not in async_clients
@@ -1374,13 +1367,13 @@ class TestProviderMappingConstruction:
     def test_build_provider_mappings_import_failures(self):
         """Test provider mapping construction with import failures."""
         from chimeric.chimeric import _build_provider_mappings
-        
+
         def mock_import_all_fail(module_path, fromlist=None):
             raise ImportError(f"No module named {module_path}")
 
-        with patch('builtins.__import__', side_effect=mock_import_all_fail):
+        with patch("builtins.__import__", side_effect=mock_import_all_fail):
             sync_clients, async_clients = _build_provider_mappings()
-            
+
             # Should return empty dicts when all imports fail
             assert len(sync_clients) == 0
             assert len(async_clients) == 0
@@ -1388,7 +1381,7 @@ class TestProviderMappingConstruction:
     def test_build_provider_mappings_partial_failures(self):
         """Test provider mapping construction with some providers failing."""
         from chimeric.chimeric import _build_provider_mappings
-        
+
         mock_openai_module = Mock()
         mock_openai_module.OpenAIClient = MockProviderClient
         mock_openai_module.OpenAIAsyncClient = MockAsyncProviderClient
@@ -1396,21 +1389,21 @@ class TestProviderMappingConstruction:
         def mock_import_partial_fail(module_path, fromlist=None):
             if module_path == "chimeric.providers.openai.client":
                 return mock_openai_module
-            else:
-                raise ModuleNotFoundError(f"No module named {module_path}")
+            raise ModuleNotFoundError(f"No module named {module_path}")
 
-        with patch('builtins.__import__', side_effect=mock_import_partial_fail):
+        with patch("builtins.__import__", side_effect=mock_import_partial_fail):
             sync_clients, async_clients = _build_provider_mappings()
-            
+
             # Should only have OpenAI provider
             assert len(sync_clients) == 1
             assert len(async_clients) == 1
             assert Provider.OPENAI in sync_clients
             assert Provider.OPENAI in async_clients
-            
+
             # Should not have other providers
             assert Provider.ANTHROPIC not in sync_clients
             assert Provider.GOOGLE not in sync_clients
+
 
 class TestProviderAvailabilityChecking:
     """Test provider availability checking logic."""
@@ -1419,25 +1412,25 @@ class TestProviderAvailabilityChecking:
         """Test behavior when provider is not in PROVIDER_CLIENTS."""
         # Create a custom provider enum that won't be in PROVIDER_CLIENTS
         from unittest.mock import Mock
-        
+
         # Save original clients
         original_provider_clients = PROVIDER_CLIENTS.copy()
         original_async_clients = ASYNC_PROVIDER_CLIENTS.copy()
-        
+
         try:
             # Clear all providers to simulate none being available
             PROVIDER_CLIENTS.clear()
             ASYNC_PROVIDER_CLIENTS.clear()
-            
+
             chimeric = Chimeric()
-            
+
             # Try to add a provider that's not in PROVIDER_CLIENTS
             fake_provider = Mock()
             fake_provider.value = "fake_provider"
-            
+
             with pytest.raises(ProviderNotFoundError, match="Provider 'fake_provider' not found"):
                 chimeric._add_provider(fake_provider, api_key="test")
-                
+
         finally:
             # Restore original clients
             PROVIDER_CLIENTS.clear()
@@ -1447,24 +1440,25 @@ class TestProviderAvailabilityChecking:
 
     def test_async_provider_not_in_async_provider_clients(self):
         """Test behavior when async provider is not in ASYNC_PROVIDER_CLIENTS."""
-        from unittest.mock import Mock
-        
+
         # Save original clients
         original_provider_clients = PROVIDER_CLIENTS.copy()
         original_async_clients = ASYNC_PROVIDER_CLIENTS.copy()
-        
+
         try:
             # Set up sync providers but clear async providers
             PROVIDER_CLIENTS.clear()
             PROVIDER_CLIENTS[Provider.OPENAI] = MockProviderClient
             ASYNC_PROVIDER_CLIENTS.clear()
-            
+
             chimeric = Chimeric()
-            
+
             # Try to add an async provider that's not in ASYNC_PROVIDER_CLIENTS
             with pytest.raises(ProviderNotFoundError, match="Async provider openai"):
-                chimeric._add_async_provider(Provider.OPENAI, api_key="test", tool_manager=chimeric._tool_manager)
-                
+                chimeric._add_async_provider(
+                    Provider.OPENAI, api_key="test", tool_manager=chimeric._tool_manager
+                )
+
         finally:
             # Restore original clients
             PROVIDER_CLIENTS.clear()
@@ -1477,19 +1471,19 @@ class TestProviderAvailabilityChecking:
         # Save original clients
         original_provider_clients = PROVIDER_CLIENTS.copy()
         original_async_clients = ASYNC_PROVIDER_CLIENTS.copy()
-        
+
         try:
             # Clear all provider mappings
             PROVIDER_CLIENTS.clear()
             ASYNC_PROVIDER_CLIENTS.clear()
-            
+
             # Should initialize successfully with no providers
             chimeric = Chimeric()
-            
+
             assert len(chimeric.providers) == 0
             assert len(chimeric.async_providers) == 0
             assert chimeric.primary_provider is None
-            
+
         finally:
             # Restore original clients
             PROVIDER_CLIENTS.clear()
