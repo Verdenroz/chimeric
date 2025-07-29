@@ -57,6 +57,10 @@ dev = [
     "mkdocs-material>=9.5.0",
     "mkdocs-autorefs>=0.5.0",
     "mkdocstrings[python]>=0.24.0",
+    "nox>=2025.5.1",
+    "vcrpy>=7.0.0",
+    "pytest-vcr>=1.0.2",
+    "python-dotenv>=1.1.1",
 ]
 
 [project.optional-dependencies]
@@ -206,6 +210,7 @@ addopts = [
     "--cov-fail-under=100",
 ]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
@@ -214,6 +219,16 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
+    "openai: tests requiring OpenAI provider",
+    "anthropic: tests requiring Anthropic provider",
+    "google: tests requiring Google provider",
+    "cerebras: tests requiring Cerebras provider",
+    "cohere: tests requiring Cohere provider",
+    "grok: tests requiring Grok provider",
+    "groq: tests requiring Groq provider",
+    "bare_install: tests with no optional dependencies",
+    "all_extras: tests with all optional dependencies",
+    "vcr: tests using VCR cassettes",
 ]
 filterwarnings = [
     "error",
