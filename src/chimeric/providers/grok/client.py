@@ -202,11 +202,11 @@ class GrokClient(ChimericClient[Client, Response, Chunk]):
         **kwargs: Any,
     ) -> Any:
         """Makes the actual API request to Grok."""
+        tool_choice = kwargs.pop("tool_choice", "auto") if tools else None
         chat = self.client.chat.create(
             model=model,
             tools=tools,
-            tool_choice=kwargs.get("tool_choice", "auto") if tools else None,
-            max_tokens=kwargs.get("max_tokens", 4096),
+            tool_choice=tool_choice,
             **kwargs,
         )
 
@@ -287,12 +287,12 @@ class GrokClient(ChimericClient[Client, Response, Chunk]):
         3. If tool calls exist, append response and tool results to same chat
         4. Call sample() again on the same chat object
         """
+        tool_choice = kwargs.pop("tool_choice", "auto") if tools else None
         # Create the chat object
         chat = self.client.chat.create(
             model=model,
             tools=tools,
-            tool_choice="auto" if tools else None,
-            max_tokens=kwargs.get("max_tokens", 4096),
+            tool_choice=tool_choice,
             **kwargs,
         )
 
@@ -366,13 +366,12 @@ class GrokClient(ChimericClient[Client, Response, Chunk]):
         """
         # For Grok, we ignore the initial stream and recreate the chat
         # because we need to handle tool calling iteratively
-
+        tool_choice = kwargs.pop("tool_choice", "auto") if tools else None
         # Create the chat object
         chat = self.client.chat.create(
             model=model,
             tools=tools,
-            tool_choice=kwargs.get("tool_choice", "auto") if tools else None,
-            max_tokens=kwargs.get("max_tokens", 4096),
+            tool_choice=tool_choice,
             **kwargs,
         )
 
@@ -572,10 +571,11 @@ class GrokAsyncClient(ChimericAsyncClient[AsyncClient, Response, Chunk]):
         **kwargs: Any,
     ) -> Any:
         """Makes the actual async API request to Grok."""
+        tool_choice = kwargs.pop("tool_choice", "auto") if tools else None
         chat = self.async_client.chat.create(
             model=model,
             tools=tools,
-            tool_choice="auto" if tools else None,
+            tool_choice=tool_choice,
             **kwargs,
         )
 
@@ -657,11 +657,11 @@ class GrokAsyncClient(ChimericAsyncClient[AsyncClient, Response, Chunk]):
         4. Call sample() again on the same chat object
         """
         # Create the chat object
+        tool_choice = kwargs.pop("tool_choice", "auto") if tools else None
         chat = self.async_client.chat.create(
             model=model,
             tools=tools,
-            tool_choice=kwargs.get("tool_choice", "auto") if tools else None,
-            max_tokens=kwargs.get("max_tokens", 4096),
+            tool_choice=tool_choice,
             **kwargs,
         )
 
@@ -737,11 +737,11 @@ class GrokAsyncClient(ChimericAsyncClient[AsyncClient, Response, Chunk]):
         # because we need to handle tool calling iteratively
 
         # Create the chat object
+        tool_choice = kwargs.pop("tool_choice", "auto") if tools else None
         chat = self.async_client.chat.create(
             model=model,
             tools=tools,
-            tool_choice=kwargs.get("tool_choice", "auto") if tools else None,
-            max_tokens=kwargs.get("max_tokens", 4096),
+            tool_choice=tool_choice,
             **kwargs,
         )
 

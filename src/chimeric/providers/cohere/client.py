@@ -4,18 +4,18 @@ from typing import Any
 from cohere import AsyncClientV2 as AsyncCohere
 from cohere import (
     ChatResponse,
-    CitationEndStreamedChatResponseV2,
-    CitationStartStreamedChatResponseV2,
-    ContentDeltaStreamedChatResponseV2,
-    ContentEndStreamedChatResponseV2,
-    ContentStartStreamedChatResponseV2,
-    DebugStreamedChatResponseV2,
-    MessageEndStreamedChatResponseV2,
-    MessageStartStreamedChatResponseV2,
-    ToolCallDeltaStreamedChatResponseV2,
-    ToolCallEndStreamedChatResponseV2,
-    ToolCallStartStreamedChatResponseV2,
-    ToolPlanDeltaStreamedChatResponseV2,
+    CitationEndV2ChatStreamResponse,
+    CitationStartV2ChatStreamResponse,
+    ContentDeltaV2ChatStreamResponse,
+    ContentEndV2ChatStreamResponse,
+    ContentStartV2ChatStreamResponse,
+    DebugV2ChatStreamResponse,
+    MessageEndV2ChatStreamResponse,
+    MessageStartV2ChatStreamResponse,
+    ToolCallDeltaV2ChatStreamResponse,
+    ToolCallEndV2ChatStreamResponse,
+    ToolCallStartV2ChatStreamResponse,
+    ToolPlanDeltaV2ChatStreamResponse,
 )
 from cohere import ClientV2 as Cohere
 
@@ -34,18 +34,18 @@ from chimeric.types import (
 from chimeric.utils import StreamProcessor, create_stream_chunk
 
 CohereChunk = (
-    MessageStartStreamedChatResponseV2
-    | ContentStartStreamedChatResponseV2
-    | ContentDeltaStreamedChatResponseV2
-    | ContentEndStreamedChatResponseV2
-    | ToolPlanDeltaStreamedChatResponseV2
-    | ToolCallStartStreamedChatResponseV2
-    | ToolCallDeltaStreamedChatResponseV2
-    | ToolCallEndStreamedChatResponseV2
-    | CitationStartStreamedChatResponseV2
-    | CitationEndStreamedChatResponseV2
-    | MessageEndStreamedChatResponseV2
-    | DebugStreamedChatResponseV2
+    MessageStartV2ChatStreamResponse
+    | ContentStartV2ChatStreamResponse
+    | ContentDeltaV2ChatStreamResponse
+    | ContentEndV2ChatStreamResponse
+    | ToolPlanDeltaV2ChatStreamResponse
+    | ToolCallStartV2ChatStreamResponse
+    | ToolCallDeltaV2ChatStreamResponse
+    | ToolCallEndV2ChatStreamResponse
+    | CitationStartV2ChatStreamResponse
+    | CitationEndV2ChatStreamResponse
+    | MessageEndV2ChatStreamResponse
+    | DebugV2ChatStreamResponse
 )
 
 
