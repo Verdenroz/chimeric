@@ -1,0 +1,175 @@
+interactions:
+- request:
+    body: '{"model": "command-r", "messages": [{"role": "user", "content": "What is
+      2+2-4? Tell me a joke."}], "tools": [{"type": "function", "function": {"name":
+      "add", "description": "Adds two numbers together.", "parameters": {"type": "object",
+      "strict": true, "properties": {"x": {"type": "integer", "description": "the
+      first number"}, "y": {"type": "integer", "description": "the second number"}},
+      "required": ["x", "y"], "additionalProperties": false}}}, {"type": "function",
+      "function": {"name": "subtract", "description": "Subtracts the second number
+      from the first.", "parameters": {"type": "object", "strict": true, "properties":
+      {"x": {"type": "integer", "description": "the first number"}, "y": {"type":
+      "integer", "description": "the second number"}}, "required": ["x", "y"], "additionalProperties":
+      false}}}, {"type": "function", "function": {"name": "joke", "description": "Returns
+      a joke.", "parameters": {"type": "object", "strict": true, "properties": {},
+      "additionalProperties": false}}}], "stream": false}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1014'
+      content-type:
+      - application/json
+      host:
+      - api.cohere.com
+      x-fern-language:
+      - Python
+      x-fern-sdk-name:
+      - cohere
+      x-fern-sdk-version:
+      - 5.15.0
+    method: POST
+    uri: https://api.cohere.com/v2/chat
+  response:
+    body:
+      string: '{"id":"92d6acc9-6855-44b4-8bd9-1adf46751c4b","message":{"role":"assistant","tool_plan":"I
+        will first calculate the answer to 2+2-4, and then search for a joke to include
+        in the answer.","tool_calls":[{"id":"add_v0gcc70dxnp3","type":"function","function":{"name":"add","arguments":"{\"x\":2,\"y\":2}"}},{"id":"subtract_65xcn09gttkp","type":"function","function":{"name":"subtract","arguments":"{\"x\":4,\"y\":2}"}},{"id":"joke_04bqb0c9vry9","type":"function","function":{"name":"joke","arguments":"{}"}}]},"finish_reason":"TOOL_CALL","usage":{"billed_units":{"input_tokens":57,"output_tokens":49},"tokens":{"input_tokens":995,"output_tokens":124}}}'
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '647'
+      Via:
+      - 1.1 google
+      access-control-expose-headers:
+      - X-Debug-Trace-ID
+      cache-control:
+      - no-cache, no-store, no-transform, must-revalidate, private, max-age=0
+      content-type:
+      - application/json
+      date:
+      - Tue, 29 Jul 2025 18:11:17 GMT
+      expires:
+      - Thu, 01 Jan 1970 00:00:00 GMT
+      num_chars:
+      - '4640'
+      num_tokens:
+      - '106'
+      pragma:
+      - no-cache
+      vary:
+      - Origin
+      x-accel-expires:
+      - '0'
+      x-debug-trace-id:
+      - e462a671a5df22f3bb2eeed8d582dda7
+      x-endpoint-monthly-call-limit:
+      - '1000'
+      x-envoy-upstream-service-time:
+      - '973'
+      x-trial-endpoint-call-limit:
+      - '10'
+      x-trial-endpoint-call-remaining:
+      - '9'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"model": "command-r", "messages": [{"role": "user", "content": "What is
+      2+2-4? Tell me a joke."}, {"role": "assistant", "tool_plan": "I will first calculate
+      the answer to 2+2-4, and then search for a joke to include in the answer.",
+      "tool_calls": [{"id": "add_v0gcc70dxnp3", "type": "function", "function": {"name":
+      "add", "arguments": "{\"x\":2,\"y\":2}"}}, {"id": "subtract_65xcn09gttkp", "type":
+      "function", "function": {"name": "subtract", "arguments": "{\"x\":4,\"y\":2}"}},
+      {"id": "joke_04bqb0c9vry9", "type": "function", "function": {"name": "joke",
+      "arguments": "{}"}}]}, {"role": "tool", "tool_call_id": "add_v0gcc70dxnp3",
+      "content": [{"type": "document", "document": {"data": "4"}}]}, {"role": "tool",
+      "tool_call_id": "subtract_65xcn09gttkp", "content": [{"type": "document", "document":
+      {"data": "2"}}]}, {"role": "tool", "tool_call_id": "joke_04bqb0c9vry9", "content":
+      [{"type": "document", "document": {"data": "Why did the chicken cross the road?
+      To get to the other side!"}}]}], "tools": [{"type": "function", "function":
+      {"name": "add", "description": "Adds two numbers together.", "parameters": {"type":
+      "object", "strict": true, "properties": {"x": {"type": "integer", "description":
+      "the first number"}, "y": {"type": "integer", "description": "the second number"}},
+      "required": ["x", "y"], "additionalProperties": false}}}, {"type": "function",
+      "function": {"name": "subtract", "description": "Subtracts the second number
+      from the first.", "parameters": {"type": "object", "strict": true, "properties":
+      {"x": {"type": "integer", "description": "the first number"}, "y": {"type":
+      "integer", "description": "the second number"}}, "required": ["x", "y"], "additionalProperties":
+      false}}}, {"type": "function", "function": {"name": "joke", "description": "Returns
+      a joke.", "parameters": {"type": "object", "strict": true, "properties": {},
+      "additionalProperties": false}}}], "stream": false}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1910'
+      content-type:
+      - application/json
+      host:
+      - api.cohere.com
+      x-fern-language:
+      - Python
+      x-fern-sdk-name:
+      - cohere
+      x-fern-sdk-version:
+      - 5.15.0
+    method: POST
+    uri: https://api.cohere.com/v2/chat
+  response:
+    body:
+      string: '{"id":"661a0be2-dfa5-4db1-9f6c-d14d6bc37d45","message":{"role":"assistant","content":[{"type":"text","text":"The
+        answer to 2+2-4 is 2. \n\nHere''s a joke for you: Why did the chicken cross
+        the road? To get to the other side!"}],"citations":[{"start":23,"end":24,"text":"2","sources":[{"type":"tool","id":"add_v0gcc70dxnp3:0","tool_output":{"content":"4"}},{"type":"tool","id":"subtract_65xcn09gttkp:0","tool_output":{"content":"2"}}],"type":"TEXT_CONTENT"},{"start":51,"end":111,"text":"Why
+        did the chicken cross the road? To get to the other side","sources":[{"type":"tool","id":"joke_04bqb0c9vry9:0","tool_output":{"content":"Why
+        did the chicken cross the road? To get to the other side!"}}],"type":"TEXT_CONTENT"}]},"finish_reason":"COMPLETE","usage":{"billed_units":{"input_tokens":126,"output_tokens":37},"tokens":{"input_tokens":1195,"output_tokens":129}}}'
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '861'
+      Via:
+      - 1.1 google
+      access-control-expose-headers:
+      - X-Debug-Trace-ID
+      cache-control:
+      - no-cache, no-store, no-transform, must-revalidate, private, max-age=0
+      content-type:
+      - application/json
+      date:
+      - Tue, 29 Jul 2025 18:11:19 GMT
+      expires:
+      - Thu, 01 Jan 1970 00:00:00 GMT
+      num_chars:
+      - '5388'
+      num_tokens:
+      - '163'
+      pragma:
+      - no-cache
+      vary:
+      - Origin
+      x-accel-expires:
+      - '0'
+      x-debug-trace-id:
+      - 73abb72f63ec379fc827d101531f98aa
+      x-endpoint-monthly-call-limit:
+      - '1000'
+      x-envoy-upstream-service-time:
+      - '1053'
+      x-trial-endpoint-call-limit:
+      - '10'
+      x-trial-endpoint-call-remaining:
+      - '8'
+    status:
+      code: 200
+      message: OK
+version: 1

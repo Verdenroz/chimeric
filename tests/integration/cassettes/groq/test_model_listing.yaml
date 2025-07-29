@@ -1,0 +1,146 @@
+interactions:
+- request:
+    body: ''
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-type:
+      - application/json
+      host:
+      - api.groq.com
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 0.26.0
+      x-stainless-read-timeout:
+      - '60'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: GET
+    uri: https://api.groq.com/openai/v1/models
+  response:
+    body:
+      string: '{"object":"list","data":[{"id":"qwen/qwen3-32b","object":"model","created":1748396646,"owned_by":"Alibaba
+        Cloud","active":true,"context_window":131072,"public_apps":null,"max_completion_tokens":40960},{"id":"playai-tts-arabic","object":"model","created":1740682783,"owned_by":"PlayAI","active":true,"context_window":8192,"public_apps":null,"max_completion_tokens":8192},{"id":"whisper-large-v3-turbo","object":"model","created":1728413088,"owned_by":"OpenAI","active":true,"context_window":448,"public_apps":null,"max_completion_tokens":448},{"id":"compound-beta","object":"model","created":1740880017,"owned_by":"Groq","active":true,"context_window":131072,"public_apps":null,"max_completion_tokens":8192},{"id":"meta-llama/llama-guard-4-12b","object":"model","created":1746743847,"owned_by":"Meta","active":true,"context_window":131072,"public_apps":null,"max_completion_tokens":1024},{"id":"meta-llama/llama-4-scout-17b-16e-instruct","object":"model","created":1743874824,"owned_by":"Meta","active":true,"context_window":131072,"public_apps":null,"max_completion_tokens":8192},{"id":"moonshotai/kimi-k2-instruct","object":"model","created":1752435491,"owned_by":"Moonshot
+        AI","active":true,"context_window":131072,"public_apps":null,"max_completion_tokens":16384},{"id":"playai-tts","object":"model","created":1740682771,"owned_by":"PlayAI","active":true,"context_window":8192,"public_apps":null,"max_completion_tokens":8192},{"id":"meta-llama/llama-prompt-guard-2-86m","object":"model","created":1748632165,"owned_by":"Meta","active":true,"context_window":512,"public_apps":null,"max_completion_tokens":512},{"id":"whisper-large-v3","object":"model","created":1693721698,"owned_by":"OpenAI","active":true,"context_window":448,"public_apps":null,"max_completion_tokens":448},{"id":"meta-llama/llama-4-maverick-17b-128e-instruct","object":"model","created":1743877158,"owned_by":"Meta","active":true,"context_window":131072,"public_apps":null,"max_completion_tokens":8192},{"id":"llama-3.3-70b-versatile","object":"model","created":1733447754,"owned_by":"Meta","active":true,"context_window":131072,"public_apps":null,"max_completion_tokens":32768},{"id":"mistral-saba-24b","object":"model","created":1739996492,"owned_by":"Mistral
+        AI","active":true,"context_window":32768,"public_apps":null,"max_completion_tokens":32768},{"id":"gemma2-9b-it","object":"model","created":1693721698,"owned_by":"Google","active":true,"context_window":8192,"public_apps":null,"max_completion_tokens":8192},{"id":"deepseek-r1-distill-llama-70b","object":"model","created":1737924940,"owned_by":"DeepSeek
+        / Meta","active":true,"context_window":131072,"public_apps":null,"max_completion_tokens":131072},{"id":"compound-beta-mini","object":"model","created":1742953279,"owned_by":"Groq","active":true,"context_window":131072,"public_apps":null,"max_completion_tokens":8192},{"id":"llama3-70b-8192","object":"model","created":1693721698,"owned_by":"Meta","active":true,"context_window":8192,"public_apps":null,"max_completion_tokens":8192},{"id":"distil-whisper-large-v3-en","object":"model","created":1693721698,"owned_by":"Hugging
+        Face","active":true,"context_window":448,"public_apps":null,"max_completion_tokens":448},{"id":"llama3-8b-8192","object":"model","created":1693721698,"owned_by":"Meta","active":true,"context_window":8192,"public_apps":null,"max_completion_tokens":8192},{"id":"meta-llama/llama-prompt-guard-2-22m","object":"model","created":1748632101,"owned_by":"Meta","active":true,"context_window":512,"public_apps":null,"max_completion_tokens":512},{"id":"allam-2-7b","object":"model","created":1737672203,"owned_by":"SDAIA","active":true,"context_window":4096,"public_apps":null,"max_completion_tokens":4096},{"id":"llama-3.1-8b-instant","object":"model","created":1693721698,"owned_by":"Meta","active":true,"context_window":131072,"public_apps":null,"max_completion_tokens":131072}]}
+
+        '
+    headers:
+      CF-RAY:
+      - 966eb9419f2b8095-EWR
+      Cache-Control:
+      - private, max-age=0, no-store, no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:36:45 GMT
+      Transfer-Encoding:
+      - chunked
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '3884'
+      vary:
+      - Origin
+      via:
+      - 1.1 google
+      x-groq-region:
+      - us-west-1
+    status:
+      code: 200
+      message: OK
+- request:
+    body: ''
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=wRfX94ePlDSIT0jE8e_1nv3Rp9immb1jfzjDqlsmAYY-1753814205-1.0.1.1-1eBsYwWu53Zrt.FFUBNJ0tH04UvmaeXYrtVs7ZxUc7kHUBUSTTyoewRtBRmtqY0.jj5ozbuNIWjIEPl8ufonn4tGUkc5QxsACkl8hRb6N4M
+      host:
+      - api.groq.com
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 0.26.0
+      x-stainless-read-timeout:
+      - '60'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: GET
+    uri: https://api.groq.com/openai/v1/models
+  response:
+    body:
+      string: '{"object":"list","data":[{"id":"whisper-large-v3-turbo","object":"model","created":1728413088,"owned_by":"OpenAI","active":true,"context_window":448,"public_apps":null,"max_completion_tokens":448},{"id":"meta-llama/llama-4-scout-17b-16e-instruct","object":"model","created":1743874824,"owned_by":"Meta","active":true,"context_window":131072,"public_apps":null,"max_completion_tokens":8192},{"id":"llama-3.3-70b-versatile","object":"model","created":1733447754,"owned_by":"Meta","active":true,"context_window":131072,"public_apps":null,"max_completion_tokens":32768},{"id":"distil-whisper-large-v3-en","object":"model","created":1693721698,"owned_by":"Hugging
+        Face","active":true,"context_window":448,"public_apps":null,"max_completion_tokens":448},{"id":"meta-llama/llama-4-maverick-17b-128e-instruct","object":"model","created":1743877158,"owned_by":"Meta","active":true,"context_window":131072,"public_apps":null,"max_completion_tokens":8192},{"id":"meta-llama/llama-prompt-guard-2-22m","object":"model","created":1748632101,"owned_by":"Meta","active":true,"context_window":512,"public_apps":null,"max_completion_tokens":512},{"id":"gemma2-9b-it","object":"model","created":1693721698,"owned_by":"Google","active":true,"context_window":8192,"public_apps":null,"max_completion_tokens":8192},{"id":"llama-3.1-8b-instant","object":"model","created":1693721698,"owned_by":"Meta","active":true,"context_window":131072,"public_apps":null,"max_completion_tokens":131072},{"id":"meta-llama/llama-prompt-guard-2-86m","object":"model","created":1748632165,"owned_by":"Meta","active":true,"context_window":512,"public_apps":null,"max_completion_tokens":512},{"id":"llama3-8b-8192","object":"model","created":1693721698,"owned_by":"Meta","active":true,"context_window":8192,"public_apps":null,"max_completion_tokens":8192},{"id":"allam-2-7b","object":"model","created":1737672203,"owned_by":"SDAIA","active":true,"context_window":4096,"public_apps":null,"max_completion_tokens":4096},{"id":"whisper-large-v3","object":"model","created":1693721698,"owned_by":"OpenAI","active":true,"context_window":448,"public_apps":null,"max_completion_tokens":448},{"id":"compound-beta","object":"model","created":1740880017,"owned_by":"Groq","active":true,"context_window":131072,"public_apps":null,"max_completion_tokens":8192},{"id":"deepseek-r1-distill-llama-70b","object":"model","created":1737924940,"owned_by":"DeepSeek
+        / Meta","active":true,"context_window":131072,"public_apps":null,"max_completion_tokens":131072},{"id":"playai-tts-arabic","object":"model","created":1740682783,"owned_by":"PlayAI","active":true,"context_window":8192,"public_apps":null,"max_completion_tokens":8192},{"id":"qwen/qwen3-32b","object":"model","created":1748396646,"owned_by":"Alibaba
+        Cloud","active":true,"context_window":131072,"public_apps":null,"max_completion_tokens":40960},{"id":"compound-beta-mini","object":"model","created":1742953279,"owned_by":"Groq","active":true,"context_window":131072,"public_apps":null,"max_completion_tokens":8192},{"id":"mistral-saba-24b","object":"model","created":1739996492,"owned_by":"Mistral
+        AI","active":true,"context_window":32768,"public_apps":null,"max_completion_tokens":32768},{"id":"meta-llama/llama-guard-4-12b","object":"model","created":1746743847,"owned_by":"Meta","active":true,"context_window":131072,"public_apps":null,"max_completion_tokens":1024},{"id":"llama3-70b-8192","object":"model","created":1693721698,"owned_by":"Meta","active":true,"context_window":8192,"public_apps":null,"max_completion_tokens":8192},{"id":"moonshotai/kimi-k2-instruct","object":"model","created":1752435491,"owned_by":"Moonshot
+        AI","active":true,"context_window":131072,"public_apps":null,"max_completion_tokens":16384},{"id":"playai-tts","object":"model","created":1740682771,"owned_by":"PlayAI","active":true,"context_window":8192,"public_apps":null,"max_completion_tokens":8192}]}
+
+        '
+    headers:
+      CF-RAY:
+      - 966eb942695b8095-EWR
+      Cache-Control:
+      - private, max-age=0, no-store, no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:36:45 GMT
+      Transfer-Encoding:
+      - chunked
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '3884'
+      vary:
+      - Origin
+      via:
+      - 1.1 google
+      x-groq-region:
+      - us-west-1
+    status:
+      code: 200
+      message: OK
+version: 1

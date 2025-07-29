@@ -35,11 +35,10 @@ def test_cohere_sync_generation(api_keys):
     if "cohere_api_key" not in api_keys:
         pytest.skip("Cohere API key not found")
 
+    chimeric = Chimeric(cohere_api_key=api_keys["cohere_api_key"])
     cassette_path = get_cassette_path("cohere", "test_sync_generation")
 
     with get_vcr().use_cassette(cassette_path):
-        chimeric = Chimeric(cohere_api_key=api_keys["cohere_api_key"])
-
         response = chimeric.generate(
             model="command-r",
             messages=[{"role": "user", "content": "Hello, respond briefly."}],
@@ -58,11 +57,10 @@ async def test_cohere_async_generation(api_keys):
     if "cohere_api_key" not in api_keys:
         pytest.skip("Cohere API key not found")
 
+    chimeric = Chimeric(cohere_api_key=api_keys["cohere_api_key"])
     cassette_path = get_cassette_path("cohere", "test_async_generation")
 
     with get_vcr().use_cassette(cassette_path):
-        chimeric = Chimeric(cohere_api_key=api_keys["cohere_api_key"])
-
         response = await chimeric.agenerate(
             model="command-r",
             messages=[{"role": "user", "content": "Hello, respond briefly."}],
@@ -80,11 +78,10 @@ def test_cohere_sync_tools_non_streaming(api_keys):
     if "cohere_api_key" not in api_keys:
         pytest.skip("Cohere API key not found")
 
+    chimeric = Chimeric(cohere_api_key=api_keys["cohere_api_key"])
     cassette_path = get_cassette_path("cohere", "test_sync_tools_non_streaming")
-    with get_vcr().use_cassette(cassette_path):
-        # Use rate-limited client for tool calling tests
-        chimeric = Chimeric(cohere_api_key=api_keys["cohere_api_key"])
 
+    with get_vcr().use_cassette(cassette_path):
         # Track tool calls
         tool_calls = {"add": 0, "subtract": 0, "joke": 0}
 
@@ -151,12 +148,10 @@ def test_cohere_sync_tools_streaming(api_keys):
     if "cohere_api_key" not in api_keys:
         pytest.skip("Cohere API key not found")
 
+    chimeric = Chimeric(cohere_api_key=api_keys["cohere_api_key"])
     cassette_path = get_cassette_path("cohere", "test_sync_tools_streaming")
 
     with get_vcr().use_cassette(cassette_path):
-        # Use rate-limited client for tool calling tests
-        chimeric = Chimeric(cohere_api_key=api_keys["cohere_api_key"])
-
         # Track tool calls
         tool_calls = {"add": 0, "subtract": 0, "joke": 0}
 
@@ -228,12 +223,10 @@ async def test_cohere_async_tools_streaming(api_keys):
     if "cohere_api_key" not in api_keys:
         pytest.skip("Cohere API key not found")
 
+    chimeric = Chimeric(cohere_api_key=api_keys["cohere_api_key"])
     cassette_path = get_cassette_path("cohere", "test_async_tools_streaming")
 
     with get_vcr().use_cassette(cassette_path):
-        # Use rate-limited client for tool calling tests
-        chimeric = Chimeric(cohere_api_key=api_keys["cohere_api_key"])
-
         # Track tool calls
         tool_calls = {"add": 0, "subtract": 0, "joke": 0}
 
@@ -308,12 +301,10 @@ async def test_cohere_async_tools_non_streaming(api_keys):
     if "cohere_api_key" not in api_keys:
         pytest.skip("Cohere API key not found")
 
+    chimeric = Chimeric(cohere_api_key=api_keys["cohere_api_key"])
     cassette_path = get_cassette_path("cohere", "test_async_tools_non_streaming")
 
     with get_vcr().use_cassette(cassette_path):
-        # Use rate-limited client for tool calling tests
-        chimeric = Chimeric(cohere_api_key=api_keys["cohere_api_key"])
-
         # Track tool calls
         tool_calls = {"add": 0, "subtract": 0, "joke": 0}
 
@@ -380,21 +371,21 @@ def test_cohere_init_kwargs_propagation(api_keys):
     if "cohere_api_key" not in api_keys:
         pytest.skip("Cohere API key not found")
 
+    # Test with custom initialization kwargs including fake params from other providers
+    chimeric = Chimeric(
+        cohere_api_key=api_keys["cohere_api_key"],
+        timeout=60,
+        max_retries=3,
+        # Fake params that other providers might use
+        openai_fake_param="should_be_ignored",
+        anthropic_fake_param="should_be_ignored",
+        google_vertex_project="fake_project",
+        cerebras_fake_setting=True,
+    )
+
     cassette_path = get_cassette_path("cohere", "test_kwargs_propagation")
 
     with get_vcr().use_cassette(cassette_path):
-        # Test with custom initialization kwargs including fake params from other providers
-        chimeric = Chimeric(
-            cohere_api_key=api_keys["cohere_api_key"],
-            timeout=60,
-            max_retries=3,
-            # Fake params that other providers might use
-            openai_fake_param="should_be_ignored",
-            anthropic_fake_param="should_be_ignored",
-            google_vertex_project="fake_project",
-            cerebras_fake_setting=True,
-        )
-
         # Test with generation kwargs
         response = chimeric.generate(
             model="command-r",
@@ -414,11 +405,10 @@ def test_cohere_invalid_generate_kwargs_raises_provider_error(api_keys):
     if "cohere_api_key" not in api_keys:
         pytest.skip("Cohere API key not found")
 
+    chimeric = Chimeric(cohere_api_key=api_keys["cohere_api_key"])
     cassette_path = get_cassette_path("cohere", "test_invalid_kwargs_raises_provider_error")
 
     with get_vcr().use_cassette(cassette_path):
-        chimeric = Chimeric(cohere_api_key=api_keys["cohere_api_key"])
-
         # Test with an invalid parameter that doesn't exist in Cohere API
         with pytest.raises(ProviderError) as exc_info:
             chimeric.generate(

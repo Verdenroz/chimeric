@@ -1,0 +1,150 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "What is 2+2-4-10+50? Tell me a joke."}],
+      "role": "user"}], "tools": [{"functionDeclarations": [{"description": "\nAdds
+      two numbers together.\nArgs:\n    x: the first number\n    y: the second number\n\nReturns:\n    The
+      sum of x and y.\n", "name": "add", "parameters": {"type": "OBJECT", "properties":
+      {"x": {"type": "INTEGER"}, "y": {"type": "INTEGER"}}}}, {"description": "\nSubtracts
+      the second number from the first.\nArgs:\n    x: the first number\n    y: the
+      second number\n\nReturns:\n    The result of x - y.\n", "name": "subtract",
+      "parameters": {"type": "OBJECT", "properties": {"x": {"type": "INTEGER"}, "y":
+      {"type": "INTEGER"}}}}, {"description": "\nReturns a joke.\n", "name": "joke"}]}],
+      "generationConfig": {}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '761'
+      Content-Type:
+      - application/json
+      x-goog-api-client:
+      - google-genai-sdk/1.2.0 gl-python/3.13.5
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"functionCall\": {\n              \"name\": \"add\",\n
+        \             \"args\": {\n                \"y\": 2,\n                \"x\":
+        2\n              }\n            }\n          },\n          {\n            \"functionCall\":
+        {\n              \"name\": \"subtract\",\n              \"args\": {\n                \"y\":
+        4,\n                \"x\": 4\n              }\n            }\n          },\n
+        \         {\n            \"functionCall\": {\n              \"name\": \"subtract\",\n
+        \             \"args\": {\n                \"x\": 0,\n                \"y\":
+        10\n              }\n            }\n          },\n          {\n            \"functionCall\":
+        {\n              \"name\": \"add\",\n              \"args\": {\n                \"y\":
+        50,\n                \"x\": -10\n              }\n            }\n          },\n
+        \         {\n            \"functionCall\": {\n              \"name\": \"joke\",\n
+        \             \"args\": {}\n            }\n          }\n        ],\n        \"role\":
+        \"model\"\n      },\n      \"finishReason\": \"STOP\",\n      \"avgLogprobs\":
+        -0.0086795460610162647\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        116,\n    \"candidatesTokenCount\": 21,\n    \"totalTokenCount\": 137,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 116\n
+        \     }\n    ],\n    \"candidatesTokensDetails\": [\n      {\n        \"modality\":
+        \"TEXT\",\n        \"tokenCount\": 21\n      }\n    ]\n  },\n  \"modelVersion\":
+        \"gemini-1.5-flash\",\n  \"responseId\": \"1BOJaPGJOPbygLUPrajR6Qw\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 29 Jul 2025 18:32:53 GMT
+      Server-Timing:
+      - gfet4t7; dur=918
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+      content-length:
+      - '1481'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "What is 2+2-4-10+50? Tell me a joke."}],
+      "role": "user"}, {"parts": [{"functionCall": {"args": {"y": 2, "x": 2}, "name":
+      "add"}}, {"functionCall": {"args": {"y": 4, "x": 4}, "name": "subtract"}}, {"functionCall":
+      {"args": {"x": 0, "y": 10}, "name": "subtract"}}, {"functionCall": {"args":
+      {"y": 50, "x": -10}, "name": "add"}}, {"functionCall": {"args": {}, "name":
+      "joke"}}], "role": "model"}, {"parts": [{"functionResponse": {"name": "add",
+      "response": {"result": 4}}}, {"functionResponse": {"name": "subtract", "response":
+      {"result": 0}}}, {"functionResponse": {"name": "subtract", "response": {"result":
+      -10}}}, {"functionResponse": {"name": "add", "response": {"result": 40}}}, {"functionResponse":
+      {"name": "joke", "response": {"result": "Why did the chicken cross the road?
+      To get to the other side!"}}}], "role": "user"}], "tools": [{"functionDeclarations":
+      [{"description": "\nAdds two numbers together.\nArgs:\n    x: the first number\n    y:
+      the second number\n\nReturns:\n    The sum of x and y.\n", "name": "add", "parameters":
+      {"type": "OBJECT", "properties": {"x": {"type": "INTEGER"}, "y": {"type": "INTEGER"}}}},
+      {"description": "\nSubtracts the second number from the first.\nArgs:\n    x:
+      the first number\n    y: the second number\n\nReturns:\n    The result of x
+      - y.\n", "name": "subtract", "parameters": {"type": "OBJECT", "properties":
+      {"x": {"type": "INTEGER"}, "y": {"type": "INTEGER"}}}}, {"description": "\nReturns
+      a joke.\n", "name": "joke"}]}], "generationConfig": {}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1532'
+      Content-Type:
+      - application/json
+      x-goog-api-client:
+      - google-genai-sdk/1.2.0 gl-python/3.13.5
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"2 + 2 - 4 - 10 + 50 = 40\\n\\nHere's
+        a joke: Why did the chicken cross the road? To get to the other side!\\n\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"avgLogprobs\": -0.0016183613666466304\n    }\n  ],\n  \"usageMetadata\":
+        {\n    \"promptTokenCount\": 166,\n    \"candidatesTokenCount\": 42,\n    \"totalTokenCount\":
+        208,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 166\n      }\n    ],\n    \"candidatesTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 42\n
+        \     }\n    ]\n  },\n  \"modelVersion\": \"gemini-1.5-flash\",\n  \"responseId\":
+        \"1ROJaNzqNcWjgLUP7OfR2A4\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 29 Jul 2025 18:32:54 GMT
+      Server-Timing:
+      - gfet4t7; dur=592
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+      content-length:
+      - '757'
+    status:
+      code: 200
+      message: OK
+version: 1

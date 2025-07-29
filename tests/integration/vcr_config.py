@@ -23,7 +23,10 @@ def get_vcr() -> vcr.VCR:
             "authorization",
             "x-api-key",
             "api-key",
+            "anthropic-organization-id",
             "openai-api-key",
+            "openai-organization",
+            "openai-project",
             "anthropic-api-key",
             "google-api-key",
             "cerebras-api-key",
@@ -80,11 +83,26 @@ def _filter_request(request):
 def _filter_response(response):
     """Filter and sanitize response data before recording."""
     # Remove any response headers that might contain sensitive info
-    sensitive_response_headers = ["set-cookie", "x-request-id"]
+    # Note: Header names are case-insensitive, so we normalize to lowercase
+    sensitive_response_headers = [
+        "set-cookie",
+        "x-request-id",
+        "x-trace-id",
+        "cf-connecting-ip",
+        "x-forwarded-for",
+        "x-real-ip",
+        "server",
+        "anthropic-organization-id",
+        "openai-organization",
+        "openai-project",
+        "openai-processing-ms",
+        "openai-version",
+    ]
 
-    for header in sensitive_response_headers:
-        if header in response.get("headers", {}):
-            del response["headers"][header]
+    headers = response.get("headers", {})
+    for header in list(headers.keys()):  # Create a copy to avoid modification during iteration
+        if header.lower() in [h.lower() for h in sensitive_response_headers]:
+            del headers[header]
 
     return response
 

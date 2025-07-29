@@ -1,0 +1,1039 @@
+interactions:
+- request:
+    body: ''
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.84.0
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: GET
+    uri: https://api.openai.com/v1/models
+  response:
+    body:
+      string: "{\n  \"object\": \"list\",\n  \"data\": [\n    {\n      \"id\": \"gpt-4-0613\",\n
+        \     \"object\": \"model\",\n      \"created\": 1686588896,\n      \"owned_by\":
+        \"openai\"\n    },\n    {\n      \"id\": \"gpt-4\",\n      \"object\": \"model\",\n
+        \     \"created\": 1687882411,\n      \"owned_by\": \"openai\"\n    },\n    {\n
+        \     \"id\": \"gpt-3.5-turbo\",\n      \"object\": \"model\",\n      \"created\":
+        1677610602,\n      \"owned_by\": \"openai\"\n    },\n    {\n      \"id\":
+        \"o4-mini-deep-research-2025-06-26\",\n      \"object\": \"model\",\n      \"created\":
+        1750866121,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"codex-mini-latest\",\n      \"object\": \"model\",\n      \"created\": 1746673257,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-realtime-preview-2025-06-03\",\n
+        \     \"object\": \"model\",\n      \"created\": 1748907838,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-audio-preview-2025-06-03\",\n
+        \     \"object\": \"model\",\n      \"created\": 1748908498,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"o4-mini-deep-research\",\n      \"object\":
+        \"model\",\n      \"created\": 1749685485,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"davinci-002\",\n      \"object\": \"model\",\n
+        \     \"created\": 1692634301,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"babbage-002\",\n      \"object\": \"model\",\n      \"created\":
+        1692634615,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-3.5-turbo-instruct\",\n      \"object\": \"model\",\n      \"created\":
+        1692901427,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-3.5-turbo-instruct-0914\",\n      \"object\": \"model\",\n      \"created\":
+        1694122472,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"dall-e-3\",\n      \"object\": \"model\",\n      \"created\": 1698785189,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"dall-e-2\",\n
+        \     \"object\": \"model\",\n      \"created\": 1698798177,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"gpt-4-1106-preview\",\n      \"object\":
+        \"model\",\n      \"created\": 1698957206,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"gpt-3.5-turbo-1106\",\n      \"object\": \"model\",\n
+        \     \"created\": 1698959748,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"tts-1-hd\",\n      \"object\": \"model\",\n      \"created\":
+        1699046015,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"tts-1-1106\",\n      \"object\": \"model\",\n      \"created\": 1699053241,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"tts-1-hd-1106\",\n
+        \     \"object\": \"model\",\n      \"created\": 1699053533,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"text-embedding-3-small\",\n      \"object\":
+        \"model\",\n      \"created\": 1705948997,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"text-embedding-3-large\",\n      \"object\":
+        \"model\",\n      \"created\": 1705953180,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"gpt-4-0125-preview\",\n      \"object\": \"model\",\n
+        \     \"created\": 1706037612,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"gpt-4-turbo-preview\",\n      \"object\": \"model\",\n      \"created\":
+        1706037777,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-3.5-turbo-0125\",\n      \"object\": \"model\",\n      \"created\":
+        1706048358,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4-turbo\",\n      \"object\": \"model\",\n      \"created\": 1712361441,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"gpt-4-turbo-2024-04-09\",\n
+        \     \"object\": \"model\",\n      \"created\": 1712601677,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"gpt-4o\",\n      \"object\": \"model\",\n
+        \     \"created\": 1715367049,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"gpt-4o-2024-05-13\",\n      \"object\": \"model\",\n      \"created\":
+        1715368132,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-mini-2024-07-18\",\n      \"object\": \"model\",\n      \"created\":
+        1721172717,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-mini\",\n      \"object\": \"model\",\n      \"created\": 1721172741,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-2024-08-06\",\n
+        \     \"object\": \"model\",\n      \"created\": 1722814719,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"chatgpt-4o-latest\",\n      \"object\":
+        \"model\",\n      \"created\": 1723515131,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"o1-mini-2024-09-12\",\n      \"object\": \"model\",\n
+        \     \"created\": 1725648979,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"o1-mini\",\n      \"object\": \"model\",\n      \"created\":
+        1725649008,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-realtime-preview-2024-10-01\",\n      \"object\": \"model\",\n      \"created\":
+        1727131766,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-audio-preview-2024-10-01\",\n      \"object\": \"model\",\n      \"created\":
+        1727389042,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-audio-preview\",\n      \"object\": \"model\",\n      \"created\":
+        1727460443,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-realtime-preview\",\n      \"object\": \"model\",\n      \"created\":
+        1727659998,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"omni-moderation-latest\",\n      \"object\": \"model\",\n      \"created\":
+        1731689265,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"omni-moderation-2024-09-26\",\n      \"object\": \"model\",\n      \"created\":
+        1732734466,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-realtime-preview-2024-12-17\",\n      \"object\": \"model\",\n      \"created\":
+        1733945430,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-audio-preview-2024-12-17\",\n      \"object\": \"model\",\n      \"created\":
+        1734034239,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-mini-realtime-preview-2024-12-17\",\n      \"object\": \"model\",\n
+        \     \"created\": 1734112601,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"gpt-4o-mini-audio-preview-2024-12-17\",\n      \"object\":
+        \"model\",\n      \"created\": 1734115920,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"o1-2024-12-17\",\n      \"object\": \"model\",\n
+        \     \"created\": 1734326976,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"o1\",\n      \"object\": \"model\",\n      \"created\": 1734375816,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-mini-realtime-preview\",\n
+        \     \"object\": \"model\",\n      \"created\": 1734387380,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-mini-audio-preview\",\n
+        \     \"object\": \"model\",\n      \"created\": 1734387424,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"o3-mini\",\n      \"object\": \"model\",\n
+        \     \"created\": 1737146383,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"o3-mini-2025-01-31\",\n      \"object\": \"model\",\n      \"created\":
+        1738010200,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-2024-11-20\",\n      \"object\": \"model\",\n      \"created\": 1739331543,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-search-preview-2025-03-11\",\n
+        \     \"object\": \"model\",\n      \"created\": 1741388170,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-search-preview\",\n      \"object\":
+        \"model\",\n      \"created\": 1741388720,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"gpt-4o-mini-search-preview-2025-03-11\",\n
+        \     \"object\": \"model\",\n      \"created\": 1741390858,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-mini-search-preview\",\n
+        \     \"object\": \"model\",\n      \"created\": 1741391161,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-transcribe\",\n      \"object\":
+        \"model\",\n      \"created\": 1742068463,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"gpt-4o-mini-transcribe\",\n      \"object\":
+        \"model\",\n      \"created\": 1742068596,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"o1-pro-2025-03-19\",\n      \"object\": \"model\",\n
+        \     \"created\": 1742251504,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"o1-pro\",\n      \"object\": \"model\",\n      \"created\":
+        1742251791,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-mini-tts\",\n      \"object\": \"model\",\n      \"created\": 1742403959,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"o4-mini-2025-04-16\",\n
+        \     \"object\": \"model\",\n      \"created\": 1744133506,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"o4-mini\",\n      \"object\": \"model\",\n
+        \     \"created\": 1744225351,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"gpt-4.1-2025-04-14\",\n      \"object\": \"model\",\n      \"created\":
+        1744315746,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4.1\",\n      \"object\": \"model\",\n      \"created\": 1744316542,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"gpt-4.1-mini-2025-04-14\",\n
+        \     \"object\": \"model\",\n      \"created\": 1744317547,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"gpt-4.1-mini\",\n      \"object\":
+        \"model\",\n      \"created\": 1744318173,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"gpt-4.1-nano-2025-04-14\",\n      \"object\":
+        \"model\",\n      \"created\": 1744321025,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"gpt-4.1-nano\",\n      \"object\": \"model\",\n
+        \     \"created\": 1744321707,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"gpt-image-1\",\n      \"object\": \"model\",\n      \"created\":
+        1745517030,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-3.5-turbo-16k\",\n      \"object\": \"model\",\n      \"created\": 1683758102,\n
+        \     \"owned_by\": \"openai-internal\"\n    },\n    {\n      \"id\": \"tts-1\",\n
+        \     \"object\": \"model\",\n      \"created\": 1681940951,\n      \"owned_by\":
+        \"openai-internal\"\n    },\n    {\n      \"id\": \"whisper-1\",\n      \"object\":
+        \"model\",\n      \"created\": 1677532384,\n      \"owned_by\": \"openai-internal\"\n
+        \   },\n    {\n      \"id\": \"text-embedding-ada-002\",\n      \"object\":
+        \"model\",\n      \"created\": 1671217299,\n      \"owned_by\": \"openai-internal\"\n
+        \   }\n  ]\n}"
+    headers:
+      CF-RAY:
+      - 966e921fa912c43b-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:10:03 GMT
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '9451'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"input": [{"role": "user", "content": "What is 2+2-4-10+50? Tell me a
+      joke."}], "model": "gpt-4o-mini", "stream": true, "tools": [{"type": "function",
+      "name": "add", "description": "Adds two numbers together.", "parameters": {"type":
+      "object", "strict": true, "properties": {"x": {"type": "integer", "description":
+      "the first number"}, "y": {"type": "integer", "description": "the second number"}},
+      "required": ["x", "y"], "additionalProperties": false}}, {"type": "function",
+      "name": "subtract", "description": "Subtracts the second number from the first.",
+      "parameters": {"type": "object", "strict": true, "properties": {"x": {"type":
+      "integer", "description": "the first number"}, "y": {"type": "integer", "description":
+      "the second number"}}, "required": ["x", "y"], "additionalProperties": false}},
+      {"type": "function", "name": "joke", "description": "Returns a joke.", "parameters":
+      {"type": "object", "strict": true, "properties": {}, "additionalProperties":
+      false}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '976'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=hp2PMonx_Ip06AfD6fm0JYO.Umpd43Opd6LbCjE7SJY-1753812603-1.0.1.1-kAbGAxac4KHvPSupuAdyQ0E561NsOqEbq_LNFBPioUe2ue0lJHNt05l_sBZ.H33xmUkqW8JXPwf5_ZNJ8t2tckytsvHANRnF8Zqsh3kn1gY;
+        _cfuvid=.21LCRU0ChCpA8dAVimxKuTUOxtltWWa5FhQiwctcbc-1753812603223-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.84.0
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    body:
+      string: 'event: response.created
+
+        data: {"type":"response.created","sequence_number":0,"response":{"id":"resp_68890e7b5c90819e9843216b14985e350bd3c1a4b8e5360c","object":"response","created_at":1753812603,"status":"in_progress","background":false,"error":null,"incomplete_details":null,"instructions":null,"max_output_tokens":null,"max_tool_calls":null,"model":"gpt-4o-mini-2024-07-18","output":[],"parallel_tool_calls":true,"previous_response_id":null,"prompt_cache_key":null,"reasoning":{"effort":null,"summary":null},"safety_identifier":null,"service_tier":"auto","store":true,"temperature":1.0,"text":{"format":{"type":"text"}},"tool_choice":"auto","tools":[{"type":"function","description":"Adds
+        two numbers together.","name":"add","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+        first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false},"strict":true},{"type":"function","description":"Subtracts
+        the second number from the first.","name":"subtract","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+        first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false},"strict":true},{"type":"function","description":"Returns
+        a joke.","name":"joke","parameters":{"type":"object","strict":true,"properties":{},"additionalProperties":false},"strict":true}],"top_logprobs":0,"top_p":1.0,"truncation":"disabled","usage":null,"user":null,"metadata":{}}}
+
+
+        event: response.in_progress
+
+        data: {"type":"response.in_progress","sequence_number":1,"response":{"id":"resp_68890e7b5c90819e9843216b14985e350bd3c1a4b8e5360c","object":"response","created_at":1753812603,"status":"in_progress","background":false,"error":null,"incomplete_details":null,"instructions":null,"max_output_tokens":null,"max_tool_calls":null,"model":"gpt-4o-mini-2024-07-18","output":[],"parallel_tool_calls":true,"previous_response_id":null,"prompt_cache_key":null,"reasoning":{"effort":null,"summary":null},"safety_identifier":null,"service_tier":"auto","store":true,"temperature":1.0,"text":{"format":{"type":"text"}},"tool_choice":"auto","tools":[{"type":"function","description":"Adds
+        two numbers together.","name":"add","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+        first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false},"strict":true},{"type":"function","description":"Subtracts
+        the second number from the first.","name":"subtract","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+        first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false},"strict":true},{"type":"function","description":"Returns
+        a joke.","name":"joke","parameters":{"type":"object","strict":true,"properties":{},"additionalProperties":false},"strict":true}],"top_logprobs":0,"top_p":1.0,"truncation":"disabled","usage":null,"user":null,"metadata":{}}}
+
+
+        event: response.output_item.added
+
+        data: {"type":"response.output_item.added","sequence_number":2,"output_index":0,"item":{"id":"fc_68890e7c0644819e9701a04e4fdd18840bd3c1a4b8e5360c","type":"function_call","status":"in_progress","arguments":"","call_id":"call_4zAPLt8BwTPDd2aqLSIEXTim","name":"add"}}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","sequence_number":3,"item_id":"fc_68890e7c0644819e9701a04e4fdd18840bd3c1a4b8e5360c","output_index":0,"delta":"{"}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","sequence_number":4,"item_id":"fc_68890e7c0644819e9701a04e4fdd18840bd3c1a4b8e5360c","output_index":0,"delta":"\"x"}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","sequence_number":5,"item_id":"fc_68890e7c0644819e9701a04e4fdd18840bd3c1a4b8e5360c","output_index":0,"delta":"\":"}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","sequence_number":6,"item_id":"fc_68890e7c0644819e9701a04e4fdd18840bd3c1a4b8e5360c","output_index":0,"delta":"2,"}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","sequence_number":7,"item_id":"fc_68890e7c0644819e9701a04e4fdd18840bd3c1a4b8e5360c","output_index":0,"delta":"\"y"}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","sequence_number":8,"item_id":"fc_68890e7c0644819e9701a04e4fdd18840bd3c1a4b8e5360c","output_index":0,"delta":"\":"}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","sequence_number":9,"item_id":"fc_68890e7c0644819e9701a04e4fdd18840bd3c1a4b8e5360c","output_index":0,"delta":"2}"}
+
+
+        event: response.function_call_arguments.done
+
+        data: {"type":"response.function_call_arguments.done","sequence_number":10,"item_id":"fc_68890e7c0644819e9701a04e4fdd18840bd3c1a4b8e5360c","output_index":0,"arguments":"{\"x\":2,\"y\":2}"}
+
+
+        event: response.output_item.done
+
+        data: {"type":"response.output_item.done","sequence_number":11,"output_index":0,"item":{"id":"fc_68890e7c0644819e9701a04e4fdd18840bd3c1a4b8e5360c","type":"function_call","status":"completed","arguments":"{\"x\":2,\"y\":2}","call_id":"call_4zAPLt8BwTPDd2aqLSIEXTim","name":"add"}}
+
+
+        event: response.output_item.added
+
+        data: {"type":"response.output_item.added","sequence_number":12,"output_index":1,"item":{"id":"fc_68890e7c5c54819eacbe096301fd18ec0bd3c1a4b8e5360c","type":"function_call","status":"in_progress","arguments":"","call_id":"call_gKHpXX0Tu5uQUMR7QxanehQu","name":"subtract"}}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","sequence_number":13,"item_id":"fc_68890e7c5c54819eacbe096301fd18ec0bd3c1a4b8e5360c","output_index":1,"delta":"{"}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","sequence_number":14,"item_id":"fc_68890e7c5c54819eacbe096301fd18ec0bd3c1a4b8e5360c","output_index":1,"delta":"\"x"}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","sequence_number":15,"item_id":"fc_68890e7c5c54819eacbe096301fd18ec0bd3c1a4b8e5360c","output_index":1,"delta":"\":"}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","sequence_number":16,"item_id":"fc_68890e7c5c54819eacbe096301fd18ec0bd3c1a4b8e5360c","output_index":1,"delta":"4,"}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","sequence_number":17,"item_id":"fc_68890e7c5c54819eacbe096301fd18ec0bd3c1a4b8e5360c","output_index":1,"delta":"\"y"}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","sequence_number":18,"item_id":"fc_68890e7c5c54819eacbe096301fd18ec0bd3c1a4b8e5360c","output_index":1,"delta":"\":"}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","sequence_number":19,"item_id":"fc_68890e7c5c54819eacbe096301fd18ec0bd3c1a4b8e5360c","output_index":1,"delta":"10}"}
+
+
+        event: response.function_call_arguments.done
+
+        data: {"type":"response.function_call_arguments.done","sequence_number":20,"item_id":"fc_68890e7c5c54819eacbe096301fd18ec0bd3c1a4b8e5360c","output_index":1,"arguments":"{\"x\":4,\"y\":10}"}
+
+
+        event: response.output_item.done
+
+        data: {"type":"response.output_item.done","sequence_number":21,"output_index":1,"item":{"id":"fc_68890e7c5c54819eacbe096301fd18ec0bd3c1a4b8e5360c","type":"function_call","status":"completed","arguments":"{\"x\":4,\"y\":10}","call_id":"call_gKHpXX0Tu5uQUMR7QxanehQu","name":"subtract"}}
+
+
+        event: response.output_item.added
+
+        data: {"type":"response.output_item.added","sequence_number":22,"output_index":2,"item":{"id":"fc_68890e7ca308819ebc64ae9c4926973d0bd3c1a4b8e5360c","type":"function_call","status":"in_progress","arguments":"","call_id":"call_s4FDa98Xib46H4OiRCbk6RHc","name":"joke"}}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","sequence_number":23,"item_id":"fc_68890e7ca308819ebc64ae9c4926973d0bd3c1a4b8e5360c","output_index":2,"delta":"{"}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","sequence_number":24,"item_id":"fc_68890e7ca308819ebc64ae9c4926973d0bd3c1a4b8e5360c","output_index":2,"delta":"}"}
+
+
+        event: response.function_call_arguments.done
+
+        data: {"type":"response.function_call_arguments.done","sequence_number":25,"item_id":"fc_68890e7ca308819ebc64ae9c4926973d0bd3c1a4b8e5360c","output_index":2,"arguments":"{}"}
+
+
+        event: response.output_item.done
+
+        data: {"type":"response.output_item.done","sequence_number":26,"output_index":2,"item":{"id":"fc_68890e7ca308819ebc64ae9c4926973d0bd3c1a4b8e5360c","type":"function_call","status":"completed","arguments":"{}","call_id":"call_s4FDa98Xib46H4OiRCbk6RHc","name":"joke"}}
+
+
+        event: response.completed
+
+        data: {"type":"response.completed","sequence_number":27,"response":{"id":"resp_68890e7b5c90819e9843216b14985e350bd3c1a4b8e5360c","object":"response","created_at":1753812603,"status":"completed","background":false,"error":null,"incomplete_details":null,"instructions":null,"max_output_tokens":null,"max_tool_calls":null,"model":"gpt-4o-mini-2024-07-18","output":[{"id":"fc_68890e7c0644819e9701a04e4fdd18840bd3c1a4b8e5360c","type":"function_call","status":"completed","arguments":"{\"x\":2,\"y\":2}","call_id":"call_4zAPLt8BwTPDd2aqLSIEXTim","name":"add"},{"id":"fc_68890e7c5c54819eacbe096301fd18ec0bd3c1a4b8e5360c","type":"function_call","status":"completed","arguments":"{\"x\":4,\"y\":10}","call_id":"call_gKHpXX0Tu5uQUMR7QxanehQu","name":"subtract"},{"id":"fc_68890e7ca308819ebc64ae9c4926973d0bd3c1a4b8e5360c","type":"function_call","status":"completed","arguments":"{}","call_id":"call_s4FDa98Xib46H4OiRCbk6RHc","name":"joke"}],"parallel_tool_calls":true,"previous_response_id":null,"prompt_cache_key":null,"reasoning":{"effort":null,"summary":null},"safety_identifier":null,"service_tier":"default","store":true,"temperature":1.0,"text":{"format":{"type":"text"}},"tool_choice":"auto","tools":[{"type":"function","description":"Adds
+        two numbers together.","name":"add","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+        first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false},"strict":true},{"type":"function","description":"Subtracts
+        the second number from the first.","name":"subtract","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+        first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false},"strict":true},{"type":"function","description":"Returns
+        a joke.","name":"joke","parameters":{"type":"object","strict":true,"properties":{},"additionalProperties":false},"strict":true}],"top_logprobs":0,"top_p":1.0,"truncation":"disabled","usage":{"input_tokens":111,"input_tokens_details":{"cached_tokens":0},"output_tokens":63,"output_tokens_details":{"reasoning_tokens":0},"total_tokens":174},"user":null,"metadata":{}}}
+
+
+        '
+    headers:
+      CF-RAY:
+      - 966e92226b31c43b-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - text/event-stream; charset=utf-8
+      Date:
+      - Tue, 29 Jul 2025 18:10:03 GMT
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"input": [{"role": "user", "content": "What is 2+2-4-10+50? Tell me a
+      joke."}, {"type": "function_call", "id": "fc_68890e7c0644819e9701a04e4fdd18840bd3c1a4b8e5360c",
+      "call_id": "call_4zAPLt8BwTPDd2aqLSIEXTim", "name": "add", "arguments": "{\"x\":2,\"y\":2}"},
+      {"type": "function_call", "id": "fc_68890e7c5c54819eacbe096301fd18ec0bd3c1a4b8e5360c",
+      "call_id": "call_gKHpXX0Tu5uQUMR7QxanehQu", "name": "subtract", "arguments":
+      "{\"x\":4,\"y\":10}"}, {"type": "function_call", "id": "fc_68890e7ca308819ebc64ae9c4926973d0bd3c1a4b8e5360c",
+      "call_id": "call_s4FDa98Xib46H4OiRCbk6RHc", "name": "joke", "arguments": "{}"},
+      {"type": "function_call_output", "call_id": "call_4zAPLt8BwTPDd2aqLSIEXTim",
+      "output": "4"}, {"type": "function_call_output", "call_id": "call_gKHpXX0Tu5uQUMR7QxanehQu",
+      "output": "-6"}, {"type": "function_call_output", "call_id": "call_s4FDa98Xib46H4OiRCbk6RHc",
+      "output": "Why did the chicken cross the road? To get to the other side!"}],
+      "model": "gpt-4o-mini", "stream": true, "tools": [{"type": "function", "name":
+      "add", "description": "Adds two numbers together.", "parameters": {"type": "object",
+      "strict": true, "properties": {"x": {"type": "integer", "description": "the
+      first number"}, "y": {"type": "integer", "description": "the second number"}},
+      "required": ["x", "y"], "additionalProperties": false}}, {"type": "function",
+      "name": "subtract", "description": "Subtracts the second number from the first.",
+      "parameters": {"type": "object", "strict": true, "properties": {"x": {"type":
+      "integer", "description": "the first number"}, "y": {"type": "integer", "description":
+      "the second number"}}, "required": ["x", "y"], "additionalProperties": false}},
+      {"type": "function", "name": "joke", "description": "Returns a joke.", "parameters":
+      {"type": "object", "strict": true, "properties": {}, "additionalProperties":
+      false}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1851'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=hp2PMonx_Ip06AfD6fm0JYO.Umpd43Opd6LbCjE7SJY-1753812603-1.0.1.1-kAbGAxac4KHvPSupuAdyQ0E561NsOqEbq_LNFBPioUe2ue0lJHNt05l_sBZ.H33xmUkqW8JXPwf5_ZNJ8t2tckytsvHANRnF8Zqsh3kn1gY;
+        _cfuvid=.21LCRU0ChCpA8dAVimxKuTUOxtltWWa5FhQiwctcbc-1753812603223-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.84.0
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    body:
+      string: 'event: response.created
+
+        data: {"type":"response.created","sequence_number":0,"response":{"id":"resp_68890e7ce11c819eaa8c4689d0cbfd8e0bd3c1a4b8e5360c","object":"response","created_at":1753812604,"status":"in_progress","background":false,"error":null,"incomplete_details":null,"instructions":null,"max_output_tokens":null,"max_tool_calls":null,"model":"gpt-4o-mini-2024-07-18","output":[],"parallel_tool_calls":true,"previous_response_id":null,"prompt_cache_key":null,"reasoning":{"effort":null,"summary":null},"safety_identifier":null,"service_tier":"auto","store":true,"temperature":1.0,"text":{"format":{"type":"text"}},"tool_choice":"auto","tools":[{"type":"function","description":"Adds
+        two numbers together.","name":"add","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+        first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false},"strict":true},{"type":"function","description":"Subtracts
+        the second number from the first.","name":"subtract","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+        first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false},"strict":true},{"type":"function","description":"Returns
+        a joke.","name":"joke","parameters":{"type":"object","strict":true,"properties":{},"additionalProperties":false},"strict":true}],"top_logprobs":0,"top_p":1.0,"truncation":"disabled","usage":null,"user":null,"metadata":{}}}
+
+
+        event: response.in_progress
+
+        data: {"type":"response.in_progress","sequence_number":1,"response":{"id":"resp_68890e7ce11c819eaa8c4689d0cbfd8e0bd3c1a4b8e5360c","object":"response","created_at":1753812604,"status":"in_progress","background":false,"error":null,"incomplete_details":null,"instructions":null,"max_output_tokens":null,"max_tool_calls":null,"model":"gpt-4o-mini-2024-07-18","output":[],"parallel_tool_calls":true,"previous_response_id":null,"prompt_cache_key":null,"reasoning":{"effort":null,"summary":null},"safety_identifier":null,"service_tier":"auto","store":true,"temperature":1.0,"text":{"format":{"type":"text"}},"tool_choice":"auto","tools":[{"type":"function","description":"Adds
+        two numbers together.","name":"add","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+        first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false},"strict":true},{"type":"function","description":"Subtracts
+        the second number from the first.","name":"subtract","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+        first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false},"strict":true},{"type":"function","description":"Returns
+        a joke.","name":"joke","parameters":{"type":"object","strict":true,"properties":{},"additionalProperties":false},"strict":true}],"top_logprobs":0,"top_p":1.0,"truncation":"disabled","usage":null,"user":null,"metadata":{}}}
+
+
+        event: response.output_item.added
+
+        data: {"type":"response.output_item.added","sequence_number":2,"output_index":0,"item":{"id":"fc_68890e7d764c819ea6aa4340d393d1a70bd3c1a4b8e5360c","type":"function_call","status":"in_progress","arguments":"","call_id":"call_VbtQDpZzoL4VvYZp3N9IV7oI","name":"add"}}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","sequence_number":3,"item_id":"fc_68890e7d764c819ea6aa4340d393d1a70bd3c1a4b8e5360c","output_index":0,"delta":"{\""}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","sequence_number":4,"item_id":"fc_68890e7d764c819ea6aa4340d393d1a70bd3c1a4b8e5360c","output_index":0,"delta":"x"}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","sequence_number":5,"item_id":"fc_68890e7d764c819ea6aa4340d393d1a70bd3c1a4b8e5360c","output_index":0,"delta":"\":"}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","sequence_number":6,"item_id":"fc_68890e7d764c819ea6aa4340d393d1a70bd3c1a4b8e5360c","output_index":0,"delta":"50"}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","sequence_number":7,"item_id":"fc_68890e7d764c819ea6aa4340d393d1a70bd3c1a4b8e5360c","output_index":0,"delta":",\""}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","sequence_number":8,"item_id":"fc_68890e7d764c819ea6aa4340d393d1a70bd3c1a4b8e5360c","output_index":0,"delta":"y"}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","sequence_number":9,"item_id":"fc_68890e7d764c819ea6aa4340d393d1a70bd3c1a4b8e5360c","output_index":0,"delta":"\":"}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","sequence_number":10,"item_id":"fc_68890e7d764c819ea6aa4340d393d1a70bd3c1a4b8e5360c","output_index":0,"delta":"-"}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","sequence_number":11,"item_id":"fc_68890e7d764c819ea6aa4340d393d1a70bd3c1a4b8e5360c","output_index":0,"delta":"6"}
+
+
+        event: response.function_call_arguments.delta
+
+        data: {"type":"response.function_call_arguments.delta","sequence_number":12,"item_id":"fc_68890e7d764c819ea6aa4340d393d1a70bd3c1a4b8e5360c","output_index":0,"delta":"}"}
+
+
+        event: response.function_call_arguments.done
+
+        data: {"type":"response.function_call_arguments.done","sequence_number":13,"item_id":"fc_68890e7d764c819ea6aa4340d393d1a70bd3c1a4b8e5360c","output_index":0,"arguments":"{\"x\":50,\"y\":-6}"}
+
+
+        event: response.output_item.done
+
+        data: {"type":"response.output_item.done","sequence_number":14,"output_index":0,"item":{"id":"fc_68890e7d764c819ea6aa4340d393d1a70bd3c1a4b8e5360c","type":"function_call","status":"completed","arguments":"{\"x\":50,\"y\":-6}","call_id":"call_VbtQDpZzoL4VvYZp3N9IV7oI","name":"add"}}
+
+
+        event: response.completed
+
+        data: {"type":"response.completed","sequence_number":15,"response":{"id":"resp_68890e7ce11c819eaa8c4689d0cbfd8e0bd3c1a4b8e5360c","object":"response","created_at":1753812604,"status":"completed","background":false,"error":null,"incomplete_details":null,"instructions":null,"max_output_tokens":null,"max_tool_calls":null,"model":"gpt-4o-mini-2024-07-18","output":[{"id":"fc_68890e7d764c819ea6aa4340d393d1a70bd3c1a4b8e5360c","type":"function_call","status":"completed","arguments":"{\"x\":50,\"y\":-6}","call_id":"call_VbtQDpZzoL4VvYZp3N9IV7oI","name":"add"}],"parallel_tool_calls":true,"previous_response_id":null,"prompt_cache_key":null,"reasoning":{"effort":null,"summary":null},"safety_identifier":null,"service_tier":"default","store":true,"temperature":1.0,"text":{"format":{"type":"text"}},"tool_choice":"auto","tools":[{"type":"function","description":"Adds
+        two numbers together.","name":"add","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+        first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false},"strict":true},{"type":"function","description":"Subtracts
+        the second number from the first.","name":"subtract","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+        first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false},"strict":true},{"type":"function","description":"Returns
+        a joke.","name":"joke","parameters":{"type":"object","strict":true,"properties":{},"additionalProperties":false},"strict":true}],"top_logprobs":0,"top_p":1.0,"truncation":"disabled","usage":{"input_tokens":191,"input_tokens_details":{"cached_tokens":0},"output_tokens":19,"output_tokens_details":{"reasoning_tokens":0},"total_tokens":210},"user":null,"metadata":{}}}
+
+
+        '
+    headers:
+      CF-RAY:
+      - 966e922c2b78c43b-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - text/event-stream; charset=utf-8
+      Date:
+      - Tue, 29 Jul 2025 18:10:04 GMT
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"input": [{"role": "user", "content": "What is 2+2-4-10+50? Tell me a
+      joke."}, {"type": "function_call", "id": "fc_68890e7c0644819e9701a04e4fdd18840bd3c1a4b8e5360c",
+      "call_id": "call_4zAPLt8BwTPDd2aqLSIEXTim", "name": "add", "arguments": "{\"x\":2,\"y\":2}"},
+      {"type": "function_call", "id": "fc_68890e7c5c54819eacbe096301fd18ec0bd3c1a4b8e5360c",
+      "call_id": "call_gKHpXX0Tu5uQUMR7QxanehQu", "name": "subtract", "arguments":
+      "{\"x\":4,\"y\":10}"}, {"type": "function_call", "id": "fc_68890e7ca308819ebc64ae9c4926973d0bd3c1a4b8e5360c",
+      "call_id": "call_s4FDa98Xib46H4OiRCbk6RHc", "name": "joke", "arguments": "{}"},
+      {"type": "function_call_output", "call_id": "call_4zAPLt8BwTPDd2aqLSIEXTim",
+      "output": "4"}, {"type": "function_call_output", "call_id": "call_gKHpXX0Tu5uQUMR7QxanehQu",
+      "output": "-6"}, {"type": "function_call_output", "call_id": "call_s4FDa98Xib46H4OiRCbk6RHc",
+      "output": "Why did the chicken cross the road? To get to the other side!"},
+      {"type": "function_call", "id": "fc_68890e7d764c819ea6aa4340d393d1a70bd3c1a4b8e5360c",
+      "call_id": "call_VbtQDpZzoL4VvYZp3N9IV7oI", "name": "add", "arguments": "{\"x\":50,\"y\":-6}"},
+      {"type": "function_call_output", "call_id": "call_VbtQDpZzoL4VvYZp3N9IV7oI",
+      "output": "44"}], "model": "gpt-4o-mini", "stream": true, "tools": [{"type":
+      "function", "name": "add", "description": "Adds two numbers together.", "parameters":
+      {"type": "object", "strict": true, "properties": {"x": {"type": "integer", "description":
+      "the first number"}, "y": {"type": "integer", "description": "the second number"}},
+      "required": ["x", "y"], "additionalProperties": false}}, {"type": "function",
+      "name": "subtract", "description": "Subtracts the second number from the first.",
+      "parameters": {"type": "object", "strict": true, "properties": {"x": {"type":
+      "integer", "description": "the first number"}, "y": {"type": "integer", "description":
+      "the second number"}}, "required": ["x", "y"], "additionalProperties": false}},
+      {"type": "function", "name": "joke", "description": "Returns a joke.", "parameters":
+      {"type": "object", "strict": true, "properties": {}, "additionalProperties":
+      false}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2128'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=hp2PMonx_Ip06AfD6fm0JYO.Umpd43Opd6LbCjE7SJY-1753812603-1.0.1.1-kAbGAxac4KHvPSupuAdyQ0E561NsOqEbq_LNFBPioUe2ue0lJHNt05l_sBZ.H33xmUkqW8JXPwf5_ZNJ8t2tckytsvHANRnF8Zqsh3kn1gY;
+        _cfuvid=.21LCRU0ChCpA8dAVimxKuTUOxtltWWa5FhQiwctcbc-1753812603223-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.84.0
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    body:
+      string: 'event: response.created
+
+        data: {"type":"response.created","sequence_number":0,"response":{"id":"resp_68890e7dc5a8819e94b2bb4084ab46d70bd3c1a4b8e5360c","object":"response","created_at":1753812605,"status":"in_progress","background":false,"error":null,"incomplete_details":null,"instructions":null,"max_output_tokens":null,"max_tool_calls":null,"model":"gpt-4o-mini-2024-07-18","output":[],"parallel_tool_calls":true,"previous_response_id":null,"prompt_cache_key":null,"reasoning":{"effort":null,"summary":null},"safety_identifier":null,"service_tier":"auto","store":true,"temperature":1.0,"text":{"format":{"type":"text"}},"tool_choice":"auto","tools":[{"type":"function","description":"Adds
+        two numbers together.","name":"add","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+        first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false},"strict":true},{"type":"function","description":"Subtracts
+        the second number from the first.","name":"subtract","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+        first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false},"strict":true},{"type":"function","description":"Returns
+        a joke.","name":"joke","parameters":{"type":"object","strict":true,"properties":{},"additionalProperties":false},"strict":true}],"top_logprobs":0,"top_p":1.0,"truncation":"disabled","usage":null,"user":null,"metadata":{}}}
+
+
+        event: response.in_progress
+
+        data: {"type":"response.in_progress","sequence_number":1,"response":{"id":"resp_68890e7dc5a8819e94b2bb4084ab46d70bd3c1a4b8e5360c","object":"response","created_at":1753812605,"status":"in_progress","background":false,"error":null,"incomplete_details":null,"instructions":null,"max_output_tokens":null,"max_tool_calls":null,"model":"gpt-4o-mini-2024-07-18","output":[],"parallel_tool_calls":true,"previous_response_id":null,"prompt_cache_key":null,"reasoning":{"effort":null,"summary":null},"safety_identifier":null,"service_tier":"auto","store":true,"temperature":1.0,"text":{"format":{"type":"text"}},"tool_choice":"auto","tools":[{"type":"function","description":"Adds
+        two numbers together.","name":"add","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+        first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false},"strict":true},{"type":"function","description":"Subtracts
+        the second number from the first.","name":"subtract","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+        first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false},"strict":true},{"type":"function","description":"Returns
+        a joke.","name":"joke","parameters":{"type":"object","strict":true,"properties":{},"additionalProperties":false},"strict":true}],"top_logprobs":0,"top_p":1.0,"truncation":"disabled","usage":null,"user":null,"metadata":{}}}
+
+
+        event: response.output_item.added
+
+        data: {"type":"response.output_item.added","sequence_number":2,"output_index":0,"item":{"id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","type":"message","status":"in_progress","content":[],"role":"assistant"}}
+
+
+        event: response.content_part.added
+
+        data: {"type":"response.content_part.added","sequence_number":3,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"part":{"type":"output_text","annotations":[],"logprobs":[],"text":""}}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":4,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"The","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":5,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        result","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":6,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        of","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":7,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        \\(","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":8,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"2","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":9,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        +","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":10,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        ","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":11,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"2","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":12,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        -","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":13,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        ","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":14,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"4","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":15,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        -","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":16,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        ","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":17,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"10","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":18,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        +","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":19,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        ","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":20,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"50","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":21,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"\\","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":22,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":")","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":23,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        is","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":24,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        \\(","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":25,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"44","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":26,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"\\","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":27,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":").\n\n","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":28,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"And","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":29,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        here''s","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":30,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        a","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":31,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        joke","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":32,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        for","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":33,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        you","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":34,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":":","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":35,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        \n\n","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":36,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"**","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":37,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"Why","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":38,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        did","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":39,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        the","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":40,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        chicken","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":41,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        cross","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":42,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        the","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":43,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        road","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":44,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"?","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":45,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"**","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":46,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"  \n","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":47,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"To","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":48,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        get","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":49,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        to","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":50,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        the","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":51,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        other","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":52,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"
+        side","logprobs":[]}
+
+
+        event: response.output_text.delta
+
+        data: {"type":"response.output_text.delta","sequence_number":53,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"delta":"!","logprobs":[]}
+
+
+        event: response.output_text.done
+
+        data: {"type":"response.output_text.done","sequence_number":54,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"text":"The
+        result of \\(2 + 2 - 4 - 10 + 50\\) is \\(44\\).\n\nAnd here''s a joke for
+        you: \n\n**Why did the chicken cross the road?**  \nTo get to the other side!","logprobs":[]}
+
+
+        event: response.content_part.done
+
+        data: {"type":"response.content_part.done","sequence_number":55,"item_id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","output_index":0,"content_index":0,"part":{"type":"output_text","annotations":[],"logprobs":[],"text":"The
+        result of \\(2 + 2 - 4 - 10 + 50\\) is \\(44\\).\n\nAnd here''s a joke for
+        you: \n\n**Why did the chicken cross the road?**  \nTo get to the other side!"}}
+
+
+        event: response.output_item.done
+
+        data: {"type":"response.output_item.done","sequence_number":56,"output_index":0,"item":{"id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","type":"message","status":"completed","content":[{"type":"output_text","annotations":[],"logprobs":[],"text":"The
+        result of \\(2 + 2 - 4 - 10 + 50\\) is \\(44\\).\n\nAnd here''s a joke for
+        you: \n\n**Why did the chicken cross the road?**  \nTo get to the other side!"}],"role":"assistant"}}
+
+
+        event: response.completed
+
+        data: {"type":"response.completed","sequence_number":57,"response":{"id":"resp_68890e7dc5a8819e94b2bb4084ab46d70bd3c1a4b8e5360c","object":"response","created_at":1753812605,"status":"completed","background":false,"error":null,"incomplete_details":null,"instructions":null,"max_output_tokens":null,"max_tool_calls":null,"model":"gpt-4o-mini-2024-07-18","output":[{"id":"msg_68890e7e3ac8819e8aaf85ac0fd0e4f10bd3c1a4b8e5360c","type":"message","status":"completed","content":[{"type":"output_text","annotations":[],"logprobs":[],"text":"The
+        result of \\(2 + 2 - 4 - 10 + 50\\) is \\(44\\).\n\nAnd here''s a joke for
+        you: \n\n**Why did the chicken cross the road?**  \nTo get to the other side!"}],"role":"assistant"}],"parallel_tool_calls":true,"previous_response_id":null,"prompt_cache_key":null,"reasoning":{"effort":null,"summary":null},"safety_identifier":null,"service_tier":"default","store":true,"temperature":1.0,"text":{"format":{"type":"text"}},"tool_choice":"auto","tools":[{"type":"function","description":"Adds
+        two numbers together.","name":"add","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+        first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false},"strict":true},{"type":"function","description":"Subtracts
+        the second number from the first.","name":"subtract","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+        first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false},"strict":true},{"type":"function","description":"Returns
+        a joke.","name":"joke","parameters":{"type":"object","strict":true,"properties":{},"additionalProperties":false},"strict":true}],"top_logprobs":0,"top_p":1.0,"truncation":"disabled","usage":{"input_tokens":218,"input_tokens_details":{"cached_tokens":0},"output_tokens":52,"output_tokens_details":{"reasoning_tokens":0},"total_tokens":270},"user":null,"metadata":{}}}
+
+
+        '
+    headers:
+      CF-RAY:
+      - 966e9231b89ec43b-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - text/event-stream; charset=utf-8
+      Date:
+      - Tue, 29 Jul 2025 18:10:05 GMT
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+    status:
+      code: 200
+      message: OK
+version: 1

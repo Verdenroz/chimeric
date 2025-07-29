@@ -1,0 +1,608 @@
+interactions:
+- request:
+    body: ''
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.84.0
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: GET
+    uri: https://api.openai.com/v1/models
+  response:
+    body:
+      string: "{\n  \"object\": \"list\",\n  \"data\": [\n    {\n      \"id\": \"gpt-4-0613\",\n
+        \     \"object\": \"model\",\n      \"created\": 1686588896,\n      \"owned_by\":
+        \"openai\"\n    },\n    {\n      \"id\": \"gpt-4\",\n      \"object\": \"model\",\n
+        \     \"created\": 1687882411,\n      \"owned_by\": \"openai\"\n    },\n    {\n
+        \     \"id\": \"gpt-3.5-turbo\",\n      \"object\": \"model\",\n      \"created\":
+        1677610602,\n      \"owned_by\": \"openai\"\n    },\n    {\n      \"id\":
+        \"o4-mini-deep-research-2025-06-26\",\n      \"object\": \"model\",\n      \"created\":
+        1750866121,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"codex-mini-latest\",\n      \"object\": \"model\",\n      \"created\": 1746673257,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-realtime-preview-2025-06-03\",\n
+        \     \"object\": \"model\",\n      \"created\": 1748907838,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-audio-preview-2025-06-03\",\n
+        \     \"object\": \"model\",\n      \"created\": 1748908498,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"o4-mini-deep-research\",\n      \"object\":
+        \"model\",\n      \"created\": 1749685485,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"davinci-002\",\n      \"object\": \"model\",\n
+        \     \"created\": 1692634301,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"babbage-002\",\n      \"object\": \"model\",\n      \"created\":
+        1692634615,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-3.5-turbo-instruct\",\n      \"object\": \"model\",\n      \"created\":
+        1692901427,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-3.5-turbo-instruct-0914\",\n      \"object\": \"model\",\n      \"created\":
+        1694122472,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"dall-e-3\",\n      \"object\": \"model\",\n      \"created\": 1698785189,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"dall-e-2\",\n
+        \     \"object\": \"model\",\n      \"created\": 1698798177,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"gpt-4-1106-preview\",\n      \"object\":
+        \"model\",\n      \"created\": 1698957206,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"gpt-3.5-turbo-1106\",\n      \"object\": \"model\",\n
+        \     \"created\": 1698959748,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"tts-1-hd\",\n      \"object\": \"model\",\n      \"created\":
+        1699046015,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"tts-1-1106\",\n      \"object\": \"model\",\n      \"created\": 1699053241,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"tts-1-hd-1106\",\n
+        \     \"object\": \"model\",\n      \"created\": 1699053533,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"text-embedding-3-small\",\n      \"object\":
+        \"model\",\n      \"created\": 1705948997,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"text-embedding-3-large\",\n      \"object\":
+        \"model\",\n      \"created\": 1705953180,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"gpt-4-0125-preview\",\n      \"object\": \"model\",\n
+        \     \"created\": 1706037612,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"gpt-4-turbo-preview\",\n      \"object\": \"model\",\n      \"created\":
+        1706037777,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-3.5-turbo-0125\",\n      \"object\": \"model\",\n      \"created\":
+        1706048358,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4-turbo\",\n      \"object\": \"model\",\n      \"created\": 1712361441,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"gpt-4-turbo-2024-04-09\",\n
+        \     \"object\": \"model\",\n      \"created\": 1712601677,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"gpt-4o\",\n      \"object\": \"model\",\n
+        \     \"created\": 1715367049,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"gpt-4o-2024-05-13\",\n      \"object\": \"model\",\n      \"created\":
+        1715368132,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-mini-2024-07-18\",\n      \"object\": \"model\",\n      \"created\":
+        1721172717,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-mini\",\n      \"object\": \"model\",\n      \"created\": 1721172741,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-2024-08-06\",\n
+        \     \"object\": \"model\",\n      \"created\": 1722814719,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"chatgpt-4o-latest\",\n      \"object\":
+        \"model\",\n      \"created\": 1723515131,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"o1-mini-2024-09-12\",\n      \"object\": \"model\",\n
+        \     \"created\": 1725648979,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"o1-mini\",\n      \"object\": \"model\",\n      \"created\":
+        1725649008,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-realtime-preview-2024-10-01\",\n      \"object\": \"model\",\n      \"created\":
+        1727131766,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-audio-preview-2024-10-01\",\n      \"object\": \"model\",\n      \"created\":
+        1727389042,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-audio-preview\",\n      \"object\": \"model\",\n      \"created\":
+        1727460443,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-realtime-preview\",\n      \"object\": \"model\",\n      \"created\":
+        1727659998,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"omni-moderation-latest\",\n      \"object\": \"model\",\n      \"created\":
+        1731689265,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"omni-moderation-2024-09-26\",\n      \"object\": \"model\",\n      \"created\":
+        1732734466,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-realtime-preview-2024-12-17\",\n      \"object\": \"model\",\n      \"created\":
+        1733945430,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-audio-preview-2024-12-17\",\n      \"object\": \"model\",\n      \"created\":
+        1734034239,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-mini-realtime-preview-2024-12-17\",\n      \"object\": \"model\",\n
+        \     \"created\": 1734112601,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"gpt-4o-mini-audio-preview-2024-12-17\",\n      \"object\":
+        \"model\",\n      \"created\": 1734115920,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"o1-2024-12-17\",\n      \"object\": \"model\",\n
+        \     \"created\": 1734326976,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"o1\",\n      \"object\": \"model\",\n      \"created\": 1734375816,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-mini-realtime-preview\",\n
+        \     \"object\": \"model\",\n      \"created\": 1734387380,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-mini-audio-preview\",\n
+        \     \"object\": \"model\",\n      \"created\": 1734387424,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"o3-mini\",\n      \"object\": \"model\",\n
+        \     \"created\": 1737146383,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"o3-mini-2025-01-31\",\n      \"object\": \"model\",\n      \"created\":
+        1738010200,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-2024-11-20\",\n      \"object\": \"model\",\n      \"created\": 1739331543,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-search-preview-2025-03-11\",\n
+        \     \"object\": \"model\",\n      \"created\": 1741388170,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-search-preview\",\n      \"object\":
+        \"model\",\n      \"created\": 1741388720,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"gpt-4o-mini-search-preview-2025-03-11\",\n
+        \     \"object\": \"model\",\n      \"created\": 1741390858,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-mini-search-preview\",\n
+        \     \"object\": \"model\",\n      \"created\": 1741391161,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-transcribe\",\n      \"object\":
+        \"model\",\n      \"created\": 1742068463,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"gpt-4o-mini-transcribe\",\n      \"object\":
+        \"model\",\n      \"created\": 1742068596,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"o1-pro-2025-03-19\",\n      \"object\": \"model\",\n
+        \     \"created\": 1742251504,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"o1-pro\",\n      \"object\": \"model\",\n      \"created\":
+        1742251791,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-mini-tts\",\n      \"object\": \"model\",\n      \"created\": 1742403959,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"o4-mini-2025-04-16\",\n
+        \     \"object\": \"model\",\n      \"created\": 1744133506,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"o4-mini\",\n      \"object\": \"model\",\n
+        \     \"created\": 1744225351,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"gpt-4.1-2025-04-14\",\n      \"object\": \"model\",\n      \"created\":
+        1744315746,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4.1\",\n      \"object\": \"model\",\n      \"created\": 1744316542,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"gpt-4.1-mini-2025-04-14\",\n
+        \     \"object\": \"model\",\n      \"created\": 1744317547,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"gpt-4.1-mini\",\n      \"object\":
+        \"model\",\n      \"created\": 1744318173,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"gpt-4.1-nano-2025-04-14\",\n      \"object\":
+        \"model\",\n      \"created\": 1744321025,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"gpt-4.1-nano\",\n      \"object\": \"model\",\n
+        \     \"created\": 1744321707,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"gpt-image-1\",\n      \"object\": \"model\",\n      \"created\":
+        1745517030,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-3.5-turbo-16k\",\n      \"object\": \"model\",\n      \"created\": 1683758102,\n
+        \     \"owned_by\": \"openai-internal\"\n    },\n    {\n      \"id\": \"tts-1\",\n
+        \     \"object\": \"model\",\n      \"created\": 1681940951,\n      \"owned_by\":
+        \"openai-internal\"\n    },\n    {\n      \"id\": \"whisper-1\",\n      \"object\":
+        \"model\",\n      \"created\": 1677532384,\n      \"owned_by\": \"openai-internal\"\n
+        \   },\n    {\n      \"id\": \"text-embedding-ada-002\",\n      \"object\":
+        \"model\",\n      \"created\": 1671217299,\n      \"owned_by\": \"openai-internal\"\n
+        \   }\n  ]\n}"
+    headers:
+      CF-RAY:
+      - 966e91fdbf190f6f-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:09:57 GMT
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '9451'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"input": [{"role": "user", "content": "What is 2+2-4-10+50? Tell me a
+      joke."}], "model": "gpt-4o-mini", "stream": false, "tools": [{"type": "function",
+      "name": "add", "description": "Adds two numbers together.", "parameters": {"type":
+      "object", "strict": true, "properties": {"x": {"type": "integer", "description":
+      "the first number"}, "y": {"type": "integer", "description": "the second number"}},
+      "required": ["x", "y"], "additionalProperties": false}}, {"type": "function",
+      "name": "subtract", "description": "Subtracts the second number from the first.",
+      "parameters": {"type": "object", "strict": true, "properties": {"x": {"type":
+      "integer", "description": "the first number"}, "y": {"type": "integer", "description":
+      "the second number"}}, "required": ["x", "y"], "additionalProperties": false}},
+      {"type": "function", "name": "joke", "description": "Returns a joke.", "parameters":
+      {"type": "object", "strict": true, "properties": {}, "additionalProperties":
+      false}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '977'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=6lUo5AXa0IkeMtFK5RlWogO0pXTbR6xVBzb7e2lpHZg-1753812597-1.0.1.1-DwcR1a9hGX6XJEnEOb44CGb0RlUqnUE0uNWJ9p1hayHsXQM_hP.htPNWIMWXqc8C9YNZq.qGPoBn10y0w2ycvrnm0YBGAm5B8XhcftsJAxA;
+        _cfuvid=f5p3fbiiSc9mbk0erOAc7Rxjs2bF_f6s7seFaaq73cw-1753812597774-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.84.0
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    body:
+      string: "{\n  \"id\": \"resp_68890e75e16881a1a5e8e756bc127e47028ada01fe01d5e7\",\n
+        \ \"object\": \"response\",\n  \"created_at\": 1753812597,\n  \"status\":
+        \"completed\",\n  \"background\": false,\n  \"error\": null,\n  \"incomplete_details\":
+        null,\n  \"instructions\": null,\n  \"max_output_tokens\": null,\n  \"max_tool_calls\":
+        null,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"output\": [\n    {\n
+        \     \"id\": \"fc_68890e77132081a1b625cba1ab092fa1028ada01fe01d5e7\",\n      \"type\":
+        \"function_call\",\n      \"status\": \"completed\",\n      \"arguments\":
+        \"{\\\"x\\\":2,\\\"y\\\":2}\",\n      \"call_id\": \"call_VYqjxYZVZ9NrS97gA9TynuQ6\",\n
+        \     \"name\": \"add\"\n    },\n    {\n      \"id\": \"fc_68890e77a1a481a1beb09f4938528f2d028ada01fe01d5e7\",\n
+        \     \"type\": \"function_call\",\n      \"status\": \"completed\",\n      \"arguments\":
+        \"{\\\"x\\\":4,\\\"y\\\":10}\",\n      \"call_id\": \"call_U6O7hQXjhcunJ97om5PIhl6H\",\n
+        \     \"name\": \"subtract\"\n    },\n    {\n      \"id\": \"fc_68890e77d28081a181c27a42bb92fc9a028ada01fe01d5e7\",\n
+        \     \"type\": \"function_call\",\n      \"status\": \"completed\",\n      \"arguments\":
+        \"{}\",\n      \"call_id\": \"call_WCakSXkTQEduUfUqEnpsZKzo\",\n      \"name\":
+        \"joke\"\n    }\n  ],\n  \"parallel_tool_calls\": true,\n  \"previous_response_id\":
+        null,\n  \"prompt_cache_key\": null,\n  \"reasoning\": {\n    \"effort\":
+        null,\n    \"summary\": null\n  },\n  \"safety_identifier\": null,\n  \"service_tier\":
+        \"default\",\n  \"store\": true,\n  \"temperature\": 1.0,\n  \"text\": {\n
+        \   \"format\": {\n      \"type\": \"text\"\n    }\n  },\n  \"tool_choice\":
+        \"auto\",\n  \"tools\": [\n    {\n      \"type\": \"function\",\n      \"description\":
+        \"Adds two numbers together.\",\n      \"name\": \"add\",\n      \"parameters\":
+        {\n        \"type\": \"object\",\n        \"strict\": true,\n        \"properties\":
+        {\n          \"x\": {\n            \"type\": \"integer\",\n            \"description\":
+        \"the first number\"\n          },\n          \"y\": {\n            \"type\":
+        \"integer\",\n            \"description\": \"the second number\"\n          }\n
+        \       },\n        \"required\": [\n          \"x\",\n          \"y\"\n        ],\n
+        \       \"additionalProperties\": false\n      },\n      \"strict\": true\n
+        \   },\n    {\n      \"type\": \"function\",\n      \"description\": \"Subtracts
+        the second number from the first.\",\n      \"name\": \"subtract\",\n      \"parameters\":
+        {\n        \"type\": \"object\",\n        \"strict\": true,\n        \"properties\":
+        {\n          \"x\": {\n            \"type\": \"integer\",\n            \"description\":
+        \"the first number\"\n          },\n          \"y\": {\n            \"type\":
+        \"integer\",\n            \"description\": \"the second number\"\n          }\n
+        \       },\n        \"required\": [\n          \"x\",\n          \"y\"\n        ],\n
+        \       \"additionalProperties\": false\n      },\n      \"strict\": true\n
+        \   },\n    {\n      \"type\": \"function\",\n      \"description\": \"Returns
+        a joke.\",\n      \"name\": \"joke\",\n      \"parameters\": {\n        \"type\":
+        \"object\",\n        \"strict\": true,\n        \"properties\": {},\n        \"additionalProperties\":
+        false\n      },\n      \"strict\": true\n    }\n  ],\n  \"top_logprobs\":
+        0,\n  \"top_p\": 1.0,\n  \"truncation\": \"disabled\",\n  \"usage\": {\n    \"input_tokens\":
+        111,\n    \"input_tokens_details\": {\n      \"cached_tokens\": 0\n    },\n
+        \   \"output_tokens\": 63,\n    \"output_tokens_details\": {\n      \"reasoning_tokens\":
+        0\n    },\n    \"total_tokens\": 174\n  },\n  \"user\": null,\n  \"metadata\":
+        {}\n}"
+    headers:
+      CF-RAY:
+      - 966e920069ce0f6f-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:09:59 GMT
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '3174'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '9997'
+      x-ratelimit-remaining-tokens:
+      - '199670'
+      x-ratelimit-reset-requests:
+      - 23.711s
+      x-ratelimit-reset-tokens:
+      - 99ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"input": [{"role": "user", "content": "What is 2+2-4-10+50? Tell me a
+      joke."}, {"arguments": "{\"x\":2,\"y\":2}", "call_id": "call_VYqjxYZVZ9NrS97gA9TynuQ6",
+      "name": "add", "type": "function_call", "id": "fc_68890e77132081a1b625cba1ab092fa1028ada01fe01d5e7",
+      "status": "completed"}, {"arguments": "{\"x\":4,\"y\":10}", "call_id": "call_U6O7hQXjhcunJ97om5PIhl6H",
+      "name": "subtract", "type": "function_call", "id": "fc_68890e77a1a481a1beb09f4938528f2d028ada01fe01d5e7",
+      "status": "completed"}, {"arguments": "{}", "call_id": "call_WCakSXkTQEduUfUqEnpsZKzo",
+      "name": "joke", "type": "function_call", "id": "fc_68890e77d28081a181c27a42bb92fc9a028ada01fe01d5e7",
+      "status": "completed"}, {"type": "function_call_output", "call_id": "call_VYqjxYZVZ9NrS97gA9TynuQ6",
+      "output": "4"}, {"type": "function_call_output", "call_id": "call_U6O7hQXjhcunJ97om5PIhl6H",
+      "output": "-6"}, {"type": "function_call_output", "call_id": "call_WCakSXkTQEduUfUqEnpsZKzo",
+      "output": "Why did the chicken cross the road? To get to the other side!"}],
+      "model": "gpt-4o-mini", "stream": false, "tools": [{"type": "function", "name":
+      "add", "description": "Adds two numbers together.", "parameters": {"type": "object",
+      "strict": true, "properties": {"x": {"type": "integer", "description": "the
+      first number"}, "y": {"type": "integer", "description": "the second number"}},
+      "required": ["x", "y"], "additionalProperties": false}}, {"type": "function",
+      "name": "subtract", "description": "Subtracts the second number from the first.",
+      "parameters": {"type": "object", "strict": true, "properties": {"x": {"type":
+      "integer", "description": "the first number"}, "y": {"type": "integer", "description":
+      "the second number"}}, "required": ["x", "y"], "additionalProperties": false}},
+      {"type": "function", "name": "joke", "description": "Returns a joke.", "parameters":
+      {"type": "object", "strict": true, "properties": {}, "additionalProperties":
+      false}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1921'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=6lUo5AXa0IkeMtFK5RlWogO0pXTbR6xVBzb7e2lpHZg-1753812597-1.0.1.1-DwcR1a9hGX6XJEnEOb44CGb0RlUqnUE0uNWJ9p1hayHsXQM_hP.htPNWIMWXqc8C9YNZq.qGPoBn10y0w2ycvrnm0YBGAm5B8XhcftsJAxA;
+        _cfuvid=f5p3fbiiSc9mbk0erOAc7Rxjs2bF_f6s7seFaaq73cw-1753812597774-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.84.0
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    body:
+      string: "{\n  \"id\": \"resp_68890e780c5481a1bbbba02c6e1dbb27028ada01fe01d5e7\",\n
+        \ \"object\": \"response\",\n  \"created_at\": 1753812600,\n  \"status\":
+        \"completed\",\n  \"background\": false,\n  \"error\": null,\n  \"incomplete_details\":
+        null,\n  \"instructions\": null,\n  \"max_output_tokens\": null,\n  \"max_tool_calls\":
+        null,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"output\": [\n    {\n
+        \     \"id\": \"fc_68890e78b95881a199baa373bccbb4b2028ada01fe01d5e7\",\n      \"type\":
+        \"function_call\",\n      \"status\": \"completed\",\n      \"arguments\":
+        \"{\\\"x\\\":-6,\\\"y\\\":50}\",\n      \"call_id\": \"call_aDEf0sUhE8oDc4YBDctP6eHN\",\n
+        \     \"name\": \"add\"\n    }\n  ],\n  \"parallel_tool_calls\": true,\n  \"previous_response_id\":
+        null,\n  \"prompt_cache_key\": null,\n  \"reasoning\": {\n    \"effort\":
+        null,\n    \"summary\": null\n  },\n  \"safety_identifier\": null,\n  \"service_tier\":
+        \"default\",\n  \"store\": true,\n  \"temperature\": 1.0,\n  \"text\": {\n
+        \   \"format\": {\n      \"type\": \"text\"\n    }\n  },\n  \"tool_choice\":
+        \"auto\",\n  \"tools\": [\n    {\n      \"type\": \"function\",\n      \"description\":
+        \"Adds two numbers together.\",\n      \"name\": \"add\",\n      \"parameters\":
+        {\n        \"type\": \"object\",\n        \"strict\": true,\n        \"properties\":
+        {\n          \"x\": {\n            \"type\": \"integer\",\n            \"description\":
+        \"the first number\"\n          },\n          \"y\": {\n            \"type\":
+        \"integer\",\n            \"description\": \"the second number\"\n          }\n
+        \       },\n        \"required\": [\n          \"x\",\n          \"y\"\n        ],\n
+        \       \"additionalProperties\": false\n      },\n      \"strict\": true\n
+        \   },\n    {\n      \"type\": \"function\",\n      \"description\": \"Subtracts
+        the second number from the first.\",\n      \"name\": \"subtract\",\n      \"parameters\":
+        {\n        \"type\": \"object\",\n        \"strict\": true,\n        \"properties\":
+        {\n          \"x\": {\n            \"type\": \"integer\",\n            \"description\":
+        \"the first number\"\n          },\n          \"y\": {\n            \"type\":
+        \"integer\",\n            \"description\": \"the second number\"\n          }\n
+        \       },\n        \"required\": [\n          \"x\",\n          \"y\"\n        ],\n
+        \       \"additionalProperties\": false\n      },\n      \"strict\": true\n
+        \   },\n    {\n      \"type\": \"function\",\n      \"description\": \"Returns
+        a joke.\",\n      \"name\": \"joke\",\n      \"parameters\": {\n        \"type\":
+        \"object\",\n        \"strict\": true,\n        \"properties\": {},\n        \"additionalProperties\":
+        false\n      },\n      \"strict\": true\n    }\n  ],\n  \"top_logprobs\":
+        0,\n  \"top_p\": 1.0,\n  \"truncation\": \"disabled\",\n  \"usage\": {\n    \"input_tokens\":
+        191,\n    \"input_tokens_details\": {\n      \"cached_tokens\": 0\n    },\n
+        \   \"output_tokens\": 19,\n    \"output_tokens_details\": {\n      \"reasoning_tokens\":
+        0\n    },\n    \"total_tokens\": 210\n  },\n  \"user\": null,\n  \"metadata\":
+        {}\n}"
+    headers:
+      CF-RAY:
+      - 966e920def750f6f-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:10:01 GMT
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '2684'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '9996'
+      x-ratelimit-remaining-tokens:
+      - '199592'
+      x-ratelimit-reset-requests:
+      - 30.14s
+      x-ratelimit-reset-tokens:
+      - 122ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"input": [{"role": "user", "content": "What is 2+2-4-10+50? Tell me a
+      joke."}, {"arguments": "{\"x\":2,\"y\":2}", "call_id": "call_VYqjxYZVZ9NrS97gA9TynuQ6",
+      "name": "add", "type": "function_call", "id": "fc_68890e77132081a1b625cba1ab092fa1028ada01fe01d5e7",
+      "status": "completed"}, {"arguments": "{\"x\":4,\"y\":10}", "call_id": "call_U6O7hQXjhcunJ97om5PIhl6H",
+      "name": "subtract", "type": "function_call", "id": "fc_68890e77a1a481a1beb09f4938528f2d028ada01fe01d5e7",
+      "status": "completed"}, {"arguments": "{}", "call_id": "call_WCakSXkTQEduUfUqEnpsZKzo",
+      "name": "joke", "type": "function_call", "id": "fc_68890e77d28081a181c27a42bb92fc9a028ada01fe01d5e7",
+      "status": "completed"}, {"type": "function_call_output", "call_id": "call_VYqjxYZVZ9NrS97gA9TynuQ6",
+      "output": "4"}, {"type": "function_call_output", "call_id": "call_U6O7hQXjhcunJ97om5PIhl6H",
+      "output": "-6"}, {"type": "function_call_output", "call_id": "call_WCakSXkTQEduUfUqEnpsZKzo",
+      "output": "Why did the chicken cross the road? To get to the other side!"},
+      {"arguments": "{\"x\":-6,\"y\":50}", "call_id": "call_aDEf0sUhE8oDc4YBDctP6eHN",
+      "name": "add", "type": "function_call", "id": "fc_68890e78b95881a199baa373bccbb4b2028ada01fe01d5e7",
+      "status": "completed"}, {"type": "function_call_output", "call_id": "call_aDEf0sUhE8oDc4YBDctP6eHN",
+      "output": "44"}], "model": "gpt-4o-mini", "stream": false, "tools": [{"type":
+      "function", "name": "add", "description": "Adds two numbers together.", "parameters":
+      {"type": "object", "strict": true, "properties": {"x": {"type": "integer", "description":
+      "the first number"}, "y": {"type": "integer", "description": "the second number"}},
+      "required": ["x", "y"], "additionalProperties": false}}, {"type": "function",
+      "name": "subtract", "description": "Subtracts the second number from the first.",
+      "parameters": {"type": "object", "strict": true, "properties": {"x": {"type":
+      "integer", "description": "the first number"}, "y": {"type": "integer", "description":
+      "the second number"}}, "required": ["x", "y"], "additionalProperties": false}},
+      {"type": "function", "name": "joke", "description": "Returns a joke.", "parameters":
+      {"type": "object", "strict": true, "properties": {}, "additionalProperties":
+      false}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2221'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=6lUo5AXa0IkeMtFK5RlWogO0pXTbR6xVBzb7e2lpHZg-1753812597-1.0.1.1-DwcR1a9hGX6XJEnEOb44CGb0RlUqnUE0uNWJ9p1hayHsXQM_hP.htPNWIMWXqc8C9YNZq.qGPoBn10y0w2ycvrnm0YBGAm5B8XhcftsJAxA;
+        _cfuvid=f5p3fbiiSc9mbk0erOAc7Rxjs2bF_f6s7seFaaq73cw-1753812597774-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.84.0
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    body:
+      string: "{\n  \"id\": \"resp_68890e79281881a18bc224dad2098296028ada01fe01d5e7\",\n
+        \ \"object\": \"response\",\n  \"created_at\": 1753812601,\n  \"status\":
+        \"completed\",\n  \"background\": false,\n  \"error\": null,\n  \"incomplete_details\":
+        null,\n  \"instructions\": null,\n  \"max_output_tokens\": null,\n  \"max_tool_calls\":
+        null,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"output\": [\n    {\n
+        \     \"id\": \"msg_68890e799f5881a19570573f44b383eb028ada01fe01d5e7\",\n
+        \     \"type\": \"message\",\n      \"status\": \"completed\",\n      \"content\":
+        [\n        {\n          \"type\": \"output_text\",\n          \"annotations\":
+        [],\n          \"logprobs\": [],\n          \"text\": \"The result of \\\\(2
+        + 2 - 4 - 10 + 50\\\\) is **44**.\\n\\nAnd here's a joke for you:  \\n**Why
+        did the chicken cross the road?**  \\nTo get to the other side!\"\n        }\n
+        \     ],\n      \"role\": \"assistant\"\n    }\n  ],\n  \"parallel_tool_calls\":
+        true,\n  \"previous_response_id\": null,\n  \"prompt_cache_key\": null,\n
+        \ \"reasoning\": {\n    \"effort\": null,\n    \"summary\": null\n  },\n  \"safety_identifier\":
+        null,\n  \"service_tier\": \"default\",\n  \"store\": true,\n  \"temperature\":
+        1.0,\n  \"text\": {\n    \"format\": {\n      \"type\": \"text\"\n    }\n
+        \ },\n  \"tool_choice\": \"auto\",\n  \"tools\": [\n    {\n      \"type\":
+        \"function\",\n      \"description\": \"Adds two numbers together.\",\n      \"name\":
+        \"add\",\n      \"parameters\": {\n        \"type\": \"object\",\n        \"strict\":
+        true,\n        \"properties\": {\n          \"x\": {\n            \"type\":
+        \"integer\",\n            \"description\": \"the first number\"\n          },\n
+        \         \"y\": {\n            \"type\": \"integer\",\n            \"description\":
+        \"the second number\"\n          }\n        },\n        \"required\": [\n
+        \         \"x\",\n          \"y\"\n        ],\n        \"additionalProperties\":
+        false\n      },\n      \"strict\": true\n    },\n    {\n      \"type\": \"function\",\n
+        \     \"description\": \"Subtracts the second number from the first.\",\n
+        \     \"name\": \"subtract\",\n      \"parameters\": {\n        \"type\":
+        \"object\",\n        \"strict\": true,\n        \"properties\": {\n          \"x\":
+        {\n            \"type\": \"integer\",\n            \"description\": \"the
+        first number\"\n          },\n          \"y\": {\n            \"type\": \"integer\",\n
+        \           \"description\": \"the second number\"\n          }\n        },\n
+        \       \"required\": [\n          \"x\",\n          \"y\"\n        ],\n        \"additionalProperties\":
+        false\n      },\n      \"strict\": true\n    },\n    {\n      \"type\": \"function\",\n
+        \     \"description\": \"Returns a joke.\",\n      \"name\": \"joke\",\n      \"parameters\":
+        {\n        \"type\": \"object\",\n        \"strict\": true,\n        \"properties\":
+        {},\n        \"additionalProperties\": false\n      },\n      \"strict\":
+        true\n    }\n  ],\n  \"top_logprobs\": 0,\n  \"top_p\": 1.0,\n  \"truncation\":
+        \"disabled\",\n  \"usage\": {\n    \"input_tokens\": 218,\n    \"input_tokens_details\":
+        {\n      \"cached_tokens\": 0\n    },\n    \"output_tokens\": 52,\n    \"output_tokens_details\":
+        {\n      \"reasoning_tokens\": 0\n    },\n    \"total_tokens\": 270\n  },\n
+        \ \"user\": null,\n  \"metadata\": {}\n}"
+    headers:
+      CF-RAY:
+      - 966e9214de260f6f-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:10:02 GMT
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '2902'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '9995'
+      x-ratelimit-remaining-tokens:
+      - '199565'
+      x-ratelimit-reset-requests:
+      - 37.646s
+      x-ratelimit-reset-tokens:
+      - 130ms
+    status:
+      code: 200
+      message: OK
+version: 1

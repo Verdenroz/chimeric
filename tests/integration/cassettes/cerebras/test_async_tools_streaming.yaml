@@ -1,0 +1,788 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "What is 2+2-4-10+50? Tell me
+      a joke."}], "model": "llama-4-maverick-17b-128e-instruct", "stream": true, "tools":
+      [{"type": "function", "function": {"name": "add", "strict": true, "description":
+      "Adds two numbers together.", "parameters": {"type": "object", "properties":
+      {"x": {"type": "integer", "description": "the first number"}, "y": {"type":
+      "integer", "description": "the second number"}}, "required": ["x", "y"], "additionalProperties":
+      false}}}, {"type": "function", "function": {"name": "subtract", "strict": true,
+      "description": "Subtracts the second number from the first.", "parameters":
+      {"type": "object", "properties": {"x": {"type": "integer", "description": "the
+      first number"}, "y": {"type": "integer", "description": "the second number"}},
+      "required": ["x", "y"], "additionalProperties": false}}}, {"type": "function",
+      "function": {"name": "joke", "strict": true, "description": "Returns a joke.",
+      "parameters": {"type": "object", "properties": {}, "additionalProperties": false}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1044'
+      content-type:
+      - application/json
+      host:
+      - api.cerebras.ai
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.35.0
+      x-stainless-read-timeout:
+      - '60'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.cerebras.ai/v1/chat/completions
+  response:
+    body:
+      string: 'data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"role":"assistant"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"To"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        find"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        the"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        final"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        result"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":","},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        we"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        first"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        need"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        to"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        add"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        "},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"2"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        and"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        "},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"2"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":","},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        then"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        subtract"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        "},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"4"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":","},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        then"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        subtract"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        "},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"10"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":","},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        and"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        finally"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        add"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        "},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"50"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"."},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        We"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        will"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        call"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        the"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        add"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        function"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        for"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        "},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"2"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        +"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        "},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"2"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        and"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        "},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"36"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        +"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        "},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"50"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":","},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        and"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        the"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        subtract"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        function"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        for"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        "},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"4"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        -"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        "},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"14"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        and"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        "},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"14"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        -"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        "},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"10"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":".\n\n"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"First"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":","},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        "},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"2"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        +"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        "},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"2"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        ="},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        \n"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"{\""},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"name"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"\":"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        \""},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"add"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"\","},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        \""},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"arguments"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"\":"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        {\""},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"x"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"\":"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        "},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"2"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":","},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        \""},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"y"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"\":"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        "},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"2"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"}}\n"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"4"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        -"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        "},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"4"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        ="},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        \n"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"{\""},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"name"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"\":"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        \""},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"subtract"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"\","},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        \""},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"arguments"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"\":"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        {\""},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"x"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"\":"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        "},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"4"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":","},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        \""},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"y"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"\":"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        "},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"4"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"}}\n"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"0"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        -"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        "},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"10"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        ="},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        \n"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"{\""},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"name"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"\":"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        \""},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"subtract"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"\","},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        \""},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"arguments"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"\":"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        {\""},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"x"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"\":"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        "},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"0"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":","},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        \""},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"y"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"\":"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        "},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"10"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"}}\n"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"-"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"10"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        +"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        "},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"50"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        ="},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        \n"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"{\""},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"name"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"\":"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        \""},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"add"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"\","},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        \""},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"arguments"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"\":"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        {\""},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"x"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"\":"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        -"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"10"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":","},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        \""},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"y"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"\":"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        "},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"50"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"}}\n"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"Here''s"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        a"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        joke"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":":"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        \n"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"{\""},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"name"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"\":"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        \""},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"j"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"oke"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"\","},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        \""},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"arguments"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"\":"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"
+        {"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{"content":"}}"},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{},"index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6","choices":[{"delta":{},"finish_reason":"stop","index":0}],"created":1753812093,"model":"llama-4-maverick-17b-128e-instruct","system_fingerprint":"fp_15bdcf899e82d0ab2dbd","object":"chat.completion.chunk","usage":{"prompt_tokens":618,"completion_tokens":199,"total_tokens":817,"prompt_tokens_details":{"cached_tokens":0}},"time_info":{"queue_time":0.568246516,"prompt_time":0.023013841,"completion_time":0.164084186,"total_time":0.7580621242523193,"created":1753812093}}
+
+
+        '
+    headers:
+      CF-RAY:
+      - 966e85ae6f0472b3-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - text/event-stream; charset=utf-8
+      Date:
+      - Tue, 29 Jul 2025 18:01:33 GMT
+      Transfer-Encoding:
+      - chunked
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      inference-id:
+      - chatcmpl-093ba334-8d5b-4365-8b07-da4733d37be6
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      strict-transport-security:
+      - max-age=3600; includeSubDomains
+      x-content-type-options:
+      - nosniff
+      x-ratelimit-limit-requests-day:
+      - '14400'
+      x-ratelimit-limit-tokens-minute:
+      - '60000'
+      x-ratelimit-remaining-requests-day:
+      - '14396'
+      x-ratelimit-remaining-tokens-minute:
+      - '59284'
+      x-ratelimit-reset-requests-day:
+      - '21506.705509662628'
+      x-ratelimit-reset-tokens-minute:
+      - '26.705509662628174'
+    status:
+      code: 200
+      message: OK
+version: 1

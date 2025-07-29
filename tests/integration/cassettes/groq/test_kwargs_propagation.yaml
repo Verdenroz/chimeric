@@ -1,0 +1,86 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "Hello, respond briefly."}],
+      "model": "llama-3.1-8b-instant", "max_completion_tokens": 20, "stream": false,
+      "temperature": 0.1}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '169'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=hnXAQZLI1G27FPn9QlXrrV37C.o_FzJK1a2zn.ao504-1753814288-1.0.1.1-batNpPlct7bMp4kikcHeidfe9XtQiI8se64.xnOlTyL0TbmFzpx.K7mQQWnQXnbepsCDBYI5dv._JOmN66VZSZhtcDuUi1F0tgDAwX6XBrE
+      host:
+      - api.groq.com
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 0.26.0
+      x-stainless-read-timeout:
+      - '60'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.groq.com/openai/v1/chat/completions
+  response:
+    body:
+      string: '{"id":"chatcmpl-9abe6d91-3bef-4198-a3c2-0b8cc523b2b8","object":"chat.completion","created":1753814289,"model":"llama-3.1-8b-instant","choices":[{"index":0,"message":{"role":"assistant","content":"Hello."},"logprobs":null,"finish_reason":"stop"}],"usage":{"queue_time":0.20043487699999998,"prompt_tokens":40,"prompt_time":0.002524303,"completion_tokens":3,"completion_time":0.00815439,"total_tokens":43,"total_time":0.010678693},"usage_breakdown":null,"system_fingerprint":"fp_c523237e5d","x_groq":{"id":"req_01k1bqmjhrey2vs9ny4deh8wnm"},"service_tier":"on_demand"}
+
+        '
+    headers:
+      CF-RAY:
+      - 966ebb49bb8143a7-EWR
+      Cache-Control:
+      - private, max-age=0, no-store, no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:38:09 GMT
+      Transfer-Encoding:
+      - chunked
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '565'
+      vary:
+      - Origin
+      via:
+      - 1.1 google
+      x-groq-region:
+      - msp
+      x-ratelimit-limit-requests:
+      - '14400'
+      x-ratelimit-limit-tokens:
+      - '6000'
+      x-ratelimit-remaining-requests:
+      - '14399'
+      x-ratelimit-remaining-tokens:
+      - '5989'
+      x-ratelimit-reset-requests:
+      - 6s
+      x-ratelimit-reset-tokens:
+      - 110ms
+    status:
+      code: 200
+      message: OK
+version: 1

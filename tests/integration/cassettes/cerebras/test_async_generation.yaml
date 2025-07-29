@@ -1,0 +1,82 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "Hello, respond briefly."}],
+      "model": "llama3.1-8b", "max_tokens": 20, "stream": false, "tools": null}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '144'
+      content-type:
+      - application/json
+      host:
+      - api.cerebras.ai
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.35.0
+      x-stainless-read-timeout:
+      - '60'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.cerebras.ai/v1/chat/completions
+  response:
+    body:
+      string: '{"id":"chatcmpl-d0e69a76-0131-4332-be00-0b20bfb42203","choices":[{"finish_reason":"stop","index":0,"message":{"content":"Hello,
+        how can I assist you?","role":"assistant"}}],"created":1753812081,"model":"llama3.1-8b","system_fingerprint":"fp_390dc65d3f27cee4c692","object":"chat.completion","usage":{"prompt_tokens":40,"completion_tokens":9,"total_tokens":49,"prompt_tokens_details":{"cached_tokens":0}},"time_info":{"queue_time":0.000385779,"prompt_time":0.002021345,"completion_time":0.003955824,"total_time":0.0073125362396240234,"created":1753812081}}'
+    headers:
+      CF-RAY:
+      - 966e8567be2fda8d-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:01:22 GMT
+      Transfer-Encoding:
+      - chunked
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '554'
+      inference-id:
+      - chatcmpl-d0e69a76-0131-4332-be00-0b20bfb42203
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      strict-transport-security:
+      - max-age=3600; includeSubDomains
+      x-content-type-options:
+      - nosniff
+      x-ratelimit-limit-requests-day:
+      - '14400'
+      x-ratelimit-limit-tokens-minute:
+      - '60000'
+      x-ratelimit-remaining-requests-day:
+      - '14396'
+      x-ratelimit-remaining-tokens-minute:
+      - '59957'
+      x-ratelimit-reset-requests-day:
+      - '21518.01786327362'
+      x-ratelimit-reset-tokens-minute:
+      - '38.017863273620605'
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -1,0 +1,681 @@
+interactions:
+- request:
+    body: '{"input": [{"role": "user", "content": "What is 2+2-4-10+50? Tell me a
+      joke."}], "model": "gpt-4o-mini", "stream": false, "tools": [{"type": "function",
+      "name": "add", "description": "Adds two numbers together.", "parameters": {"type":
+      "object", "strict": true, "properties": {"x": {"type": "integer", "description":
+      "the first number"}, "y": {"type": "integer", "description": "the second number"}},
+      "required": ["x", "y"], "additionalProperties": false}}, {"type": "function",
+      "name": "subtract", "description": "Subtracts the second number from the first.",
+      "parameters": {"type": "object", "strict": true, "properties": {"x": {"type":
+      "integer", "description": "the first number"}, "y": {"type": "integer", "description":
+      "the second number"}}, "required": ["x", "y"], "additionalProperties": false}},
+      {"type": "function", "name": "joke", "description": "Returns a joke.", "parameters":
+      {"type": "object", "strict": true, "properties": {}, "additionalProperties":
+      false}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '977'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.84.0
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    body:
+      string: "{\n  \"id\": \"resp_68890e86a1f081a08dcac4611a6d734a04ce14ebc961e785\",\n
+        \ \"object\": \"response\",\n  \"created_at\": 1753812614,\n  \"status\":
+        \"completed\",\n  \"background\": false,\n  \"error\": null,\n  \"incomplete_details\":
+        null,\n  \"instructions\": null,\n  \"max_output_tokens\": null,\n  \"max_tool_calls\":
+        null,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"output\": [\n    {\n
+        \     \"id\": \"fc_68890e875ae881a0a9be9cd4524443c304ce14ebc961e785\",\n      \"type\":
+        \"function_call\",\n      \"status\": \"completed\",\n      \"arguments\":
+        \"{\\\"x\\\":2,\\\"y\\\":2}\",\n      \"call_id\": \"call_oTdmKWyasuGcOlTiXXNxXMWM\",\n
+        \     \"name\": \"add\"\n    },\n    {\n      \"id\": \"fc_68890e87fec481a08d53f6a6aab3e07a04ce14ebc961e785\",\n
+        \     \"type\": \"function_call\",\n      \"status\": \"completed\",\n      \"arguments\":
+        \"{}\",\n      \"call_id\": \"call_uodHWQN2r2GBKMIS01PcoV2x\",\n      \"name\":
+        \"joke\"\n    }\n  ],\n  \"parallel_tool_calls\": true,\n  \"previous_response_id\":
+        null,\n  \"prompt_cache_key\": null,\n  \"reasoning\": {\n    \"effort\":
+        null,\n    \"summary\": null\n  },\n  \"safety_identifier\": null,\n  \"service_tier\":
+        \"default\",\n  \"store\": true,\n  \"temperature\": 1.0,\n  \"text\": {\n
+        \   \"format\": {\n      \"type\": \"text\"\n    }\n  },\n  \"tool_choice\":
+        \"auto\",\n  \"tools\": [\n    {\n      \"type\": \"function\",\n      \"description\":
+        \"Adds two numbers together.\",\n      \"name\": \"add\",\n      \"parameters\":
+        {\n        \"type\": \"object\",\n        \"strict\": true,\n        \"properties\":
+        {\n          \"x\": {\n            \"type\": \"integer\",\n            \"description\":
+        \"the first number\"\n          },\n          \"y\": {\n            \"type\":
+        \"integer\",\n            \"description\": \"the second number\"\n          }\n
+        \       },\n        \"required\": [\n          \"x\",\n          \"y\"\n        ],\n
+        \       \"additionalProperties\": false\n      },\n      \"strict\": true\n
+        \   },\n    {\n      \"type\": \"function\",\n      \"description\": \"Subtracts
+        the second number from the first.\",\n      \"name\": \"subtract\",\n      \"parameters\":
+        {\n        \"type\": \"object\",\n        \"strict\": true,\n        \"properties\":
+        {\n          \"x\": {\n            \"type\": \"integer\",\n            \"description\":
+        \"the first number\"\n          },\n          \"y\": {\n            \"type\":
+        \"integer\",\n            \"description\": \"the second number\"\n          }\n
+        \       },\n        \"required\": [\n          \"x\",\n          \"y\"\n        ],\n
+        \       \"additionalProperties\": false\n      },\n      \"strict\": true\n
+        \   },\n    {\n      \"type\": \"function\",\n      \"description\": \"Returns
+        a joke.\",\n      \"name\": \"joke\",\n      \"parameters\": {\n        \"type\":
+        \"object\",\n        \"strict\": true,\n        \"properties\": {},\n        \"additionalProperties\":
+        false\n      },\n      \"strict\": true\n    }\n  ],\n  \"top_logprobs\":
+        0,\n  \"top_p\": 1.0,\n  \"truncation\": \"disabled\",\n  \"usage\": {\n    \"input_tokens\":
+        112,\n    \"input_tokens_details\": {\n      \"cached_tokens\": 0\n    },\n
+        \   \"output_tokens\": 46,\n    \"output_tokens_details\": {\n      \"reasoning_tokens\":
+        0\n    },\n    \"total_tokens\": 158\n  },\n  \"user\": null,\n  \"metadata\":
+        {}\n}"
+    headers:
+      CF-RAY:
+      - 966e9268da2ac329-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:10:16 GMT
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '2918'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '9988'
+      x-ratelimit-remaining-tokens:
+      - '199670'
+      x-ratelimit-reset-requests:
+      - 1m42.023s
+      x-ratelimit-reset-tokens:
+      - 99ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"input": [{"role": "user", "content": "What is 2+2-4-10+50? Tell me a
+      joke."}, {"arguments": "{\"x\":2,\"y\":2}", "call_id": "call_oTdmKWyasuGcOlTiXXNxXMWM",
+      "name": "add", "type": "function_call", "id": "fc_68890e875ae881a0a9be9cd4524443c304ce14ebc961e785",
+      "status": "completed"}, {"arguments": "{}", "call_id": "call_uodHWQN2r2GBKMIS01PcoV2x",
+      "name": "joke", "type": "function_call", "id": "fc_68890e87fec481a08d53f6a6aab3e07a04ce14ebc961e785",
+      "status": "completed"}, {"type": "function_call_output", "call_id": "call_oTdmKWyasuGcOlTiXXNxXMWM",
+      "output": "4"}, {"type": "function_call_output", "call_id": "call_uodHWQN2r2GBKMIS01PcoV2x",
+      "output": "Why did the chicken cross the road? To get to the other side!"}],
+      "model": "gpt-4o-mini", "stream": false, "tools": [{"type": "function", "name":
+      "add", "description": "Adds two numbers together.", "parameters": {"type": "object",
+      "strict": true, "properties": {"x": {"type": "integer", "description": "the
+      first number"}, "y": {"type": "integer", "description": "the second number"}},
+      "required": ["x", "y"], "additionalProperties": false}}, {"type": "function",
+      "name": "subtract", "description": "Subtracts the second number from the first.",
+      "parameters": {"type": "object", "strict": true, "properties": {"x": {"type":
+      "integer", "description": "the first number"}, "y": {"type": "integer", "description":
+      "the second number"}}, "required": ["x", "y"], "additionalProperties": false}},
+      {"type": "function", "name": "joke", "description": "Returns a joke.", "parameters":
+      {"type": "object", "strict": true, "properties": {}, "additionalProperties":
+      false}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1617'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=8Sq87G2IfKLLG.biBbj39lFxoIbom41VXGNzWF6y5A4-1753812616-1.0.1.1-.hGTVwzZkNP20QcV1EuKII718TN8HihlYmTh14HqB1yfnWkuW9Ugg6C_iEPTwrOn4MNzkSeAwjeUKbPemnZmYvDGeIPo_qVLNVplxg6fYqE;
+        _cfuvid=anbyZzwho7BUVQgcVjKVFt4T87QvDgBN8CIg3quti0k-1753812616176-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.84.0
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    body:
+      string: "{\n  \"id\": \"resp_68890e883b1481a0922e94e3c4ddfc3704ce14ebc961e785\",\n
+        \ \"object\": \"response\",\n  \"created_at\": 1753812616,\n  \"status\":
+        \"completed\",\n  \"background\": false,\n  \"error\": null,\n  \"incomplete_details\":
+        null,\n  \"instructions\": null,\n  \"max_output_tokens\": null,\n  \"max_tool_calls\":
+        null,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"output\": [\n    {\n
+        \     \"id\": \"fc_68890e88da8481a0b356238f57bd1a5c04ce14ebc961e785\",\n      \"type\":
+        \"function_call\",\n      \"status\": \"completed\",\n      \"arguments\":
+        \"{\\\"x\\\":4,\\\"y\\\":4}\",\n      \"call_id\": \"call_Ni5MxUDxalO1cJLH4oZKKmdZ\",\n
+        \     \"name\": \"subtract\"\n    }\n  ],\n  \"parallel_tool_calls\": true,\n
+        \ \"previous_response_id\": null,\n  \"prompt_cache_key\": null,\n  \"reasoning\":
+        {\n    \"effort\": null,\n    \"summary\": null\n  },\n  \"safety_identifier\":
+        null,\n  \"service_tier\": \"default\",\n  \"store\": true,\n  \"temperature\":
+        1.0,\n  \"text\": {\n    \"format\": {\n      \"type\": \"text\"\n    }\n
+        \ },\n  \"tool_choice\": \"auto\",\n  \"tools\": [\n    {\n      \"type\":
+        \"function\",\n      \"description\": \"Adds two numbers together.\",\n      \"name\":
+        \"add\",\n      \"parameters\": {\n        \"type\": \"object\",\n        \"strict\":
+        true,\n        \"properties\": {\n          \"x\": {\n            \"type\":
+        \"integer\",\n            \"description\": \"the first number\"\n          },\n
+        \         \"y\": {\n            \"type\": \"integer\",\n            \"description\":
+        \"the second number\"\n          }\n        },\n        \"required\": [\n
+        \         \"x\",\n          \"y\"\n        ],\n        \"additionalProperties\":
+        false\n      },\n      \"strict\": true\n    },\n    {\n      \"type\": \"function\",\n
+        \     \"description\": \"Subtracts the second number from the first.\",\n
+        \     \"name\": \"subtract\",\n      \"parameters\": {\n        \"type\":
+        \"object\",\n        \"strict\": true,\n        \"properties\": {\n          \"x\":
+        {\n            \"type\": \"integer\",\n            \"description\": \"the
+        first number\"\n          },\n          \"y\": {\n            \"type\": \"integer\",\n
+        \           \"description\": \"the second number\"\n          }\n        },\n
+        \       \"required\": [\n          \"x\",\n          \"y\"\n        ],\n        \"additionalProperties\":
+        false\n      },\n      \"strict\": true\n    },\n    {\n      \"type\": \"function\",\n
+        \     \"description\": \"Returns a joke.\",\n      \"name\": \"joke\",\n      \"parameters\":
+        {\n        \"type\": \"object\",\n        \"strict\": true,\n        \"properties\":
+        {},\n        \"additionalProperties\": false\n      },\n      \"strict\":
+        true\n    }\n  ],\n  \"top_logprobs\": 0,\n  \"top_p\": 1.0,\n  \"truncation\":
+        \"disabled\",\n  \"usage\": {\n    \"input_tokens\": 167,\n    \"input_tokens_details\":
+        {\n      \"cached_tokens\": 0\n    },\n    \"output_tokens\": 18,\n    \"output_tokens_details\":
+        {\n      \"reasoning_tokens\": 0\n    },\n    \"total_tokens\": 185\n  },\n
+        \ \"user\": null,\n  \"metadata\": {}\n}"
+    headers:
+      CF-RAY:
+      - 966e92732c95c329-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:10:17 GMT
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '2687'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '9987'
+      x-ratelimit-remaining-tokens:
+      - '199616'
+      x-ratelimit-reset-requests:
+      - 1m49.05s
+      x-ratelimit-reset-tokens:
+      - 115ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"input": [{"role": "user", "content": "What is 2+2-4-10+50? Tell me a
+      joke."}, {"arguments": "{\"x\":2,\"y\":2}", "call_id": "call_oTdmKWyasuGcOlTiXXNxXMWM",
+      "name": "add", "type": "function_call", "id": "fc_68890e875ae881a0a9be9cd4524443c304ce14ebc961e785",
+      "status": "completed"}, {"arguments": "{}", "call_id": "call_uodHWQN2r2GBKMIS01PcoV2x",
+      "name": "joke", "type": "function_call", "id": "fc_68890e87fec481a08d53f6a6aab3e07a04ce14ebc961e785",
+      "status": "completed"}, {"type": "function_call_output", "call_id": "call_oTdmKWyasuGcOlTiXXNxXMWM",
+      "output": "4"}, {"type": "function_call_output", "call_id": "call_uodHWQN2r2GBKMIS01PcoV2x",
+      "output": "Why did the chicken cross the road? To get to the other side!"},
+      {"arguments": "{\"x\":4,\"y\":4}", "call_id": "call_Ni5MxUDxalO1cJLH4oZKKmdZ",
+      "name": "subtract", "type": "function_call", "id": "fc_68890e88da8481a0b356238f57bd1a5c04ce14ebc961e785",
+      "status": "completed"}, {"type": "function_call_output", "call_id": "call_Ni5MxUDxalO1cJLH4oZKKmdZ",
+      "output": "0"}], "model": "gpt-4o-mini", "stream": false, "tools": [{"type":
+      "function", "name": "add", "description": "Adds two numbers together.", "parameters":
+      {"type": "object", "strict": true, "properties": {"x": {"type": "integer", "description":
+      "the first number"}, "y": {"type": "integer", "description": "the second number"}},
+      "required": ["x", "y"], "additionalProperties": false}}, {"type": "function",
+      "name": "subtract", "description": "Subtracts the second number from the first.",
+      "parameters": {"type": "object", "strict": true, "properties": {"x": {"type":
+      "integer", "description": "the first number"}, "y": {"type": "integer", "description":
+      "the second number"}}, "required": ["x", "y"], "additionalProperties": false}},
+      {"type": "function", "name": "joke", "description": "Returns a joke.", "parameters":
+      {"type": "object", "strict": true, "properties": {}, "additionalProperties":
+      false}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1919'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=8Sq87G2IfKLLG.biBbj39lFxoIbom41VXGNzWF6y5A4-1753812616-1.0.1.1-.hGTVwzZkNP20QcV1EuKII718TN8HihlYmTh14HqB1yfnWkuW9Ugg6C_iEPTwrOn4MNzkSeAwjeUKbPemnZmYvDGeIPo_qVLNVplxg6fYqE;
+        _cfuvid=anbyZzwho7BUVQgcVjKVFt4T87QvDgBN8CIg3quti0k-1753812616176-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.84.0
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    body:
+      string: "{\n  \"id\": \"resp_68890e8950d081a0a73df5b326ae3f9704ce14ebc961e785\",\n
+        \ \"object\": \"response\",\n  \"created_at\": 1753812617,\n  \"status\":
+        \"completed\",\n  \"background\": false,\n  \"error\": null,\n  \"incomplete_details\":
+        null,\n  \"instructions\": null,\n  \"max_output_tokens\": null,\n  \"max_tool_calls\":
+        null,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"output\": [\n    {\n
+        \     \"id\": \"fc_68890e89cffc81a084e167be41e0832504ce14ebc961e785\",\n      \"type\":
+        \"function_call\",\n      \"status\": \"completed\",\n      \"arguments\":
+        \"{\\\"x\\\":0,\\\"y\\\":10}\",\n      \"call_id\": \"call_1Z5dIHz7kfsgWBOMlbkSW3Ol\",\n
+        \     \"name\": \"subtract\"\n    }\n  ],\n  \"parallel_tool_calls\": true,\n
+        \ \"previous_response_id\": null,\n  \"prompt_cache_key\": null,\n  \"reasoning\":
+        {\n    \"effort\": null,\n    \"summary\": null\n  },\n  \"safety_identifier\":
+        null,\n  \"service_tier\": \"default\",\n  \"store\": true,\n  \"temperature\":
+        1.0,\n  \"text\": {\n    \"format\": {\n      \"type\": \"text\"\n    }\n
+        \ },\n  \"tool_choice\": \"auto\",\n  \"tools\": [\n    {\n      \"type\":
+        \"function\",\n      \"description\": \"Adds two numbers together.\",\n      \"name\":
+        \"add\",\n      \"parameters\": {\n        \"type\": \"object\",\n        \"strict\":
+        true,\n        \"properties\": {\n          \"x\": {\n            \"type\":
+        \"integer\",\n            \"description\": \"the first number\"\n          },\n
+        \         \"y\": {\n            \"type\": \"integer\",\n            \"description\":
+        \"the second number\"\n          }\n        },\n        \"required\": [\n
+        \         \"x\",\n          \"y\"\n        ],\n        \"additionalProperties\":
+        false\n      },\n      \"strict\": true\n    },\n    {\n      \"type\": \"function\",\n
+        \     \"description\": \"Subtracts the second number from the first.\",\n
+        \     \"name\": \"subtract\",\n      \"parameters\": {\n        \"type\":
+        \"object\",\n        \"strict\": true,\n        \"properties\": {\n          \"x\":
+        {\n            \"type\": \"integer\",\n            \"description\": \"the
+        first number\"\n          },\n          \"y\": {\n            \"type\": \"integer\",\n
+        \           \"description\": \"the second number\"\n          }\n        },\n
+        \       \"required\": [\n          \"x\",\n          \"y\"\n        ],\n        \"additionalProperties\":
+        false\n      },\n      \"strict\": true\n    },\n    {\n      \"type\": \"function\",\n
+        \     \"description\": \"Returns a joke.\",\n      \"name\": \"joke\",\n      \"parameters\":
+        {\n        \"type\": \"object\",\n        \"strict\": true,\n        \"properties\":
+        {},\n        \"additionalProperties\": false\n      },\n      \"strict\":
+        true\n    }\n  ],\n  \"top_logprobs\": 0,\n  \"top_p\": 1.0,\n  \"truncation\":
+        \"disabled\",\n  \"usage\": {\n    \"input_tokens\": 193,\n    \"input_tokens_details\":
+        {\n      \"cached_tokens\": 0\n    },\n    \"output_tokens\": 18,\n    \"output_tokens_details\":
+        {\n      \"reasoning_tokens\": 0\n    },\n    \"total_tokens\": 211\n  },\n
+        \ \"user\": null,\n  \"metadata\": {}\n}"
+    headers:
+      CF-RAY:
+      - 966e9279ead8c329-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:10:18 GMT
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '2688'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '9986'
+      x-ratelimit-remaining-tokens:
+      - '199590'
+      x-ratelimit-reset-requests:
+      - 1m56.592s
+      x-ratelimit-reset-tokens:
+      - 123ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"input": [{"role": "user", "content": "What is 2+2-4-10+50? Tell me a
+      joke."}, {"arguments": "{\"x\":2,\"y\":2}", "call_id": "call_oTdmKWyasuGcOlTiXXNxXMWM",
+      "name": "add", "type": "function_call", "id": "fc_68890e875ae881a0a9be9cd4524443c304ce14ebc961e785",
+      "status": "completed"}, {"arguments": "{}", "call_id": "call_uodHWQN2r2GBKMIS01PcoV2x",
+      "name": "joke", "type": "function_call", "id": "fc_68890e87fec481a08d53f6a6aab3e07a04ce14ebc961e785",
+      "status": "completed"}, {"type": "function_call_output", "call_id": "call_oTdmKWyasuGcOlTiXXNxXMWM",
+      "output": "4"}, {"type": "function_call_output", "call_id": "call_uodHWQN2r2GBKMIS01PcoV2x",
+      "output": "Why did the chicken cross the road? To get to the other side!"},
+      {"arguments": "{\"x\":4,\"y\":4}", "call_id": "call_Ni5MxUDxalO1cJLH4oZKKmdZ",
+      "name": "subtract", "type": "function_call", "id": "fc_68890e88da8481a0b356238f57bd1a5c04ce14ebc961e785",
+      "status": "completed"}, {"type": "function_call_output", "call_id": "call_Ni5MxUDxalO1cJLH4oZKKmdZ",
+      "output": "0"}, {"arguments": "{\"x\":0,\"y\":10}", "call_id": "call_1Z5dIHz7kfsgWBOMlbkSW3Ol",
+      "name": "subtract", "type": "function_call", "id": "fc_68890e89cffc81a084e167be41e0832504ce14ebc961e785",
+      "status": "completed"}, {"type": "function_call_output", "call_id": "call_1Z5dIHz7kfsgWBOMlbkSW3Ol",
+      "output": "-10"}], "model": "gpt-4o-mini", "stream": false, "tools": [{"type":
+      "function", "name": "add", "description": "Adds two numbers together.", "parameters":
+      {"type": "object", "strict": true, "properties": {"x": {"type": "integer", "description":
+      "the first number"}, "y": {"type": "integer", "description": "the second number"}},
+      "required": ["x", "y"], "additionalProperties": false}}, {"type": "function",
+      "name": "subtract", "description": "Subtracts the second number from the first.",
+      "parameters": {"type": "object", "strict": true, "properties": {"x": {"type":
+      "integer", "description": "the first number"}, "y": {"type": "integer", "description":
+      "the second number"}}, "required": ["x", "y"], "additionalProperties": false}},
+      {"type": "function", "name": "joke", "description": "Returns a joke.", "parameters":
+      {"type": "object", "strict": true, "properties": {}, "additionalProperties":
+      false}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2224'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=8Sq87G2IfKLLG.biBbj39lFxoIbom41VXGNzWF6y5A4-1753812616-1.0.1.1-.hGTVwzZkNP20QcV1EuKII718TN8HihlYmTh14HqB1yfnWkuW9Ugg6C_iEPTwrOn4MNzkSeAwjeUKbPemnZmYvDGeIPo_qVLNVplxg6fYqE;
+        _cfuvid=anbyZzwho7BUVQgcVjKVFt4T87QvDgBN8CIg3quti0k-1753812616176-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.84.0
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    body:
+      string: "{\n  \"id\": \"resp_68890e8a928881a08b130d4176ef10f304ce14ebc961e785\",\n
+        \ \"object\": \"response\",\n  \"created_at\": 1753812618,\n  \"status\":
+        \"completed\",\n  \"background\": false,\n  \"error\": null,\n  \"incomplete_details\":
+        null,\n  \"instructions\": null,\n  \"max_output_tokens\": null,\n  \"max_tool_calls\":
+        null,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"output\": [\n    {\n
+        \     \"id\": \"fc_68890e8b100881a0896c44a2775c1d8804ce14ebc961e785\",\n      \"type\":
+        \"function_call\",\n      \"status\": \"completed\",\n      \"arguments\":
+        \"{\\\"x\\\":-10,\\\"y\\\":50}\",\n      \"call_id\": \"call_TDXTSICtp1DJQqdSPNDJCsuV\",\n
+        \     \"name\": \"add\"\n    }\n  ],\n  \"parallel_tool_calls\": true,\n  \"previous_response_id\":
+        null,\n  \"prompt_cache_key\": null,\n  \"reasoning\": {\n    \"effort\":
+        null,\n    \"summary\": null\n  },\n  \"safety_identifier\": null,\n  \"service_tier\":
+        \"default\",\n  \"store\": true,\n  \"temperature\": 1.0,\n  \"text\": {\n
+        \   \"format\": {\n      \"type\": \"text\"\n    }\n  },\n  \"tool_choice\":
+        \"auto\",\n  \"tools\": [\n    {\n      \"type\": \"function\",\n      \"description\":
+        \"Adds two numbers together.\",\n      \"name\": \"add\",\n      \"parameters\":
+        {\n        \"type\": \"object\",\n        \"strict\": true,\n        \"properties\":
+        {\n          \"x\": {\n            \"type\": \"integer\",\n            \"description\":
+        \"the first number\"\n          },\n          \"y\": {\n            \"type\":
+        \"integer\",\n            \"description\": \"the second number\"\n          }\n
+        \       },\n        \"required\": [\n          \"x\",\n          \"y\"\n        ],\n
+        \       \"additionalProperties\": false\n      },\n      \"strict\": true\n
+        \   },\n    {\n      \"type\": \"function\",\n      \"description\": \"Subtracts
+        the second number from the first.\",\n      \"name\": \"subtract\",\n      \"parameters\":
+        {\n        \"type\": \"object\",\n        \"strict\": true,\n        \"properties\":
+        {\n          \"x\": {\n            \"type\": \"integer\",\n            \"description\":
+        \"the first number\"\n          },\n          \"y\": {\n            \"type\":
+        \"integer\",\n            \"description\": \"the second number\"\n          }\n
+        \       },\n        \"required\": [\n          \"x\",\n          \"y\"\n        ],\n
+        \       \"additionalProperties\": false\n      },\n      \"strict\": true\n
+        \   },\n    {\n      \"type\": \"function\",\n      \"description\": \"Returns
+        a joke.\",\n      \"name\": \"joke\",\n      \"parameters\": {\n        \"type\":
+        \"object\",\n        \"strict\": true,\n        \"properties\": {},\n        \"additionalProperties\":
+        false\n      },\n      \"strict\": true\n    }\n  ],\n  \"top_logprobs\":
+        0,\n  \"top_p\": 1.0,\n  \"truncation\": \"disabled\",\n  \"usage\": {\n    \"input_tokens\":
+        220,\n    \"input_tokens_details\": {\n      \"cached_tokens\": 0\n    },\n
+        \   \"output_tokens\": 19,\n    \"output_tokens_details\": {\n      \"reasoning_tokens\":
+        0\n    },\n    \"total_tokens\": 239\n  },\n  \"user\": null,\n  \"metadata\":
+        {}\n}"
+    headers:
+      CF-RAY:
+      - 966e9281ba53c329-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:10:19 GMT
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '2685'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '9985'
+      x-ratelimit-remaining-tokens:
+      - '199563'
+      x-ratelimit-reset-requests:
+      - 2m3.973s
+      x-ratelimit-reset-tokens:
+      - 131ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"input": [{"role": "user", "content": "What is 2+2-4-10+50? Tell me a
+      joke."}, {"arguments": "{\"x\":2,\"y\":2}", "call_id": "call_oTdmKWyasuGcOlTiXXNxXMWM",
+      "name": "add", "type": "function_call", "id": "fc_68890e875ae881a0a9be9cd4524443c304ce14ebc961e785",
+      "status": "completed"}, {"arguments": "{}", "call_id": "call_uodHWQN2r2GBKMIS01PcoV2x",
+      "name": "joke", "type": "function_call", "id": "fc_68890e87fec481a08d53f6a6aab3e07a04ce14ebc961e785",
+      "status": "completed"}, {"type": "function_call_output", "call_id": "call_oTdmKWyasuGcOlTiXXNxXMWM",
+      "output": "4"}, {"type": "function_call_output", "call_id": "call_uodHWQN2r2GBKMIS01PcoV2x",
+      "output": "Why did the chicken cross the road? To get to the other side!"},
+      {"arguments": "{\"x\":4,\"y\":4}", "call_id": "call_Ni5MxUDxalO1cJLH4oZKKmdZ",
+      "name": "subtract", "type": "function_call", "id": "fc_68890e88da8481a0b356238f57bd1a5c04ce14ebc961e785",
+      "status": "completed"}, {"type": "function_call_output", "call_id": "call_Ni5MxUDxalO1cJLH4oZKKmdZ",
+      "output": "0"}, {"arguments": "{\"x\":0,\"y\":10}", "call_id": "call_1Z5dIHz7kfsgWBOMlbkSW3Ol",
+      "name": "subtract", "type": "function_call", "id": "fc_68890e89cffc81a084e167be41e0832504ce14ebc961e785",
+      "status": "completed"}, {"type": "function_call_output", "call_id": "call_1Z5dIHz7kfsgWBOMlbkSW3Ol",
+      "output": "-10"}, {"arguments": "{\"x\":-10,\"y\":50}", "call_id": "call_TDXTSICtp1DJQqdSPNDJCsuV",
+      "name": "add", "type": "function_call", "id": "fc_68890e8b100881a0896c44a2775c1d8804ce14ebc961e785",
+      "status": "completed"}, {"type": "function_call_output", "call_id": "call_TDXTSICtp1DJQqdSPNDJCsuV",
+      "output": "40"}], "model": "gpt-4o-mini", "stream": false, "tools": [{"type":
+      "function", "name": "add", "description": "Adds two numbers together.", "parameters":
+      {"type": "object", "strict": true, "properties": {"x": {"type": "integer", "description":
+      "the first number"}, "y": {"type": "integer", "description": "the second number"}},
+      "required": ["x", "y"], "additionalProperties": false}}, {"type": "function",
+      "name": "subtract", "description": "Subtracts the second number from the first.",
+      "parameters": {"type": "object", "strict": true, "properties": {"x": {"type":
+      "integer", "description": "the first number"}, "y": {"type": "integer", "description":
+      "the second number"}}, "required": ["x", "y"], "additionalProperties": false}},
+      {"type": "function", "name": "joke", "description": "Returns a joke.", "parameters":
+      {"type": "object", "strict": true, "properties": {}, "additionalProperties":
+      false}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2525'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=8Sq87G2IfKLLG.biBbj39lFxoIbom41VXGNzWF6y5A4-1753812616-1.0.1.1-.hGTVwzZkNP20QcV1EuKII718TN8HihlYmTh14HqB1yfnWkuW9Ugg6C_iEPTwrOn4MNzkSeAwjeUKbPemnZmYvDGeIPo_qVLNVplxg6fYqE;
+        _cfuvid=anbyZzwho7BUVQgcVjKVFt4T87QvDgBN8CIg3quti0k-1753812616176-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.84.0
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    body:
+      string: "{\n  \"id\": \"resp_68890e8b75b481a0bf4653642e9d53bf04ce14ebc961e785\",\n
+        \ \"object\": \"response\",\n  \"created_at\": 1753812619,\n  \"status\":
+        \"completed\",\n  \"background\": false,\n  \"error\": null,\n  \"incomplete_details\":
+        null,\n  \"instructions\": null,\n  \"max_output_tokens\": null,\n  \"max_tool_calls\":
+        null,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"output\": [\n    {\n
+        \     \"id\": \"msg_68890e8be05481a085408ca6694f4dcf04ce14ebc961e785\",\n
+        \     \"type\": \"message\",\n      \"status\": \"completed\",\n      \"content\":
+        [\n        {\n          \"type\": \"output_text\",\n          \"annotations\":
+        [],\n          \"logprobs\": [],\n          \"text\": \"The calculation \\\\(2
+        + 2 - 4 - 10 + 50\\\\) equals **40**.\\n\\nAnd here's a joke for you: \\nWhy
+        did the chicken cross the road? To get to the other side!\"\n        }\n      ],\n
+        \     \"role\": \"assistant\"\n    }\n  ],\n  \"parallel_tool_calls\": true,\n
+        \ \"previous_response_id\": null,\n  \"prompt_cache_key\": null,\n  \"reasoning\":
+        {\n    \"effort\": null,\n    \"summary\": null\n  },\n  \"safety_identifier\":
+        null,\n  \"service_tier\": \"default\",\n  \"store\": true,\n  \"temperature\":
+        1.0,\n  \"text\": {\n    \"format\": {\n      \"type\": \"text\"\n    }\n
+        \ },\n  \"tool_choice\": \"auto\",\n  \"tools\": [\n    {\n      \"type\":
+        \"function\",\n      \"description\": \"Adds two numbers together.\",\n      \"name\":
+        \"add\",\n      \"parameters\": {\n        \"type\": \"object\",\n        \"strict\":
+        true,\n        \"properties\": {\n          \"x\": {\n            \"type\":
+        \"integer\",\n            \"description\": \"the first number\"\n          },\n
+        \         \"y\": {\n            \"type\": \"integer\",\n            \"description\":
+        \"the second number\"\n          }\n        },\n        \"required\": [\n
+        \         \"x\",\n          \"y\"\n        ],\n        \"additionalProperties\":
+        false\n      },\n      \"strict\": true\n    },\n    {\n      \"type\": \"function\",\n
+        \     \"description\": \"Subtracts the second number from the first.\",\n
+        \     \"name\": \"subtract\",\n      \"parameters\": {\n        \"type\":
+        \"object\",\n        \"strict\": true,\n        \"properties\": {\n          \"x\":
+        {\n            \"type\": \"integer\",\n            \"description\": \"the
+        first number\"\n          },\n          \"y\": {\n            \"type\": \"integer\",\n
+        \           \"description\": \"the second number\"\n          }\n        },\n
+        \       \"required\": [\n          \"x\",\n          \"y\"\n        ],\n        \"additionalProperties\":
+        false\n      },\n      \"strict\": true\n    },\n    {\n      \"type\": \"function\",\n
+        \     \"description\": \"Returns a joke.\",\n      \"name\": \"joke\",\n      \"parameters\":
+        {\n        \"type\": \"object\",\n        \"strict\": true,\n        \"properties\":
+        {},\n        \"additionalProperties\": false\n      },\n      \"strict\":
+        true\n    }\n  ],\n  \"top_logprobs\": 0,\n  \"top_p\": 1.0,\n  \"truncation\":
+        \"disabled\",\n  \"usage\": {\n    \"input_tokens\": 247,\n    \"input_tokens_details\":
+        {\n      \"cached_tokens\": 0\n    },\n    \"output_tokens\": 48,\n    \"output_tokens_details\":
+        {\n      \"reasoning_tokens\": 0\n    },\n    \"total_tokens\": 295\n  },\n
+        \ \"user\": null,\n  \"metadata\": {}\n}"
+    headers:
+      CF-RAY:
+      - 966e92872f98c329-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:10:20 GMT
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '2900'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '9984'
+      x-ratelimit-remaining-tokens:
+      - '199536'
+      x-ratelimit-reset-requests:
+      - 2m11.729s
+      x-ratelimit-reset-tokens:
+      - 139ms
+    status:
+      code: 200
+      message: OK
+version: 1

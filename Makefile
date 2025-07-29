@@ -5,7 +5,7 @@
 .DEFAULT_GOAL := default
 
 .PHONY: default install lint test test-unit test-integration nox nox-unit nox-integration test-deps upgrade build clean docs docs-deploy
-.PHONY: typing test-openai test-anthropic test-google test-cerebras test-cohere test-grok test-groq
+.PHONY: test-openai test-anthropic test-google test-cerebras test-cohere test-grok test-groq
 .PHONY: test-bare test-all-extras clean-cassettes help
 
 default: install lint test
@@ -16,13 +16,11 @@ install:
 lint:
 	uv run python devtools/lint.py
 
-typing:
-	uv run basedpyright src tests
 
 test: test-unit test-integration
 	@echo "✅ All tests passed"
 
-test-unit:
+test-unit: install
 	uv run pytest tests/unit
 
 test-integration:
@@ -103,8 +101,7 @@ help:
 	@echo "  make upgrade       - Upgrade all dependencies"
 	@echo ""
 	@echo "🔍 Code Quality:"
-	@echo "  make lint          - Run linting and formatting"
-	@echo "  make typing        - Run type checking"
+	@echo "  make lint          - Run linting, formatting, and type checking"
 	@echo ""
 	@echo "🧪 Testing:"
 	@echo "  make test          - Run all tests (single Python version)"

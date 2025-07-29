@@ -1,0 +1,401 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "What is 3+5-2? Then tell me
+      a joke."}], "model": "meta-llama/llama-4-maverick-17b-128e-instruct", "stream":
+      false, "tools": [{"type": "function", "function": {"name": "add", "description":
+      "Adds two numbers together.", "parameters": {"type": "object", "strict": true,
+      "properties": {"x": {"type": "integer", "description": "the first number"},
+      "y": {"type": "integer", "description": "the second number"}}, "required": ["x",
+      "y"], "additionalProperties": false}}}, {"type": "function", "function": {"name":
+      "subtract", "description": "Subtracts the second number from the first.", "parameters":
+      {"type": "object", "strict": true, "properties": {"x": {"type": "integer", "description":
+      "the first number"}, "y": {"type": "integer", "description": "the second number"}},
+      "required": ["x", "y"], "additionalProperties": false}}}, {"type": "function",
+      "function": {"name": "joke", "description": "Returns a joke.", "parameters":
+      {"type": "object", "strict": true, "properties": {}, "additionalProperties":
+      false}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1055'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=0iEdZfKXw677muIlTJ0h4OvvFL8paLkZWCR8ydMYc4Y-1753814207-1.0.1.1-tiXNF88jh_chxdCWaNKjP5i5DezJqCbvLiEs4zqNNd3yzuEb86xE9NioYT5_Wl4suMp60nH9XR.aMS4cbK.A1L.O1LgMKFA0P1DNTpatOB4
+      host:
+      - api.groq.com
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 0.26.0
+      x-stainless-read-timeout:
+      - '60'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.groq.com/openai/v1/chat/completions
+  response:
+    body:
+      string: '{"id":"chatcmpl-3804ab31-5e0e-4009-947b-20136ade4abe","object":"chat.completion","created":1753814208,"model":"meta-llama/llama-4-maverick-17b-128e-instruct","choices":[{"index":0,"message":{"role":"assistant","content":"To
+        solve the expression ''3+5-2'', we need to follow the order of operations.\n\nFirst,
+        let''s add 3 and 5.\n","tool_calls":[{"id":"vzzmqa393","type":"function","function":{"name":"add","arguments":"{\"x\":3,\"y\":5}"}}]},"logprobs":null,"finish_reason":"tool_calls"}],"usage":{"queue_time":0.201798446,"prompt_tokens":802,"prompt_time":0.01665219,"completion_tokens":171,"completion_time":0.242623718,"total_tokens":973,"total_time":0.259275908},"usage_breakdown":null,"system_fingerprint":"fp_c527aa4474","x_groq":{"id":"req_01k1bqj34cen097e3e2x7g6xxf"},"service_tier":"on_demand"}
+
+        '
+    headers:
+      CF-RAY:
+      - 966eb94d79d642cd-EWR
+      Cache-Control:
+      - private, max-age=0, no-store, no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:36:48 GMT
+      Transfer-Encoding:
+      - chunked
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '802'
+      vary:
+      - Origin
+      via:
+      - 1.1 google
+      x-groq-region:
+      - msp
+      x-ratelimit-limit-requests:
+      - '1000'
+      x-ratelimit-limit-tokens:
+      - '6000'
+      x-ratelimit-remaining-requests:
+      - '999'
+      x-ratelimit-remaining-tokens:
+      - '5986'
+      x-ratelimit-reset-requests:
+      - 1m26.4s
+      x-ratelimit-reset-tokens:
+      - 140ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "What is 3+5-2? Then tell me
+      a joke."}, {"role": "assistant", "tool_calls": [{"id": "vzzmqa393", "type":
+      "function", "function": {"name": "add", "arguments": "{\"x\":3,\"y\":5}"}}]},
+      {"role": "tool", "tool_call_id": "vzzmqa393", "content": "8"}], "model": "meta-llama/llama-4-maverick-17b-128e-instruct",
+      "stream": false, "tools": [{"type": "function", "function": {"name": "add",
+      "description": "Adds two numbers together.", "parameters": {"type": "object",
+      "strict": true, "properties": {"x": {"type": "integer", "description": "the
+      first number"}, "y": {"type": "integer", "description": "the second number"}},
+      "required": ["x", "y"], "additionalProperties": false}}}, {"type": "function",
+      "function": {"name": "subtract", "description": "Subtracts the second number
+      from the first.", "parameters": {"type": "object", "strict": true, "properties":
+      {"x": {"type": "integer", "description": "the first number"}, "y": {"type":
+      "integer", "description": "the second number"}}, "required": ["x", "y"], "additionalProperties":
+      false}}}, {"type": "function", "function": {"name": "joke", "description": "Returns
+      a joke.", "parameters": {"type": "object", "strict": true, "properties": {},
+      "additionalProperties": false}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1261'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=0iEdZfKXw677muIlTJ0h4OvvFL8paLkZWCR8ydMYc4Y-1753814207-1.0.1.1-tiXNF88jh_chxdCWaNKjP5i5DezJqCbvLiEs4zqNNd3yzuEb86xE9NioYT5_Wl4suMp60nH9XR.aMS4cbK.A1L.O1LgMKFA0P1DNTpatOB4
+      host:
+      - api.groq.com
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 0.26.0
+      x-stainless-read-timeout:
+      - '60'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.groq.com/openai/v1/chat/completions
+  response:
+    body:
+      string: '{"id":"chatcmpl-59d73fdb-4122-493c-9c52-a4c274f25500","object":"chat.completion","created":1753814208,"model":"meta-llama/llama-4-maverick-17b-128e-instruct","choices":[{"index":0,"message":{"role":"assistant","tool_calls":[{"id":"9yh1qmxxr","type":"function","function":{"name":"subtract","arguments":"{\"x\":8,\"y\":2}"}}]},"logprobs":null,"finish_reason":"tool_calls"}],"usage":{"queue_time":0.204298463,"prompt_tokens":847,"prompt_time":0.017266709,"completion_tokens":62,"completion_time":0.099611635,"total_tokens":909,"total_time":0.116878344},"usage_breakdown":null,"system_fingerprint":"fp_347abb10b2","x_groq":{"id":"req_01k1bqj3p0fgy8asa58swyasqe"},"service_tier":"on_demand"}
+
+        '
+    headers:
+      CF-RAY:
+      - 966eb950cdb842cd-EWR
+      Cache-Control:
+      - private, max-age=0, no-store, no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:36:48 GMT
+      Transfer-Encoding:
+      - chunked
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '688'
+      vary:
+      - Origin
+      via:
+      - 1.1 google
+      x-groq-region:
+      - msp
+      x-ratelimit-limit-requests:
+      - '1000'
+      x-ratelimit-limit-tokens:
+      - '6000'
+      x-ratelimit-remaining-requests:
+      - '998'
+      x-ratelimit-remaining-tokens:
+      - '5014'
+      x-ratelimit-reset-requests:
+      - 2m52.235999999s
+      x-ratelimit-reset-tokens:
+      - 9.86s
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "What is 3+5-2? Then tell me
+      a joke."}, {"role": "assistant", "tool_calls": [{"id": "vzzmqa393", "type":
+      "function", "function": {"name": "add", "arguments": "{\"x\":3,\"y\":5}"}}]},
+      {"role": "tool", "tool_call_id": "vzzmqa393", "content": "8"}, {"role": "assistant",
+      "tool_calls": [{"id": "9yh1qmxxr", "type": "function", "function": {"name":
+      "subtract", "arguments": "{\"x\":8,\"y\":2}"}}]}, {"role": "tool", "tool_call_id":
+      "9yh1qmxxr", "content": "6"}], "model": "meta-llama/llama-4-maverick-17b-128e-instruct",
+      "stream": false, "tools": [{"type": "function", "function": {"name": "add",
+      "description": "Adds two numbers together.", "parameters": {"type": "object",
+      "strict": true, "properties": {"x": {"type": "integer", "description": "the
+      first number"}, "y": {"type": "integer", "description": "the second number"}},
+      "required": ["x", "y"], "additionalProperties": false}}}, {"type": "function",
+      "function": {"name": "subtract", "description": "Subtracts the second number
+      from the first.", "parameters": {"type": "object", "strict": true, "properties":
+      {"x": {"type": "integer", "description": "the first number"}, "y": {"type":
+      "integer", "description": "the second number"}}, "required": ["x", "y"], "additionalProperties":
+      false}}}, {"type": "function", "function": {"name": "joke", "description": "Returns
+      a joke.", "parameters": {"type": "object", "strict": true, "properties": {},
+      "additionalProperties": false}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1472'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=0iEdZfKXw677muIlTJ0h4OvvFL8paLkZWCR8ydMYc4Y-1753814207-1.0.1.1-tiXNF88jh_chxdCWaNKjP5i5DezJqCbvLiEs4zqNNd3yzuEb86xE9NioYT5_Wl4suMp60nH9XR.aMS4cbK.A1L.O1LgMKFA0P1DNTpatOB4
+      host:
+      - api.groq.com
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 0.26.0
+      x-stainless-read-timeout:
+      - '60'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.groq.com/openai/v1/chat/completions
+  response:
+    body:
+      string: '{"id":"chatcmpl-a2b050e8-d55a-4d67-a5c8-5903cf0a09fc","object":"chat.completion","created":1753814208,"model":"meta-llama/llama-4-maverick-17b-128e-instruct","choices":[{"index":0,"message":{"role":"assistant","tool_calls":[{"id":"7736zy0ez","type":"function","function":{"name":"joke","arguments":"{}"}}]},"logprobs":null,"finish_reason":"tool_calls"}],"usage":{"queue_time":0.19770258699999999,"prompt_tokens":892,"prompt_time":0.051334543,"completion_tokens":16,"completion_time":0.019128643,"total_tokens":908,"total_time":0.070463186},"usage_breakdown":null,"system_fingerprint":"fp_347abb10b2","x_groq":{"id":"req_01k1bqj43mf4dbg06cebt6xvz6"},"service_tier":"on_demand"}
+
+        '
+    headers:
+      CF-RAY:
+      - 966eb953891342cd-EWR
+      Cache-Control:
+      - private, max-age=0, no-store, no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:36:48 GMT
+      Transfer-Encoding:
+      - chunked
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '677'
+      vary:
+      - Origin
+      via:
+      - 1.1 google
+      x-groq-region:
+      - msp
+      x-ratelimit-limit-requests:
+      - '1000'
+      x-ratelimit-limit-tokens:
+      - '6000'
+      x-ratelimit-remaining-requests:
+      - '997'
+      x-ratelimit-remaining-tokens:
+      - '4138'
+      x-ratelimit-reset-requests:
+      - 4m18.763999999s
+      x-ratelimit-reset-tokens:
+      - 18.613999999s
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "What is 3+5-2? Then tell me
+      a joke."}, {"role": "assistant", "tool_calls": [{"id": "vzzmqa393", "type":
+      "function", "function": {"name": "add", "arguments": "{\"x\":3,\"y\":5}"}}]},
+      {"role": "tool", "tool_call_id": "vzzmqa393", "content": "8"}, {"role": "assistant",
+      "tool_calls": [{"id": "9yh1qmxxr", "type": "function", "function": {"name":
+      "subtract", "arguments": "{\"x\":8,\"y\":2}"}}]}, {"role": "tool", "tool_call_id":
+      "9yh1qmxxr", "content": "6"}, {"role": "assistant", "tool_calls": [{"id": "7736zy0ez",
+      "type": "function", "function": {"name": "joke", "arguments": "{}"}}]}, {"role":
+      "tool", "tool_call_id": "7736zy0ez", "content": "Why did the chicken cross the
+      road? To get to the other side!"}], "model": "meta-llama/llama-4-maverick-17b-128e-instruct",
+      "stream": false, "tools": [{"type": "function", "function": {"name": "add",
+      "description": "Adds two numbers together.", "parameters": {"type": "object",
+      "strict": true, "properties": {"x": {"type": "integer", "description": "the
+      first number"}, "y": {"type": "integer", "description": "the second number"}},
+      "required": ["x", "y"], "additionalProperties": false}}}, {"type": "function",
+      "function": {"name": "subtract", "description": "Subtracts the second number
+      from the first.", "parameters": {"type": "object", "strict": true, "properties":
+      {"x": {"type": "integer", "description": "the first number"}, "y": {"type":
+      "integer", "description": "the second number"}}, "required": ["x", "y"], "additionalProperties":
+      false}}}, {"type": "function", "function": {"name": "joke", "description": "Returns
+      a joke.", "parameters": {"type": "object", "strict": true, "properties": {},
+      "additionalProperties": false}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1724'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=0iEdZfKXw677muIlTJ0h4OvvFL8paLkZWCR8ydMYc4Y-1753814207-1.0.1.1-tiXNF88jh_chxdCWaNKjP5i5DezJqCbvLiEs4zqNNd3yzuEb86xE9NioYT5_Wl4suMp60nH9XR.aMS4cbK.A1L.O1LgMKFA0P1DNTpatOB4
+      host:
+      - api.groq.com
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 0.26.0
+      x-stainless-read-timeout:
+      - '60'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.groq.com/openai/v1/chat/completions
+  response:
+    body:
+      string: '{"id":"chatcmpl-3abb2e09-7bdf-42ec-b743-c4c6cff792d2","object":"chat.completion","created":1753814209,"model":"meta-llama/llama-4-maverick-17b-128e-instruct","choices":[{"index":0,"message":{"role":"assistant","content":"The
+        result of the calculation is 6. Here''s a joke for you: Why did the chicken
+        cross the road? To get to the other side!"},"logprobs":null,"finish_reason":"stop"}],"usage":{"queue_time":0.19778686900000003,"prompt_tokens":940,"prompt_time":0.29620796,"completion_tokens":31,"completion_time":0.049973091,"total_tokens":971,"total_time":0.346181051},"usage_breakdown":null,"system_fingerprint":"fp_347abb10b2","x_groq":{"id":"req_01k1bqj4epf4eaaj6y2wz6wk7y"},"service_tier":"on_demand"}
+
+        '
+    headers:
+      CF-RAY:
+      - 966eb955db9542cd-EWR
+      Cache-Control:
+      - private, max-age=0, no-store, no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:36:49 GMT
+      Transfer-Encoding:
+      - chunked
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '707'
+      vary:
+      - Origin
+      via:
+      - 1.1 google
+      x-groq-region:
+      - msp
+      x-ratelimit-limit-requests:
+      - '1000'
+      x-ratelimit-limit-tokens:
+      - '6000'
+      x-ratelimit-remaining-requests:
+      - '996'
+      x-ratelimit-remaining-tokens:
+      - '3240'
+      x-ratelimit-reset-requests:
+      - 5m45.246s
+      x-ratelimit-reset-tokens:
+      - 27.592s
+    status:
+      code: 200
+      message: OK
+version: 1

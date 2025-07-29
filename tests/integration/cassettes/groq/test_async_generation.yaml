@@ -1,0 +1,84 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "Hello, respond briefly."}],
+      "model": "llama-3.1-8b-instant", "max_completion_tokens": 20, "stream": false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '149'
+      content-type:
+      - application/json
+      host:
+      - api.groq.com
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 0.26.0
+      x-stainless-read-timeout:
+      - '60'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.groq.com/openai/v1/chat/completions
+  response:
+    body:
+      string: '{"id":"chatcmpl-24d6d0b4-bf96-4c51-80a5-264f87c06501","object":"chat.completion","created":1753814207,"model":"llama-3.1-8b-instant","choices":[{"index":0,"message":{"role":"assistant","content":"Hello.
+        How can I assist you?"},"logprobs":null,"finish_reason":"stop"}],"usage":{"queue_time":0.20006395299999996,"prompt_tokens":40,"prompt_time":0.262747508,"completion_tokens":9,"completion_time":0.018180643,"total_tokens":49,"total_time":0.280928151},"usage_breakdown":null,"system_fingerprint":"fp_c523237e5d","x_groq":{"id":"req_01k1bqj2cff47ap79fksay7yvv"},"service_tier":"on_demand"}
+
+        '
+    headers:
+      CF-RAY:
+      - 966eb948af4f75b1-EWR
+      Cache-Control:
+      - private, max-age=0, no-store, no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:36:47 GMT
+      Transfer-Encoding:
+      - chunked
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '588'
+      vary:
+      - Origin
+      via:
+      - 1.1 google
+      x-groq-region:
+      - msp
+      x-ratelimit-limit-requests:
+      - '14400'
+      x-ratelimit-limit-tokens:
+      - '6000'
+      x-ratelimit-remaining-requests:
+      - '14398'
+      x-ratelimit-remaining-tokens:
+      - '5976'
+      x-ratelimit-reset-requests:
+      - 11.299999999s
+      x-ratelimit-reset-tokens:
+      - 240ms
+    status:
+      code: 200
+      message: OK
+version: 1
