@@ -261,4 +261,4 @@ exclude_lines = [
 ]
 
 [tool.codespell]
-skip = "*.git,*.lock,*.json,__pycache__,*.pyc,*.egg-info,htmlcov,.coverage,coverage.xml"
+skip = "*.git,*.lock,*.json,__pycache__,*.pyc,*.egg-info,htmlcov,.coverage,coverage.xml,tests/integration/cassettes"

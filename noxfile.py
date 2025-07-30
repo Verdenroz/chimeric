@@ -126,3 +126,24 @@ def test_integration(session: Session) -> None:
     session.log("Testing all providers together...")
     session.run("uv", "sync", "--all-extras", "--dev", external=True)
     session.run("uv", "run", "pytest", "tests/integration", "-m", "all_extras", "--no-cov", "-v", external=True)
+
+
+# Code quality sessions
+@nox.session(python=latest_python_version)
+def lint(session: Session) -> None:
+    """Run linting and formatting checks."""
+    session.run("uv", "sync", "--all-extras", "--dev", external=True)
+    session.run("uv", "run", "python", "devtools/lint.py", external=True)
+
+
+# Coverage sessions
+@nox.session(python=latest_python_version)
+def coverage(session: Session) -> None:
+    """Combine coverage data and create reports."""
+    session.run("uv", "sync", "--all-extras", "--dev", external=True)
+    session.run("uv", "run", "coverage", "combine", external=True)
+    session.run("uv", "run", "coverage", "report", "--show-missing", external=True)
+    
+    # Generate XML report if requested
+    if session.posargs and "xml" in session.posargs:
+        session.run("uv", "run", "coverage", "xml", external=True)

@@ -5,12 +5,13 @@ on:
     types: [published]
   workflow_dispatch: # Enable manual trigger.
 
+permissions:
+  id-token: write # Mandatory for OIDC.
+  contents: read
+
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write # Mandatory for OIDC.
-      contents: read
     steps:
       - name: Checkout (official GitHub action)
         uses: actions/checkout@v4
@@ -18,21 +19,12 @@ jobs:
           # Important for versioning plugins:
           fetch-depth: 0
 
-      - name: Install uv (official Astral action)
-        uses: astral-sh/setup-uv@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
         with:
-          version: "0.8.0"
+          version: "0.8.3"
           enable-cache: true
-          python-version: "3.12"
-
-      - name: Set up Python (using uv)
-        run: uv python install
-
-      - name: Install all dependencies
-        run: uv sync --all-extras --dev
-
-      - name: Run tests
-        run: uv run pytest
+          python-version: "3.13"
         
       - name: Build package
         run: uv build
