@@ -470,7 +470,7 @@ class TestProviderManagement:
             assert initial_mapping_size > 0
 
             # Clear cache
-            chimeric.clear_model_cache()
+            chimeric._clear_model_cache()
 
             # Should be repopulated
             assert len(chimeric._model_provider_mapping) == initial_mapping_size
@@ -500,7 +500,7 @@ class TestProviderManagement:
             chimeric.providers[Provider.OPENAI].fail_next = True
 
             # Should not raise error, just skip failed provider
-            chimeric.clear_model_cache()
+            chimeric._clear_model_cache()
 
 
 class TestModelSelection:
@@ -816,7 +816,7 @@ class TestProviderAccess:
         ):
             chimeric = Chimeric(openai_api_key="test-key")
 
-            client = chimeric.get_provider_client("openai")
+            client = chimeric._get_provider_client("openai")
             assert client is chimeric.providers[Provider.OPENAI]
 
     def test_get_provider_client_not_configured(self):
@@ -828,7 +828,7 @@ class TestProviderAccess:
             chimeric = Chimeric(openai_api_key="test-key")
 
             with pytest.raises(ProviderNotFoundError, match="Provider anthropic not configured"):
-                chimeric.get_provider_client("anthropic")
+                chimeric._get_provider_client("anthropic")
 
     def test_list_models_specific_provider(self):
         """Test listing models for specific provider."""
@@ -1100,7 +1100,7 @@ class TestErrorScenarios:
         chimeric = Chimeric()
 
         with pytest.raises(ValueError, match="'nonexistent' is not a valid Provider"):
-            chimeric.get_provider_client("nonexistent")
+            chimeric._get_provider_client("nonexistent")
 
     def test_model_not_supported_error_details(self):
         """Test ModelNotSupportedError contains supported models list."""
@@ -1202,7 +1202,7 @@ class TestErrorScenarios:
             )
 
             # Clear the cache to force dynamic lookup
-            chimeric.clear_model_cache()
+            chimeric._clear_model_cache()
 
             # Should skip the error-prone provider and find model in working one
             try:

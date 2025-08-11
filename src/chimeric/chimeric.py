@@ -4,8 +4,6 @@ from typing import Any
 
 from .base import ChimericAsyncClient, ChimericClient
 from .exceptions import ChimericError, ModelNotSupportedError, ProviderError, ProviderNotFoundError
-
-# Conditionally import provider clients based on available dependencies
 from .tools import ToolManager
 from .types import (
     Capability,
@@ -69,47 +67,28 @@ PROVIDER_CLIENTS, ASYNC_PROVIDER_CLIENTS = _build_provider_mappings()
 
 
 class Chimeric:
-    """Main Chimeric client with unified interface across all LLM providers.
+    """Unified interface for multiple LLM providers with automatic provider detection.
 
-    This class provides a single interface that can work with any supported
-    LLM provider, with automatic provider detection and seamless switching.
+    Supports OpenAI, Anthropic, Google AI, Cerebras, Cohere, xAI Grok, and Groq
+    with automatic model-to-provider routing and tool management.
 
     Examples:
-        # Auto-detect from environment variables
-        client = Chimeric()
+        Basic usage:
 
-        # Explicit API key configuration
-        chimeric = Chimeric(
-            openai_api_key="sk-...",
-            anthropic_api_key="sk-ant-...",
-            google_api_key="...",
-            cerebras_api_key="...",
-            cohere_api_key="...",
-            grok_api_key="...",
-            groq_api_key="...",
-            aws_access_key_id="...",
-            aws_secret_access_key="...",
-            aws_region="us-east-1"
-        )
+        >>> client = Chimeric()  # Auto-detects API keys from environment
+        >>> response = client.generate(model="gpt-4o", messages="Hello!")
 
-        # Generate completions with automatic provider routing
-        response = chimeric.generate(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": "Hello"}]
-        )
+        Streaming:
 
-        # Use specific provider
-        response = chimeric.generate(
-            model="claude-3-opus-20240229",
-            messages=[{"role": "user", "content": "Hello"}]
-        )
+        >>> for chunk in client.generate(model="gpt-4o", messages="Tell a story", stream=True):
+        ...     print(chunk.content, end="")
 
-        # Force specific provider (bypass model detection)
-        response = chimeric.generate(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": "Hello"}],
-            provider="openai"
-        )
+        Tool registration:
+
+        >>> @client.tool()
+        ... def get_weather(city: str) -> str:
+        ...     return f"Weather in {city}: Sunny"
+        >>> response = client.generate(model="gpt-4o", messages="What's the weather in NYC?")
     """
 
     def __init__(
@@ -123,17 +102,31 @@ class Chimeric:
         groq_api_key: str | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initializes the Chimeric client.
+        """Initialize Chimeric client with provider configuration.
+
+        API keys can be provided explicitly or via environment variables.
+
+        Environment variables:
+        - OPENAI_API_KEY
+        - ANTHROPIC_API_KEY
+        - GOOGLE_API_KEY or GEMINI_API_KEY
+        - CEREBRAS_API_KEY
+        - COHERE_API_KEY or CO_API_KEY
+        - GROK_API_KEY or XAI_API_KEY
+        - GROQ_API_KEY
 
         Args:
-            openai_api_key: OpenAI API key for authentication.
-            anthropic_api_key: Anthropic API key for authentication.
-            google_api_key: Google API key for authentication.
-            cerebras_api_key: Cerebras API key for authentication.
-            cohere_api_key: Cohere API key for authentication.
-            grok_api_key: Grok API key for authentication.
-            groq_api_key: Groq API key for authentication.
-            **kwargs: Additional provider-specific configuration options.
+            openai_api_key: OpenAI API key (defaults to OPENAI_API_KEY env var)
+            anthropic_api_key: Anthropic API key (defaults to ANTHROPIC_API_KEY env var)
+            google_api_key: Google AI API key (defaults to GOOGLE_API_KEY or GEMINI_API_KEY env var)
+            cerebras_api_key: Cerebras API key (defaults to CEREBRAS_API_KEY env var)
+            cohere_api_key: Cohere API key (defaults to COHERE_API_KEY or CO_API_KEY env var)
+            grok_api_key: xAI Grok API key (defaults to GROK_API_KEY or XAI_API_KEY env var)
+            groq_api_key: Groq API key (defaults to GROQ_API_KEY env var)
+            **kwargs: Provider-specific options (timeout, base_url, max_retries, etc.)
+
+        Raises:
+            ChimericError: If no providers can be initialized
         """
         self.providers: dict[Provider, ChimericClient[Any, Any, Any]] = {}
         self.async_providers: dict[Provider, ChimericAsyncClient[Any, Any, Any]] = {}
@@ -361,24 +354,78 @@ class Chimeric:
         provider: str | None = None,
         **kwargs: Any,
     ) -> CompletionResponse | Generator[StreamChunk, None, None]:
-        """Generates chat completion using the appropriate provider for the model.
+        """Generate chat completion using the appropriate provider for the model.
 
         Args:
-            model: Model name to use (determines provider automatically unless provider is specified).
-            messages: List of messages in provider-compatible format.
-            stream: If True, enables streaming response.
-            tools: List of tools to use for function calling (if supported).
-            auto_tool: If True, automatically uses registered tools if none are provided.
-            native: If True, uses the provider's native chat completion method.
-            provider: Optional provider name to force using a specific provider.
-            **kwargs: Additional provider-specific arguments (temperature, tools, etc.).
+            model: Model name (e.g., "gpt-4o", "gemini-2.5-flash")
+            messages: Messages as string, dict, or list of dicts with 'role'/'content' keys
+            stream: If True, returns generator for streaming responses
+            tools: List of functions/Tool objects for model to call, or None
+            auto_tool: If True, includes all registered tools when tools=None
+            native: If True, returns provider's native response format
+            provider: Force specific provider ('openai', 'anthropic', etc.)
+            **kwargs: Provider options (temperature, max_tokens, top_p, etc.)
 
         Returns:
-            CompletionResponse object or a generator yielding StreamChunk objects
-            if streaming is enabled.
+            CompletionResponse or Generator[StreamChunk] for streaming
 
         Raises:
-            ProviderNotFoundError: If no suitable provider is found or the specified provider is not configured.
+            ModelNotSupportedError: Model not available from any configured provider
+            ProviderNotFoundError: Specified provider not configured
+            ChimericError: Provider or authentication errors
+
+        Examples:
+            Basic text generation:
+
+            >>> response = client.generate(
+            ...     model="gpt-4o",
+            ...     messages=[{"role": "user", "content": "Hello, how are you?"}]
+            ... )
+            >>> print(response.content)
+
+            Streaming response:
+
+            >>> for chunk in client.generate(
+            ...     model="claude-3-5-haiku-latest",
+            ...     messages=[{"role": "user", "content": "Write a story"}],
+            ...     stream=True
+            ... ):
+            ...     print(chunk.content, end="", flush=True)
+
+            With tools/function calling:
+
+            >>> def get_weather(city: str) -> str:
+            ...     return f"Weather in {city}: Sunny, 72°F"
+            >>>
+            >>> response = client.generate(
+            ...     model="gpt-4o",
+            ...     messages=[{"role": "user", "content": "What's the weather in NYC?"}],
+            ...     tools=[get_weather]
+            ... )
+
+            Force specific provider:
+
+            >>> response = client.generate(
+            ...     model="gpt-4o",
+            ...     messages=[{"role": "user", "content": "Hello"}],
+            ...     provider="openai"  # Force OpenAI even if other providers support gpt-4o
+            ... )
+
+            Advanced parameters:
+
+            >>> response = client.generate(
+            ...     model="gpt-4o",
+            ...     messages=[{"role": "user", "content": "Generate JSON"}],
+            ...     temperature=0.7,
+            ...     max_tokens=1000,
+            ...     response_format={"type": "json_object"}
+            ... )
+
+        Note:
+            - Model names are matched using a canonical form (alphanumeric characters only)
+            - Provider selection uses a cached mapping for performance
+            - Providers with connection issues are silently skipped during model lookup
+            - Tool execution happens automatically when the model calls functions
         """
         target_provider = self._select_provider(model, provider)
         client = self.providers[target_provider]
@@ -408,24 +455,80 @@ class Chimeric:
         provider: str | None = None,
         **kwargs: Any,
     ) -> CompletionResponse | AsyncGenerator[StreamChunk, None]:
-        """Asynchronously generates chat completion.
+        """Async version of generate() for non-blocking chat completion.
 
         Args:
-            model: Model name to use (determines provider automatically unless provider is specified).
-            messages: List of messages in provider-compatible format.
-            stream: If True, enables streaming response.
-            tools: List of tools to use for function calling (if supported).
-            auto_tool: If True, automatically uses registered tools if none are provided.
-            native: If True, uses the provider's native chat completion method.
-            provider: Optional provider name to force using a specific provider.
-            **kwargs: Additional provider-specific arguments (temperature, tools, etc.).
+            model: Model name (e.g., "gpt-4o", "claude-3-5-haiku-latest")
+            messages: Messages as string, dict, or list of dicts with 'role'/'content' keys
+            stream: If True, returns async generator for streaming responses
+            tools: List of functions/Tool objects for model to call, or None
+            auto_tool: If True, includes all registered tools when tools=None
+            native: If True, returns provider's native response format
+            provider: Force specific provider ('openai', 'anthropic', etc.)
+            **kwargs: Provider options (temperature, max_tokens, top_p, etc.)
 
         Returns:
-            CompletionResponse object or an async generator yielding StreamChunk
-            objects if streaming is enabled.
+            CompletionResponse or AsyncGenerator[StreamChunk] for streaming
 
         Raises:
-            ProviderNotFoundError: If no suitable provider is found or the specified provider is not configured.
+            ModelNotSupportedError: Model not available from any configured provider
+            ProviderNotFoundError: Specified provider not configured
+            ChimericError: Provider or authentication errors
+
+        Examples:
+            Basic async text generation:
+
+            >>> import asyncio
+            >>> async def main():
+            ...     response = await client.agenerate(
+            ...         model="gpt-4o",
+            ...         messages=[{"role": "user", "content": "Hello, how are you?"}]
+            ...     )
+            ...     print(response.content)
+            ...     return response
+            >>> asyncio.run(main())
+
+            Async streaming response:
+
+            >>> async def stream_example():
+            ...     async for chunk in client.agenerate(
+            ...         model="claude-3-5-haiku-latest",
+            ...         messages=[{"role": "user", "content": "Write a story"}],
+            ...         stream=True
+            ...     ):
+            ...         print(chunk.content, end="", flush=True)
+            >>> asyncio.run(stream_example())
+
+            Async with tools/function calling:
+
+            >>> async def tool_example():
+            ...     def get_weather(city: str) -> str:
+            ...         return f"Weather in {city}: Sunny, 72°F"
+            ...
+            ...     response = await client.agenerate(
+            ...         model="gpt-4o",
+            ...         messages=[{"role": "user", "content": "What's the weather in NYC?"}],
+            ...         tools=[get_weather]
+            ...     )
+            ...     return response
+            >>> asyncio.run(tool_example())
+
+            Multiple concurrent requests:
+
+            >>> async def concurrent_example():
+            ...     tasks = [
+            ...         client.agenerate(model="gpt-4o", messages=[{"role": "user", "content": f"Tell me about {topic}"}])
+            ...         for topic in ["Python", "JavaScript", "Rust"]
+            ...     ]
+            ...     responses = await asyncio.gather(*tasks)
+            ...     return responses
+            >>> asyncio.run(concurrent_example())
+
+        Note:
+            - All error handling and provider selection logic is identical to generate()
+            - Async generators must be consumed with `async for` loops
+            - Multiple concurrent requests can be made using asyncio.gather()
+            - Tool execution happens automatically and asynchronously when the model calls functions
         """
         target_provider = self._select_async_provider(model, provider)
         async_client = self.async_providers[target_provider]
@@ -576,16 +679,16 @@ class Chimeric:
         )
 
     def list_models(self, provider: str | None = None) -> list[ModelSummary]:
-        """Lists available models from specified provider or all providers.
+        """List available models from specified provider or all providers.
 
         Args:
-            provider: Provider name to list models for, or None for all providers.
+            provider: Provider name ('openai', 'anthropic', etc.) or None for all
 
         Returns:
-            List of ModelSummary objects containing model information.
+            List of ModelSummary objects with id, name, and provider fields
 
         Raises:
-            ProviderNotFoundError: If the specified provider is not configured.
+            ProviderNotFoundError: Specified provider not configured
         """
         if provider:
             provider_enum = Provider(provider.lower())
@@ -622,11 +725,7 @@ class Chimeric:
 
     @property
     def capabilities(self) -> Capability:
-        """Gets merged capabilities from all configured providers.
-
-        Returns:
-            Capability object with union of all provider features.
-        """
+        """Merged capabilities from all configured providers."""
         # Merge capabilities from all providers (union of all features).
         merged_values = {
             "streaming": False,
@@ -644,16 +743,16 @@ class Chimeric:
         return Capability(**merged_values)
 
     def get_capabilities(self, provider: str | None = None) -> Capability:
-        """Gets capabilities for a specific provider or merged capabilities.
+        """Get capabilities for specific provider or merged from all providers.
 
         Args:
-            provider: Optional provider name to get capabilities for.
+            provider: Provider name or None for merged capabilities
 
         Returns:
-            Capability object with supported features.
+            Capability object with streaming and tools boolean fields
 
         Raises:
-            ProviderNotFoundError: If the specified provider is not configured.
+            ProviderNotFoundError: Specified provider not configured
         """
         if provider:
             provider_enum = Provider(provider.lower())
@@ -664,7 +763,7 @@ class Chimeric:
         # Use the property for merged capabilities
         return self.capabilities
 
-    def get_provider_client(self, provider: str) -> ChimericClient[Any, Any, Any]:
+    def _get_provider_client(self, provider: str) -> ChimericClient[Any, Any, Any]:
         """Gets direct access to a provider's client instance.
 
         Args:
@@ -681,7 +780,7 @@ class Chimeric:
             raise ProviderNotFoundError(f"Provider {provider} not configured")
         return self.providers[provider_enum]
 
-    def clear_model_cache(self) -> None:
+    def _clear_model_cache(self) -> None:
         """Clears the model-to-provider mapping.
 
         This can be useful if providers add or remove models dynamically.
@@ -703,25 +802,21 @@ class Chimeric:
         description: str | None = None,
         strict: bool = True,
     ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
-        """Decorator to register a function as a Chimeric tool.
-
-        This decorator allows easy registration of functions as tools for LLM
-        providers that support tool/function calling. Function parameters and
-        return types are automatically inferred from type annotations.
+        """Decorator to register a function as a tool for LLM function calling.
 
         Args:
-            name: Optional name for the tool. Default to function name.
-            description: Optional description. Default to function's docstring.
-            strict: If True, enforce strict type checking for function parameters
+            name: Custom name for tool (defaults to function name)
+            description: Custom description (defaults to function docstring)
+            strict: Enforce strict type checking (default True)
 
         Returns:
-            A decorator function that registers the decorated function as a tool.
+            Decorator that registers function and returns it unchanged
 
         Example:
-            @chimeric.tool()
-            def search_web(query: str) -> list[str]:
-                '''Searches the web for information.'''
-                return ["result1", "result2"]
+            >>> @client.tool()
+            ... def get_weather(city: str) -> str:
+            ...     '''Get weather for a city.'''
+            ...     return f"Sunny in {city}"
         """
 
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -733,20 +828,12 @@ class Chimeric:
 
     @property
     def tools(self) -> list[Tool]:
-        """Gets the list of all registered tools.
-
-        Returns:
-            List of all registered Tool instances.
-        """
+        """List of all registered tools for function calling."""
         return self._tool_manager.get_all_tools()
 
     @property
     def available_providers(self) -> list[str]:
-        """Gets the list of configured provider names.
-
-        Returns:
-            List of provider name strings.
-        """
+        """List of successfully configured provider names."""
         return [provider.value for provider in self.providers]
 
     def __repr__(self) -> str:
