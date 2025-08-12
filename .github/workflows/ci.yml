@@ -47,12 +47,16 @@ jobs:
           # Important for versioning plugins
           fetch-depth: 0
 
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
           version: "0.8.3"
           enable-cache: true
-          python-version: ${{ matrix.python }}
 
       - name: Install nox
         run: uv tool install nox
@@ -79,12 +83,16 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
           version: "0.8.3"
           enable-cache: true
-          python-version: "3.13"
 
       - name: Install nox
         run: uv tool install nox
