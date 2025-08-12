@@ -1,0 +1,74 @@
+/* Logo Styling */
+.md-header__button.md-logo img,
+.md-nav__button.md-logo img {
+  box-shadow: 0 2px 4px rgba(255,255,255,0.1);
+  transition: box-shadow 0.2s ease;
+  object-fit: cover;
+  width: 32px;
+  height: 32px;
+}
+
+.md-header__button.md-logo img:hover,
+.md-nav__button.md-logo img:hover {
+  box-shadow: 0 4px 8px rgba(255,255,255,0.2);
+  transform: scale(1.05);
+  transition: all 0.2s ease;
+}
+
+/* Night Theme Headings */
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4,
+.md-typeset h5,
+.md-typeset h6 {
+  color: #ffffff !important;
+  font-weight: 600;
+}
+
+/* Black Navigation Bar */
+.md-header {
+  background-color: #000000 !important;
+}
+
+/* Navigation items in black navbar */
+.md-header__title,
+.md-header__button,
+.md-search__form {
+  color: #ffffff !important;
+}
+
+/* Navigation section headings */
+.md-nav__title {
+  color: #ffffff !important;
+  font-weight: 600;
+}
+
+/* Ensure good contrast for night theme */
+.md-typeset {
+  color: #e8eaed;
+}
+
+/* Code blocks with better contrast */
+.md-typeset code {
+  background-color: #2d2d2d;
+  color: #f8f8f2;
+}
+
+/* Clipboard button styling */
+.md-clipboard {
+  color: #ffffff !important;
+  transition: color 0.2s ease;
+}
+
+/* Hover effect for clipboard button */
+.md-clipboard:hover {
+  color: #ff5722 !important;
+}
+
+/* Dialog-based clipboard notification styling */
+.md-dialog,
+.md-dialog__inner {
+  background-color: #2d2d2d !important;
+  color: #ffffff !important;
+}
