@@ -920,7 +920,7 @@ class TestChimericClientBase:
         assert client.request_count == 1
         assert client.error_count == 0
         assert client.last_request_time is not None
-        assert client.client_age > 0
+        assert client.client_age >= 0  # Allow for zero age on fast systems/Windows
 
         # Test string representations
         repr_str = repr(client)
