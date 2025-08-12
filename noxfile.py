@@ -141,7 +141,6 @@ def lint(session: Session) -> None:
 def coverage(session: Session) -> None:
     """Combine coverage data and create reports."""
     session.run("uv", "sync", "--all-extras", "--dev", external=True)
-    session.run("uv", "run", "coverage", "combine", external=True)
     session.run("uv", "run", "coverage", "report", "--show-missing", external=True)
     
     # Generate XML report if requested
