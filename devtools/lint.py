@@ -13,6 +13,11 @@ reconfigure(emoji=not get_console().options.legacy_windows)  # No emojis on lega
 
 
 def main():
+    """Run linting checks and report errors.
+
+    Returns:
+        int: The number of errors encountered during linting
+    """
     rprint()
 
     errcount = 0
@@ -34,6 +39,14 @@ def main():
 
 @log_calls(level="warning", show_timing_only=True)
 def run(cmd: list[str]) -> int:
+    """Execute a command and handle its output.
+
+    Args:
+        cmd: The command to run as a list of strings
+
+    Returns:
+        int: 0 if the command succeeded, 1 if it failed
+    """
     rprint()
     rprint(f"[bold green]>> {' '.join(cmd)}[/bold green]")
     errcount = 0

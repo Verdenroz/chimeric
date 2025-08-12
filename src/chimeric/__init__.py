@@ -1,24 +1,74 @@
-from .base import BaseClient, CompletionResponse, MediaType, Message, StreamChunk, Tool, ToolType
-from .client import Chimeric
-from .exceptions import ChimericError, ProviderNotFoundError
+from .base import (
+    ChimericAsyncClient,
+    ChimericClient,
+    ChunkType,
+    CompletionResponseType,
+    StreamProcessor,
+)
+from .chimeric import PROVIDER_CLIENTS, Chimeric
+from .exceptions import (
+    ChimericError,
+    ModelNotSupportedError,
+    ProviderError,
+    ProviderNotFoundError,
+    ToolRegistrationError,
+)
+from .tools import ToolManager
+from .types import (
+    Capability,
+    ChimericCompletionResponse,
+    ChimericStreamChunk,
+    CompletionResponse,
+    Input,
+    Message,
+    Metadata,
+    ModelSummary,
+    NativeCompletionType,
+    NativeStreamType,
+    Provider,
+    StreamChunk,
+    Tool,
+    ToolCall,
+    ToolCallChunk,
+    ToolExecutionResult,
+    ToolParameters,
+    Tools,
+    Usage,
+)
 
-# Main exports
 __all__ = [
-    # Main client
+    "PROVIDER_CLIENTS",
+    "Capability",
     "Chimeric",
-    # Base classes
-    "BaseClient",
-    # Data types
-    "Message",
-    "Tool",
-    "CompletionResponse",
-    "StreamChunk",
-    # Enums
-    "MediaType",
-    "ToolType",
-    # Exceptions
+    "ChimericAsyncClient",
+    "ChimericClient",
+    "ChimericCompletionResponse",
     "ChimericError",
+    "ChimericStreamChunk",
+    "ChunkType",
+    "CompletionResponse",
+    "CompletionResponseType",
+    "Input",
+    "Message",
+    "Metadata",
+    "ModelNotSupportedError",
+    "ModelSummary",
+    "NativeCompletionType",
+    "NativeStreamType",
+    "Provider",
+    "ProviderError",
     "ProviderNotFoundError",
+    "StreamChunk",
+    "StreamProcessor",
+    "Tool",
+    "ToolCall",
+    "ToolCallChunk",
+    "ToolExecutionResult",
+    "ToolManager",
+    "ToolParameters",
+    "ToolRegistrationError",
+    "Tools",
+    "Usage",
 ]
 
 __version__ = "0.1.0"

@@ -1,0 +1,599 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "What is 2+2-4-10+50? Tell me
+      a joke."}], "model": "qwen-3-32b", "stream": false, "tools": [{"type": "function",
+      "function": {"name": "add", "strict": true, "description": "Adds two numbers
+      together.", "parameters": {"type": "object", "properties": {"x": {"type": "integer",
+      "description": "the first number"}, "y": {"type": "integer", "description":
+      "the second number"}}, "required": ["x", "y"], "additionalProperties": false}}},
+      {"type": "function", "function": {"name": "subtract", "strict": true, "description":
+      "Subtracts the second number from the first.", "parameters": {"type": "object",
+      "properties": {"x": {"type": "integer", "description": "the first number"},
+      "y": {"type": "integer", "description": "the second number"}}, "required": ["x",
+      "y"], "additionalProperties": false}}}, {"type": "function", "function": {"name":
+      "joke", "strict": true, "description": "Returns a joke.", "parameters": {"type":
+      "object", "properties": {}, "additionalProperties": false}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1021'
+      content-type:
+      - application/json
+      host:
+      - api.cerebras.ai
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.35.0
+      x-stainless-read-timeout:
+      - '60'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.cerebras.ai/v1/chat/completions
+  response:
+    body:
+      string: '{"id":"chatcmpl-255ffa70-502d-43df-9fa2-fd43868cb4b7","choices":[{"finish_reason":"tool_calls","index":0,"message":{"content":"\n\n","tool_calls":[{"id":"7ab53e0c4","type":"function","function":{"name":"add","arguments":"{\"x\":
+        2, \"y\": 2}"}}],"role":"assistant"}}],"created":1753812094,"model":"qwen-3-32b","system_fingerprint":"fp_d92e1e5be69bb839ccfe","object":"chat.completion","usage":{"prompt_tokens":349,"completion_tokens":5406,"total_tokens":5755,"prompt_tokens_details":{"cached_tokens":0}},"time_info":{"queue_time":0.002498292,"prompt_time":0.0076095,"completion_time":4.376737796,"total_time":4.388146638870239,"created":1753812094}}'
+    headers:
+      CF-RAY:
+      - 966e85b84ea14268-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:01:39 GMT
+      Transfer-Encoding:
+      - chunked
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '648'
+      inference-id:
+      - chatcmpl-255ffa70-502d-43df-9fa2-fd43868cb4b7
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      strict-transport-security:
+      - max-age=3600; includeSubDomains
+      x-content-type-options:
+      - nosniff
+      x-ratelimit-limit-requests-day:
+      - '14400'
+      x-ratelimit-limit-tokens-minute:
+      - '64000'
+      x-ratelimit-remaining-requests-day:
+      - '14387'
+      x-ratelimit-remaining-tokens-minute:
+      - '53684'
+      x-ratelimit-reset-requests-day:
+      - '21500.738371372223'
+      x-ratelimit-reset-tokens-minute:
+      - '20.7383713722229'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "What is 2+2-4-10+50? Tell me
+      a joke."}, {"role": "assistant", "tool_calls": [{"id": "7ab53e0c4", "type":
+      "function", "function": {"name": "add", "arguments": "{\"x\": 2, \"y\": 2}"}}]},
+      {"role": "tool", "tool_call_id": "7ab53e0c4", "content": "4"}], "model": "qwen-3-32b",
+      "stream": false, "tools": [{"type": "function", "function": {"name": "add",
+      "strict": true, "description": "Adds two numbers together.", "parameters": {"type":
+      "object", "properties": {"x": {"type": "integer", "description": "the first
+      number"}, "y": {"type": "integer", "description": "the second number"}}, "required":
+      ["x", "y"], "additionalProperties": false}}}, {"type": "function", "function":
+      {"name": "subtract", "strict": true, "description": "Subtracts the second number
+      from the first.", "parameters": {"type": "object", "properties": {"x": {"type":
+      "integer", "description": "the first number"}, "y": {"type": "integer", "description":
+      "the second number"}}, "required": ["x", "y"], "additionalProperties": false}}},
+      {"type": "function", "function": {"name": "joke", "strict": true, "description":
+      "Returns a joke.", "parameters": {"type": "object", "properties": {}, "additionalProperties":
+      false}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1230'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=kIFaLFa28fgwy7l0YrJFRUyimjZB0.CwTDTQtLJY6l0-1753812099-1.0.1.1-2QlnRJq5x32YvN3_1qUDQhUlBOj1a_E4hXHY7fBNh5W8dUmE.vWHKFRbYPtg9FwPDPAvMUsQQEjgcojOvjKElrGhPeNumliCLaf967KLwao
+      host:
+      - api.cerebras.ai
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.35.0
+      x-stainless-read-timeout:
+      - '60'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.cerebras.ai/v1/chat/completions
+  response:
+    body:
+      string: '{"id":"chatcmpl-3fd18546-1362-4896-937a-95812a303716","choices":[{"finish_reason":"tool_calls","index":0,"message":{"content":"\n\n","tool_calls":[{"id":"724daee48","type":"function","function":{"name":"subtract","arguments":"{\"x\":
+        4, \"y\": 4}"}}],"role":"assistant"}}],"created":1753812099,"model":"qwen-3-32b","system_fingerprint":"fp_d92e1e5be69bb839ccfe","object":"chat.completion","usage":{"prompt_tokens":388,"completion_tokens":2973,"total_tokens":3361,"prompt_tokens_details":{"cached_tokens":0}},"time_info":{"queue_time":0.003312115,"prompt_time":0.00848651,"completion_time":2.106513556,"total_time":2.1197004318237305,"created":1753812099}}'
+    headers:
+      CF-RAY:
+      - 966e85d4ba594268-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:01:41 GMT
+      Transfer-Encoding:
+      - chunked
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '655'
+      inference-id:
+      - chatcmpl-3fd18546-1362-4896-937a-95812a303716
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      strict-transport-security:
+      - max-age=3600; includeSubDomains
+      x-content-type-options:
+      - nosniff
+      x-ratelimit-limit-requests-day:
+      - '14400'
+      x-ratelimit-limit-tokens-minute:
+      - '64000'
+      x-ratelimit-remaining-requests-day:
+      - '14386'
+      x-ratelimit-remaining-tokens-minute:
+      - '47929'
+      x-ratelimit-reset-requests-day:
+      - '21498.444586992264'
+      x-ratelimit-reset-tokens-minute:
+      - '18.444586992263794'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "What is 2+2-4-10+50? Tell me
+      a joke."}, {"role": "assistant", "tool_calls": [{"id": "7ab53e0c4", "type":
+      "function", "function": {"name": "add", "arguments": "{\"x\": 2, \"y\": 2}"}}]},
+      {"role": "tool", "tool_call_id": "7ab53e0c4", "content": "4"}, {"role": "assistant",
+      "tool_calls": [{"id": "724daee48", "type": "function", "function": {"name":
+      "subtract", "arguments": "{\"x\": 4, \"y\": 4}"}}]}, {"role": "tool", "tool_call_id":
+      "724daee48", "content": "0"}], "model": "qwen-3-32b", "stream": false, "tools":
+      [{"type": "function", "function": {"name": "add", "strict": true, "description":
+      "Adds two numbers together.", "parameters": {"type": "object", "properties":
+      {"x": {"type": "integer", "description": "the first number"}, "y": {"type":
+      "integer", "description": "the second number"}}, "required": ["x", "y"], "additionalProperties":
+      false}}}, {"type": "function", "function": {"name": "subtract", "strict": true,
+      "description": "Subtracts the second number from the first.", "parameters":
+      {"type": "object", "properties": {"x": {"type": "integer", "description": "the
+      first number"}, "y": {"type": "integer", "description": "the second number"}},
+      "required": ["x", "y"], "additionalProperties": false}}}, {"type": "function",
+      "function": {"name": "joke", "strict": true, "description": "Returns a joke.",
+      "parameters": {"type": "object", "properties": {}, "additionalProperties": false}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1444'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=kIFaLFa28fgwy7l0YrJFRUyimjZB0.CwTDTQtLJY6l0-1753812099-1.0.1.1-2QlnRJq5x32YvN3_1qUDQhUlBOj1a_E4hXHY7fBNh5W8dUmE.vWHKFRbYPtg9FwPDPAvMUsQQEjgcojOvjKElrGhPeNumliCLaf967KLwao
+      host:
+      - api.cerebras.ai
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.35.0
+      x-stainless-read-timeout:
+      - '60'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.cerebras.ai/v1/chat/completions
+  response:
+    body:
+      string: '{"id":"chatcmpl-8cd9442d-af92-4c18-92b1-d7124725898c","choices":[{"finish_reason":"tool_calls","index":0,"message":{"content":"\n\n","tool_calls":[{"id":"953a9120b","type":"function","function":{"name":"subtract","arguments":"{\"x\":
+        0, \"y\": 10}"}}],"role":"assistant"}}],"created":1753812101,"model":"qwen-3-32b","system_fingerprint":"fp_d92e1e5be69bb839ccfe","object":"chat.completion","usage":{"prompt_tokens":427,"completion_tokens":639,"total_tokens":1066,"prompt_tokens_details":{"cached_tokens":0}},"time_info":{"queue_time":0.002893663,"prompt_time":0.011623545,"completion_time":0.45238435,"total_time":0.46837878227233887,"created":1753812101}}'
+    headers:
+      CF-RAY:
+      - 966e85e30b2c4268-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:01:42 GMT
+      Transfer-Encoding:
+      - chunked
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '656'
+      inference-id:
+      - chatcmpl-8cd9442d-af92-4c18-92b1-d7124725898c
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      strict-transport-security:
+      - max-age=3600; includeSubDomains
+      x-content-type-options:
+      - nosniff
+      x-ratelimit-limit-requests-day:
+      - '14400'
+      x-ratelimit-limit-tokens-minute:
+      - '64000'
+      x-ratelimit-remaining-requests-day:
+      - '14385'
+      x-ratelimit-remaining-tokens-minute:
+      - '44568'
+      x-ratelimit-reset-requests-day:
+      - '21497.818793058395'
+      x-ratelimit-reset-tokens-minute:
+      - '17.818793058395386'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "What is 2+2-4-10+50? Tell me
+      a joke."}, {"role": "assistant", "tool_calls": [{"id": "7ab53e0c4", "type":
+      "function", "function": {"name": "add", "arguments": "{\"x\": 2, \"y\": 2}"}}]},
+      {"role": "tool", "tool_call_id": "7ab53e0c4", "content": "4"}, {"role": "assistant",
+      "tool_calls": [{"id": "724daee48", "type": "function", "function": {"name":
+      "subtract", "arguments": "{\"x\": 4, \"y\": 4}"}}]}, {"role": "tool", "tool_call_id":
+      "724daee48", "content": "0"}, {"role": "assistant", "tool_calls": [{"id": "953a9120b",
+      "type": "function", "function": {"name": "subtract", "arguments": "{\"x\": 0,
+      \"y\": 10}"}}]}, {"role": "tool", "tool_call_id": "953a9120b", "content": "-10"}],
+      "model": "qwen-3-32b", "stream": false, "tools": [{"type": "function", "function":
+      {"name": "add", "strict": true, "description": "Adds two numbers together.",
+      "parameters": {"type": "object", "properties": {"x": {"type": "integer", "description":
+      "the first number"}, "y": {"type": "integer", "description": "the second number"}},
+      "required": ["x", "y"], "additionalProperties": false}}}, {"type": "function",
+      "function": {"name": "subtract", "strict": true, "description": "Subtracts the
+      second number from the first.", "parameters": {"type": "object", "properties":
+      {"x": {"type": "integer", "description": "the first number"}, "y": {"type":
+      "integer", "description": "the second number"}}, "required": ["x", "y"], "additionalProperties":
+      false}}}, {"type": "function", "function": {"name": "joke", "strict": true,
+      "description": "Returns a joke.", "parameters": {"type": "object", "properties":
+      {}, "additionalProperties": false}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1661'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=kIFaLFa28fgwy7l0YrJFRUyimjZB0.CwTDTQtLJY6l0-1753812099-1.0.1.1-2QlnRJq5x32YvN3_1qUDQhUlBOj1a_E4hXHY7fBNh5W8dUmE.vWHKFRbYPtg9FwPDPAvMUsQQEjgcojOvjKElrGhPeNumliCLaf967KLwao
+      host:
+      - api.cerebras.ai
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.35.0
+      x-stainless-read-timeout:
+      - '60'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.cerebras.ai/v1/chat/completions
+  response:
+    body:
+      string: '{"id":"chatcmpl-898ee3df-115a-45a7-aac9-7dec395e9655","choices":[{"finish_reason":"tool_calls","index":0,"message":{"content":"\n\n","tool_calls":[{"id":"42ddfc735","type":"function","function":{"name":"add","arguments":"{\"x\":
+        -10, \"y\": 50}"}}],"role":"assistant"}}],"created":1753812101,"model":"qwen-3-32b","system_fingerprint":"fp_d92e1e5be69bb839ccfe","object":"chat.completion","usage":{"prompt_tokens":469,"completion_tokens":828,"total_tokens":1297,"prompt_tokens_details":{"cached_tokens":0}},"time_info":{"queue_time":0.00244608,"prompt_time":0.01009452,"completion_time":0.626260787,"total_time":0.6401488780975342,"created":1753812101}}'
+    headers:
+      CF-RAY:
+      - 966e85e6f8294268-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:01:43 GMT
+      Transfer-Encoding:
+      - chunked
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '651'
+      inference-id:
+      - chatcmpl-898ee3df-115a-45a7-aac9-7dec395e9655
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      strict-transport-security:
+      - max-age=3600; includeSubDomains
+      x-content-type-options:
+      - nosniff
+      x-ratelimit-limit-requests-day:
+      - '14400'
+      x-ratelimit-limit-tokens-minute:
+      - '64000'
+      x-ratelimit-remaining-requests-day:
+      - '14384'
+      x-ratelimit-remaining-tokens-minute:
+      - '43502'
+      x-ratelimit-reset-requests-day:
+      - '21497.00037765503'
+      x-ratelimit-reset-tokens-minute:
+      - '17.000377655029297'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "What is 2+2-4-10+50? Tell me
+      a joke."}, {"role": "assistant", "tool_calls": [{"id": "7ab53e0c4", "type":
+      "function", "function": {"name": "add", "arguments": "{\"x\": 2, \"y\": 2}"}}]},
+      {"role": "tool", "tool_call_id": "7ab53e0c4", "content": "4"}, {"role": "assistant",
+      "tool_calls": [{"id": "724daee48", "type": "function", "function": {"name":
+      "subtract", "arguments": "{\"x\": 4, \"y\": 4}"}}]}, {"role": "tool", "tool_call_id":
+      "724daee48", "content": "0"}, {"role": "assistant", "tool_calls": [{"id": "953a9120b",
+      "type": "function", "function": {"name": "subtract", "arguments": "{\"x\": 0,
+      \"y\": 10}"}}]}, {"role": "tool", "tool_call_id": "953a9120b", "content": "-10"},
+      {"role": "assistant", "tool_calls": [{"id": "42ddfc735", "type": "function",
+      "function": {"name": "add", "arguments": "{\"x\": -10, \"y\": 50}"}}]}, {"role":
+      "tool", "tool_call_id": "42ddfc735", "content": "40"}], "model": "qwen-3-32b",
+      "stream": false, "tools": [{"type": "function", "function": {"name": "add",
+      "strict": true, "description": "Adds two numbers together.", "parameters": {"type":
+      "object", "properties": {"x": {"type": "integer", "description": "the first
+      number"}, "y": {"type": "integer", "description": "the second number"}}, "required":
+      ["x", "y"], "additionalProperties": false}}}, {"type": "function", "function":
+      {"name": "subtract", "strict": true, "description": "Subtracts the second number
+      from the first.", "parameters": {"type": "object", "properties": {"x": {"type":
+      "integer", "description": "the first number"}, "y": {"type": "integer", "description":
+      "the second number"}}, "required": ["x", "y"], "additionalProperties": false}}},
+      {"type": "function", "function": {"name": "joke", "strict": true, "description":
+      "Returns a joke.", "parameters": {"type": "object", "properties": {}, "additionalProperties":
+      false}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1874'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=kIFaLFa28fgwy7l0YrJFRUyimjZB0.CwTDTQtLJY6l0-1753812099-1.0.1.1-2QlnRJq5x32YvN3_1qUDQhUlBOj1a_E4hXHY7fBNh5W8dUmE.vWHKFRbYPtg9FwPDPAvMUsQQEjgcojOvjKElrGhPeNumliCLaf967KLwao
+      host:
+      - api.cerebras.ai
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.35.0
+      x-stainless-read-timeout:
+      - '60'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.cerebras.ai/v1/chat/completions
+  response:
+    body:
+      string: '{"id":"chatcmpl-89c96b66-d745-462c-9e23-20eaa6b867e0","choices":[{"finish_reason":"tool_calls","index":0,"message":{"content":"\n\n","tool_calls":[{"id":"e0672d005","type":"function","function":{"name":"joke","arguments":"{}"}}],"role":"assistant"}}],"created":1753812102,"model":"qwen-3-32b","system_fingerprint":"fp_d92e1e5be69bb839ccfe","object":"chat.completion","usage":{"prompt_tokens":511,"completion_tokens":370,"total_tokens":881,"prompt_tokens_details":{"cached_tokens":0}},"time_info":{"queue_time":0.002730912,"prompt_time":0.011047638,"completion_time":0.248947885,"total_time":0.26403117179870605,"created":1753812102}}'
+    headers:
+      CF-RAY:
+      - 966e85ec1e554268-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:01:43 GMT
+      Transfer-Encoding:
+      - chunked
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '633'
+      inference-id:
+      - chatcmpl-89c96b66-d745-462c-9e23-20eaa6b867e0
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      strict-transport-security:
+      - max-age=3600; includeSubDomains
+      x-content-type-options:
+      - nosniff
+      x-ratelimit-limit-requests-day:
+      - '14400'
+      x-ratelimit-limit-tokens-minute:
+      - '64000'
+      x-ratelimit-remaining-requests-day:
+      - '14383'
+      x-ratelimit-remaining-tokens-minute:
+      - '42205'
+      x-ratelimit-reset-requests-day:
+      - '21496.5731921196'
+      x-ratelimit-reset-tokens-minute:
+      - '16.57319211959839'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "What is 2+2-4-10+50? Tell me
+      a joke."}, {"role": "assistant", "tool_calls": [{"id": "7ab53e0c4", "type":
+      "function", "function": {"name": "add", "arguments": "{\"x\": 2, \"y\": 2}"}}]},
+      {"role": "tool", "tool_call_id": "7ab53e0c4", "content": "4"}, {"role": "assistant",
+      "tool_calls": [{"id": "724daee48", "type": "function", "function": {"name":
+      "subtract", "arguments": "{\"x\": 4, \"y\": 4}"}}]}, {"role": "tool", "tool_call_id":
+      "724daee48", "content": "0"}, {"role": "assistant", "tool_calls": [{"id": "953a9120b",
+      "type": "function", "function": {"name": "subtract", "arguments": "{\"x\": 0,
+      \"y\": 10}"}}]}, {"role": "tool", "tool_call_id": "953a9120b", "content": "-10"},
+      {"role": "assistant", "tool_calls": [{"id": "42ddfc735", "type": "function",
+      "function": {"name": "add", "arguments": "{\"x\": -10, \"y\": 50}"}}]}, {"role":
+      "tool", "tool_call_id": "42ddfc735", "content": "40"}, {"role": "assistant",
+      "tool_calls": [{"id": "e0672d005", "type": "function", "function": {"name":
+      "joke", "arguments": "{}"}}]}, {"role": "tool", "tool_call_id": "e0672d005",
+      "content": "Why did the chicken cross the road? To get to the other side!"}],
+      "model": "qwen-3-32b", "stream": false, "tools": [{"type": "function", "function":
+      {"name": "add", "strict": true, "description": "Adds two numbers together.",
+      "parameters": {"type": "object", "properties": {"x": {"type": "integer", "description":
+      "the first number"}, "y": {"type": "integer", "description": "the second number"}},
+      "required": ["x", "y"], "additionalProperties": false}}}, {"type": "function",
+      "function": {"name": "subtract", "strict": true, "description": "Subtracts the
+      second number from the first.", "parameters": {"type": "object", "properties":
+      {"x": {"type": "integer", "description": "the first number"}, "y": {"type":
+      "integer", "description": "the second number"}}, "required": ["x", "y"], "additionalProperties":
+      false}}}, {"type": "function", "function": {"name": "joke", "strict": true,
+      "description": "Returns a joke.", "parameters": {"type": "object", "properties":
+      {}, "additionalProperties": false}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2126'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=kIFaLFa28fgwy7l0YrJFRUyimjZB0.CwTDTQtLJY6l0-1753812099-1.0.1.1-2QlnRJq5x32YvN3_1qUDQhUlBOj1a_E4hXHY7fBNh5W8dUmE.vWHKFRbYPtg9FwPDPAvMUsQQEjgcojOvjKElrGhPeNumliCLaf967KLwao
+      host:
+      - api.cerebras.ai
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.35.0
+      x-stainless-read-timeout:
+      - '60'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.cerebras.ai/v1/chat/completions
+  response:
+    body:
+      string: "{\"id\":\"chatcmpl-c189b35d-1ca3-4a7c-b2d4-3b48e966fabe\",\"choices\":[{\"finish_reason\":\"stop\",\"index\":0,\"message\":{\"content\":\"\\n\\nThe
+        result of 2+2-4-10+50 is **40**. \\n\\nHere's your joke:  \\n**\\\"Why did
+        the chicken cross the road? To get to the other side!\\\"** \U0001F604\",\"role\":\"assistant\"}}],\"created\":1753812103,\"model\":\"qwen-3-32b\",\"system_fingerprint\":\"fp_d92e1e5be69bb839ccfe\",\"object\":\"chat.completion\",\"usage\":{\"prompt_tokens\":554,\"completion_tokens\":337,\"total_tokens\":891,\"prompt_tokens_details\":{\"cached_tokens\":0}},\"time_info\":{\"queue_time\":0.00272589,\"prompt_time\":0.011843742,\"completion_time\":0.236284238,\"total_time\":0.25221991539001465,\"created\":1753812103}}"
+    headers:
+      CF-RAY:
+      - 966e85ef09f74268-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:01:43 GMT
+      Transfer-Encoding:
+      - chunked
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '666'
+      inference-id:
+      - chatcmpl-c189b35d-1ca3-4a7c-b2d4-3b48e966fabe
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      strict-transport-security:
+      - max-age=3600; includeSubDomains
+      x-content-type-options:
+      - nosniff
+      x-ratelimit-limit-requests-day:
+      - '14400'
+      x-ratelimit-limit-tokens-minute:
+      - '64000'
+      x-ratelimit-remaining-requests-day:
+      - '14382'
+      x-ratelimit-remaining-tokens-minute:
+      - '41324'
+      x-ratelimit-reset-requests-day:
+      - '21496.10560107231'
+      x-ratelimit-reset-tokens-minute:
+      - '16.1056010723114'
+    status:
+      code: 200
+      message: OK
+version: 1

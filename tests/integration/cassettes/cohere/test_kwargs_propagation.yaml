@@ -1,0 +1,129 @@
+interactions:
+- request:
+    body: ''
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      host:
+      - api.cohere.com
+      x-fern-language:
+      - Python
+      x-fern-sdk-name:
+      - cohere
+      x-fern-sdk-version:
+      - 5.15.0
+    method: GET
+    uri: https://api.cohere.com/v1/models
+  response:
+    body:
+      string: '{"models":[{"name":"embed-english-light-v3.0","endpoints":["embed","classify"],"finetuned":false,"context_length":512,"tokenizer_url":"https://storage.googleapis.com/cohere-public/tokenizers/embed-english-light-v3.0.json","supports_vision":false,"features":null,"default_endpoints":[]},{"name":"embed-multilingual-v2.0","endpoints":["embed","classify"],"finetuned":false,"context_length":256,"tokenizer_url":"https://storage.googleapis.com/cohere-public/tokenizers/embed-multilingual-v2.0.json","supports_vision":false,"features":null,"default_endpoints":[]},{"name":"rerank-v3.5","endpoints":["rerank"],"finetuned":false,"context_length":4096,"tokenizer_url":"https://storage.googleapis.com/cohere-public/tokenizers/rerank-v3.5.json","supports_vision":false,"features":null,"default_endpoints":["rerank"]},{"name":"command-r-08-2024","endpoints":["generate","chat","summarize"],"finetuned":false,"context_length":132096,"tokenizer_url":"https://storage.googleapis.com/cohere-public/tokenizers/command-r-08-2024.json","supports_vision":false,"features":["logprobs","json_mode","json_schema","strict_tools","safety_modes","tools"],"default_endpoints":[]},{"name":"command-r-plus-08-2024","endpoints":["generate","chat","summarize"],"finetuned":false,"context_length":132096,"tokenizer_url":"https://storage.googleapis.com/cohere-public/tokenizers/command-r-plus-08-2024.json","supports_vision":false,"features":["logprobs","json_mode","json_schema","strict_tools","safety_modes","tools"],"default_endpoints":[]},{"name":"embed-v4.0","endpoints":["embed"],"finetuned":false,"context_length":8192,"tokenizer_url":"https://storage.googleapis.com/cohere-public/tokenizers/embed-v4.0.json","supports_vision":false,"features":null,"default_endpoints":[]},{"name":"rerank-english-v3.0","endpoints":["rerank"],"finetuned":false,"context_length":4096,"tokenizer_url":"https://storage.googleapis.com/cohere-public/tokenizers/rerank-english-v3.0.json","supports_vision":false,"features":null,"default_endpoints":[]},{"name":"command-nightly","endpoints":["chat"],"finetuned":false,"context_length":288000,"tokenizer_url":"https://storage.googleapis.com/cohere-public/tokenizers/command-nightly.json","supports_vision":false,"features":["logprobs","json_mode","json_schema","strict_tools","safety_modes","tools"],"default_endpoints":[]},{"name":"command-a-03-2025","endpoints":["chat"],"finetuned":false,"context_length":288000,"tokenizer_url":"https://storage.googleapis.com/cohere-public/tokenizers/command-a-03-2025.json","supports_vision":false,"features":["logprobs","json_mode","json_schema","strict_tools","safety_modes","tools"],"default_endpoints":["chat"]},{"name":"embed-english-light-v3.0-image","endpoints":["embed_image"],"finetuned":false,"context_length":0,"tokenizer_url":null,"supports_vision":false,"features":null,"default_endpoints":[]},{"name":"command-r","endpoints":["generate","chat","summarize"],"finetuned":false,"context_length":132096,"tokenizer_url":"https://storage.googleapis.com/cohere-public/tokenizers/command-r.json","supports_vision":false,"features":["logprobs","json_mode","json_schema","strict_tools","tools"],"default_endpoints":[]},{"name":"embed-english-v3.0-image","endpoints":["embed_image"],"finetuned":false,"context_length":0,"tokenizer_url":null,"supports_vision":false,"features":null,"default_endpoints":[]},{"name":"command-a-vision-07-2025","endpoints":["chat"],"finetuned":false,"context_length":128000,"tokenizer_url":"https://storage.googleapis.com/cohere-public/tokenizers/command-a-vision-07-2025.json","supports_vision":true,"features":["vision","logprobs","json_mode","json_schema","strict_tools","safety_modes"],"default_endpoints":[]},{"name":"c4ai-aya-vision-32b","endpoints":["chat"],"finetuned":false,"context_length":16384,"tokenizer_url":"https://storage.googleapis.com/cohere-public/tokenizers/c4ai-aya-vision-32b.json","supports_vision":true,"features":["logprobs","vision"],"default_endpoints":[]},{"name":"command-r7b-arabic-02-2025","endpoints":["generate","chat"],"finetuned":false,"context_length":128000,"tokenizer_url":"https://storage.googleapis.com/cohere-public/tokenizers/command-r7b-arabic-02-2025.json","supports_vision":false,"features":["logprobs","json_mode","json_schema","strict_tools","safety_modes","tools"],"default_endpoints":[]},{"name":"command-light-nightly","endpoints":["generate","summarize","chat"],"finetuned":false,"context_length":4096,"tokenizer_url":"https://storage.googleapis.com/cohere-public/tokenizers/command-light-nightly.json","supports_vision":false,"features":null,"default_endpoints":[]},{"name":"embed-english-v3.0","endpoints":["embed","classify"],"finetuned":false,"context_length":512,"tokenizer_url":"https://storage.googleapis.com/cohere-public/tokenizers/embed-english-v3.0.json","supports_vision":false,"features":null,"default_endpoints":[]},{"name":"command-r7b-12-2024","endpoints":["generate","chat"],"finetuned":false,"context_length":132000,"tokenizer_url":"https://storage.googleapis.com/cohere-public/tokenizers/command-r7b-12-2024.json","supports_vision":false,"features":["logprobs","json_mode","json_schema","strict_tools","safety_modes","tools"],"default_endpoints":[]},{"name":"embed-multilingual-light-v3.0-image","endpoints":["embed_image"],"finetuned":false,"context_length":0,"tokenizer_url":null,"supports_vision":false,"features":null,"default_endpoints":[]},{"name":"embed-multilingual-v3.0-image","endpoints":["embed_image"],"finetuned":false,"context_length":0,"tokenizer_url":null,"supports_vision":false,"features":null,"default_endpoints":[]},{"name":"c4ai-aya-expanse-32b","endpoints":["generate","chat"],"finetuned":false,"context_length":128000,"tokenizer_url":"https://storage.googleapis.com/cohere-public/tokenizers/c4ai-aya-expanse-32b.json","supports_vision":false,"features":null,"default_endpoints":[]}],"next_page_token":"S_-BAwEBCVBhZ2VUb2tlbgH_ggABBAECSUQBDAABC0ZUUGFnZVRva2VuAQwAAQtJbkZpbmV0dW5lcwECAAEIQ2hlY2tzdW0BBgAAAC__ggEkYTQ0Zjc3ZTMtNDIwNy00YjcyLWIyNGMtZmZiNTg0ZDQ2MWI4A_xo327JAA=="}'
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Transfer-Encoding:
+      - chunked
+      Via:
+      - 1.1 google
+      access-control-expose-headers:
+      - X-Debug-Trace-ID
+      cache-control:
+      - no-cache, no-store, no-transform, must-revalidate, private, max-age=0
+      content-type:
+      - application/json
+      date:
+      - Tue, 29 Jul 2025 18:08:21 GMT
+      expires:
+      - Thu, 01 Jan 1970 00:00:00 GMT
+      pragma:
+      - no-cache
+      vary:
+      - Origin
+      x-accel-expires:
+      - '0'
+      x-debug-trace-id:
+      - cb23749b64020db341b6cde02430ba48
+      x-endpoint-monthly-call-limit:
+      - '1000'
+      x-envoy-upstream-service-time:
+      - '35'
+      x-trial-endpoint-call-limit:
+      - '100'
+      x-trial-endpoint-call-remaining:
+      - '94'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"model": "command-r", "messages": [{"role": "user", "content": "Hello,
+      respond briefly."}], "tools": null, "max_tokens": 20, "temperature": 0.1, "stream":
+      false}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '162'
+      content-type:
+      - application/json
+      host:
+      - api.cohere.com
+      x-fern-language:
+      - Python
+      x-fern-sdk-name:
+      - cohere
+      x-fern-sdk-version:
+      - 5.15.0
+    method: POST
+    uri: https://api.cohere.com/v2/chat
+  response:
+    body:
+      string: '{"id":"d71ed3c4-b3bd-41c3-a936-4333fddebd0d","message":{"role":"assistant","content":[{"type":"text","text":"Hi
+        there! Hello briefly. How can I assist you today?"}]},"finish_reason":"COMPLETE","usage":{"billed_units":{"input_tokens":5,"output_tokens":13},"tokens":{"input_tokens":71,"output_tokens":13}}}'
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '304'
+      Via:
+      - 1.1 google
+      access-control-expose-headers:
+      - X-Debug-Trace-ID
+      cache-control:
+      - no-cache, no-store, no-transform, must-revalidate, private, max-age=0
+      content-type:
+      - application/json
+      date:
+      - Tue, 29 Jul 2025 18:08:22 GMT
+      expires:
+      - Thu, 01 Jan 1970 00:00:00 GMT
+      num_chars:
+      - '438'
+      num_tokens:
+      - '18'
+      pragma:
+      - no-cache
+      vary:
+      - Origin
+      x-accel-expires:
+      - '0'
+      x-debug-trace-id:
+      - c43868bdcaf39b34cf66edcb9fb14ec8
+      x-endpoint-monthly-call-limit:
+      - '1000'
+      x-envoy-upstream-service-time:
+      - '172'
+      x-trial-endpoint-call-limit:
+      - '10'
+      x-trial-endpoint-call-remaining:
+      - '5'
+    status:
+      code: 200
+      message: OK
+version: 1

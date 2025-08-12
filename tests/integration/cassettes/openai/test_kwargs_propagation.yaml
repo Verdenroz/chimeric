@@ -1,0 +1,295 @@
+interactions:
+- request:
+    body: ''
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.84.0
+      x-stainless-read-timeout:
+      - '60'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: GET
+    uri: https://api.openai.com/v1/models
+  response:
+    body:
+      string: "{\n  \"object\": \"list\",\n  \"data\": [\n    {\n      \"id\": \"gpt-4-0613\",\n
+        \     \"object\": \"model\",\n      \"created\": 1686588896,\n      \"owned_by\":
+        \"openai\"\n    },\n    {\n      \"id\": \"gpt-4\",\n      \"object\": \"model\",\n
+        \     \"created\": 1687882411,\n      \"owned_by\": \"openai\"\n    },\n    {\n
+        \     \"id\": \"gpt-3.5-turbo\",\n      \"object\": \"model\",\n      \"created\":
+        1677610602,\n      \"owned_by\": \"openai\"\n    },\n    {\n      \"id\":
+        \"o4-mini-deep-research-2025-06-26\",\n      \"object\": \"model\",\n      \"created\":
+        1750866121,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"codex-mini-latest\",\n      \"object\": \"model\",\n      \"created\": 1746673257,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-realtime-preview-2025-06-03\",\n
+        \     \"object\": \"model\",\n      \"created\": 1748907838,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-audio-preview-2025-06-03\",\n
+        \     \"object\": \"model\",\n      \"created\": 1748908498,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"o4-mini-deep-research\",\n      \"object\":
+        \"model\",\n      \"created\": 1749685485,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"davinci-002\",\n      \"object\": \"model\",\n
+        \     \"created\": 1692634301,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"babbage-002\",\n      \"object\": \"model\",\n      \"created\":
+        1692634615,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-3.5-turbo-instruct\",\n      \"object\": \"model\",\n      \"created\":
+        1692901427,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-3.5-turbo-instruct-0914\",\n      \"object\": \"model\",\n      \"created\":
+        1694122472,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"dall-e-3\",\n      \"object\": \"model\",\n      \"created\": 1698785189,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"dall-e-2\",\n
+        \     \"object\": \"model\",\n      \"created\": 1698798177,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"gpt-4-1106-preview\",\n      \"object\":
+        \"model\",\n      \"created\": 1698957206,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"gpt-3.5-turbo-1106\",\n      \"object\": \"model\",\n
+        \     \"created\": 1698959748,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"tts-1-hd\",\n      \"object\": \"model\",\n      \"created\":
+        1699046015,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"tts-1-1106\",\n      \"object\": \"model\",\n      \"created\": 1699053241,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"tts-1-hd-1106\",\n
+        \     \"object\": \"model\",\n      \"created\": 1699053533,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"text-embedding-3-small\",\n      \"object\":
+        \"model\",\n      \"created\": 1705948997,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"text-embedding-3-large\",\n      \"object\":
+        \"model\",\n      \"created\": 1705953180,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"gpt-4-0125-preview\",\n      \"object\": \"model\",\n
+        \     \"created\": 1706037612,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"gpt-4-turbo-preview\",\n      \"object\": \"model\",\n      \"created\":
+        1706037777,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-3.5-turbo-0125\",\n      \"object\": \"model\",\n      \"created\":
+        1706048358,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4-turbo\",\n      \"object\": \"model\",\n      \"created\": 1712361441,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"gpt-4-turbo-2024-04-09\",\n
+        \     \"object\": \"model\",\n      \"created\": 1712601677,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"gpt-4o\",\n      \"object\": \"model\",\n
+        \     \"created\": 1715367049,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"gpt-4o-2024-05-13\",\n      \"object\": \"model\",\n      \"created\":
+        1715368132,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-mini-2024-07-18\",\n      \"object\": \"model\",\n      \"created\":
+        1721172717,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-mini\",\n      \"object\": \"model\",\n      \"created\": 1721172741,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-2024-08-06\",\n
+        \     \"object\": \"model\",\n      \"created\": 1722814719,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"chatgpt-4o-latest\",\n      \"object\":
+        \"model\",\n      \"created\": 1723515131,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"o1-mini-2024-09-12\",\n      \"object\": \"model\",\n
+        \     \"created\": 1725648979,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"o1-mini\",\n      \"object\": \"model\",\n      \"created\":
+        1725649008,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-realtime-preview-2024-10-01\",\n      \"object\": \"model\",\n      \"created\":
+        1727131766,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-audio-preview-2024-10-01\",\n      \"object\": \"model\",\n      \"created\":
+        1727389042,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-audio-preview\",\n      \"object\": \"model\",\n      \"created\":
+        1727460443,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-realtime-preview\",\n      \"object\": \"model\",\n      \"created\":
+        1727659998,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"omni-moderation-latest\",\n      \"object\": \"model\",\n      \"created\":
+        1731689265,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"omni-moderation-2024-09-26\",\n      \"object\": \"model\",\n      \"created\":
+        1732734466,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-realtime-preview-2024-12-17\",\n      \"object\": \"model\",\n      \"created\":
+        1733945430,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-audio-preview-2024-12-17\",\n      \"object\": \"model\",\n      \"created\":
+        1734034239,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-mini-realtime-preview-2024-12-17\",\n      \"object\": \"model\",\n
+        \     \"created\": 1734112601,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"gpt-4o-mini-audio-preview-2024-12-17\",\n      \"object\":
+        \"model\",\n      \"created\": 1734115920,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"o1-2024-12-17\",\n      \"object\": \"model\",\n
+        \     \"created\": 1734326976,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"o1\",\n      \"object\": \"model\",\n      \"created\": 1734375816,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-mini-realtime-preview\",\n
+        \     \"object\": \"model\",\n      \"created\": 1734387380,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-mini-audio-preview\",\n
+        \     \"object\": \"model\",\n      \"created\": 1734387424,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"o3-mini\",\n      \"object\": \"model\",\n
+        \     \"created\": 1737146383,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"o3-mini-2025-01-31\",\n      \"object\": \"model\",\n      \"created\":
+        1738010200,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-2024-11-20\",\n      \"object\": \"model\",\n      \"created\": 1739331543,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-search-preview-2025-03-11\",\n
+        \     \"object\": \"model\",\n      \"created\": 1741388170,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-search-preview\",\n      \"object\":
+        \"model\",\n      \"created\": 1741388720,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"gpt-4o-mini-search-preview-2025-03-11\",\n
+        \     \"object\": \"model\",\n      \"created\": 1741390858,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-mini-search-preview\",\n
+        \     \"object\": \"model\",\n      \"created\": 1741391161,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"gpt-4o-transcribe\",\n      \"object\":
+        \"model\",\n      \"created\": 1742068463,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"gpt-4o-mini-transcribe\",\n      \"object\":
+        \"model\",\n      \"created\": 1742068596,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"o1-pro-2025-03-19\",\n      \"object\": \"model\",\n
+        \     \"created\": 1742251504,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"o1-pro\",\n      \"object\": \"model\",\n      \"created\":
+        1742251791,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4o-mini-tts\",\n      \"object\": \"model\",\n      \"created\": 1742403959,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"o4-mini-2025-04-16\",\n
+        \     \"object\": \"model\",\n      \"created\": 1744133506,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"o4-mini\",\n      \"object\": \"model\",\n
+        \     \"created\": 1744225351,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"gpt-4.1-2025-04-14\",\n      \"object\": \"model\",\n      \"created\":
+        1744315746,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-4.1\",\n      \"object\": \"model\",\n      \"created\": 1744316542,\n
+        \     \"owned_by\": \"system\"\n    },\n    {\n      \"id\": \"gpt-4.1-mini-2025-04-14\",\n
+        \     \"object\": \"model\",\n      \"created\": 1744317547,\n      \"owned_by\":
+        \"system\"\n    },\n    {\n      \"id\": \"gpt-4.1-mini\",\n      \"object\":
+        \"model\",\n      \"created\": 1744318173,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"gpt-4.1-nano-2025-04-14\",\n      \"object\":
+        \"model\",\n      \"created\": 1744321025,\n      \"owned_by\": \"system\"\n
+        \   },\n    {\n      \"id\": \"gpt-4.1-nano\",\n      \"object\": \"model\",\n
+        \     \"created\": 1744321707,\n      \"owned_by\": \"system\"\n    },\n    {\n
+        \     \"id\": \"gpt-image-1\",\n      \"object\": \"model\",\n      \"created\":
+        1745517030,\n      \"owned_by\": \"system\"\n    },\n    {\n      \"id\":
+        \"gpt-3.5-turbo-16k\",\n      \"object\": \"model\",\n      \"created\": 1683758102,\n
+        \     \"owned_by\": \"openai-internal\"\n    },\n    {\n      \"id\": \"tts-1\",\n
+        \     \"object\": \"model\",\n      \"created\": 1681940951,\n      \"owned_by\":
+        \"openai-internal\"\n    },\n    {\n      \"id\": \"whisper-1\",\n      \"object\":
+        \"model\",\n      \"created\": 1677532384,\n      \"owned_by\": \"openai-internal\"\n
+        \   },\n    {\n      \"id\": \"text-embedding-ada-002\",\n      \"object\":
+        \"model\",\n      \"created\": 1671217299,\n      \"owned_by\": \"openai-internal\"\n
+        \   }\n  ]\n}"
+    headers:
+      CF-RAY:
+      - 966e928fd88b8c23-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:10:20 GMT
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '9451'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"input": [{"role": "user", "content": "Hello, respond briefly."}], "model":
+      "gpt-4o-mini", "max_output_tokens": 20, "stream": false, "temperature": 0.1}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '153'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=ORWtmwoILj3t2_R0Y2vHVRa9xBRULnsANUitBle8MZM-1753812620-1.0.1.1-HUhLDdyC500UghAXsQrUxdNMgsdYtUJI2cs7oZECNj9a9cKqomPTqu7shBrsRLlsohjrLI2ctCYYK9c0k2tfdmUDHxU821qzZ05j_SOomSI;
+        _cfuvid=lQQ39gXapPPlT441DkkoEN._4GNLrz3EhrWIbGqMyec-1753812620925-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.84.0
+      x-stainless-read-timeout:
+      - '60'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    body:
+      string: "{\n  \"id\": \"resp_68890e8d0fec81a28d18d25a1bc2e1510c59df6205f37a57\",\n
+        \ \"object\": \"response\",\n  \"created_at\": 1753812621,\n  \"status\":
+        \"completed\",\n  \"background\": false,\n  \"error\": null,\n  \"incomplete_details\":
+        null,\n  \"instructions\": null,\n  \"max_output_tokens\": 20,\n  \"max_tool_calls\":
+        null,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"output\": [\n    {\n
+        \     \"id\": \"msg_68890e8d66d881a2a052a24d151a96760c59df6205f37a57\",\n
+        \     \"type\": \"message\",\n      \"status\": \"completed\",\n      \"content\":
+        [\n        {\n          \"type\": \"output_text\",\n          \"annotations\":
+        [],\n          \"logprobs\": [],\n          \"text\": \"Hello! How can I assist
+        you today?\"\n        }\n      ],\n      \"role\": \"assistant\"\n    }\n
+        \ ],\n  \"parallel_tool_calls\": true,\n  \"previous_response_id\": null,\n
+        \ \"prompt_cache_key\": null,\n  \"reasoning\": {\n    \"effort\": null,\n
+        \   \"summary\": null\n  },\n  \"safety_identifier\": null,\n  \"service_tier\":
+        \"default\",\n  \"store\": true,\n  \"temperature\": 0.1,\n  \"text\": {\n
+        \   \"format\": {\n      \"type\": \"text\"\n    }\n  },\n  \"tool_choice\":
+        \"auto\",\n  \"tools\": [],\n  \"top_logprobs\": 0,\n  \"top_p\": 1.0,\n  \"truncation\":
+        \"disabled\",\n  \"usage\": {\n    \"input_tokens\": 12,\n    \"input_tokens_details\":
+        {\n      \"cached_tokens\": 0\n    },\n    \"output_tokens\": 10,\n    \"output_tokens_details\":
+        {\n      \"reasoning_tokens\": 0\n    },\n    \"total_tokens\": 22\n  },\n
+        \ \"user\": null,\n  \"metadata\": {}\n}"
+    headers:
+      CF-RAY:
+      - 966e929119508c23-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Jul 2025 18:10:21 GMT
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '1365'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '9983'
+      x-ratelimit-remaining-tokens:
+      - '199968'
+      x-ratelimit-reset-requests:
+      - 2m18.779s
+      x-ratelimit-reset-tokens:
+      - 9ms
+    status:
+      code: 200
+      message: OK
+version: 1

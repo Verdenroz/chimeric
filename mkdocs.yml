@@ -12,34 +12,24 @@ site_author: Harvey Tseng
 # Theme configuration
 theme:
   name: material
+  logo: assets/images/chimeric.png
+  favicon: assets/favicon.ico
   palette:
-    # Use system preference for light/dark mode
-    - media: "(prefers-color-scheme: light)"
-      scheme: default
-      primary: indigo
-      accent: indigo
-      toggle:
-        icon: material/brightness-7
-        name: Switch to dark mode
-    - media: "(prefers-color-scheme: dark)"
-      scheme: slate
-      primary: indigo
-      accent: indigo
-      toggle:
-        icon: material/brightness-4
-        name: Switch to light mode
+    scheme: slate
+    primary: black
+    accent: deep orange
   features:
     - navigation.instant
     - navigation.tracking
-    - navigation.expand
-    - navigation.indexes
     - navigation.top
     - search.highlight
-    - search.share
     - content.code.copy
-    - content.code.annotate
   icon:
     repo: fontawesome/brands/github
+
+# Custom CSS
+extra_css:
+  - stylesheets/extra.css
 
 # Extensions
 markdown_extensions:
@@ -74,27 +64,14 @@ plugins:
 # Navigation structure
 nav:
   - Home: index.md
-  - Installation: installation.md
   - Usage:
     - Getting Started: usage/getting-started.md
     - Configuration: usage/configuration.md
-  - Providers:
-    - Overview: providers/index.md
-    - OpenAI: providers/openai.md
-    - Anthropic: providers/anthropic.md
-    - Google Gemini: providers/gemini.md
-    - Cohere: providers/cohere.md
-    - AWS: providers/aws.md
-    - Groq: providers/groq.md
-    - Replicate: providers/replicate.md
-    - HuggingFace: providers/huggingface.md
-  - API Reference:
-    - Core: api/core.md
-    - Providers: api/providers.md
-  - Development:
-    - Contributing: development.md
-    - Publishing: publishing.md
-  - Changelog: changelog.md
+    - Response Types: usage/responses.md
+    - Streaming: usage/streaming.md
+    - Tools: usage/tools.md
+  - Contributing: contributing.md
+  - Changelog: https://github.com/Verdenroz/chimeric/releases
 
 # Extra settings
 extra:

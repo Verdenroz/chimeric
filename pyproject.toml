@@ -23,7 +23,9 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Typing :: Typed",
 ]
-dependencies = []
+dependencies = [
+    "pydantic>=2.11.5",
+]
 
 
 [project.urls]
@@ -42,7 +44,6 @@ dev = [
     "pytest-mock>=3.12.0",
     "pytest-sugar>=1.0.0",
     "pytest-xdist>=3.5.0", # Parallel test execution
-
     # Code quality
     "ruff>=0.11.9",
     "basedpyright>=1.29.1",
@@ -56,10 +57,13 @@ dev = [
     "mkdocs-material>=9.5.0",
     "mkdocs-autorefs>=0.5.0",
     "mkdocstrings[python]>=0.24.0",
+    "nox>=2025.5.1",
+    "vcrpy>=7.0.0",
+    "pytest-vcr>=1.0.2",
+    "python-dotenv>=1.1.1",
 ]
 
 [project.optional-dependencies]
-# Major Commercial Providers
 openai = [
     "openai>=1.84.0",
 ]
@@ -72,26 +76,23 @@ google = [
 cohere = [
     "cohere>=5.15.0",
 ]
-
-# Cloud Platforms
-aws = [
-    "boto3>=1.38.31",
-    "botocore>=1.34.31",
-]
-
-# Open Source Hosting
-huggingface = [
-    "huggingface-hub>=0.32.4",
-    "transformers>=4.36.0",
-]
-replicate = [
-    "replicate>=1.0.7",
-]
 groq = [
     "groq>=0.4.0",
 ]
 cerebras = [
     "cerebras-cloud-sdk>=1.35.0",
+]
+grok = [
+    "xai-sdk>=1.0.0",
+]
+all = [
+    "openai>=1.84.0",
+    "anthropic>=0.52.2",
+    "google-genai>=1.2.0",
+    "cohere>=5.15.0",
+    "groq>=0.4.0",
+    "cerebras-cloud-sdk>=1.35.0",
+    "xai-sdk>=1.0.0",
 ]
 
 
@@ -182,6 +183,12 @@ force-sort-within-sections = true
 
 [tool.basedpyright]
 include = ["src", "tests"]
+executionEnvironments = [
+  # Tests folder: disable private-usage and unknown-parameter warnings
+  { root = "tests", reportPrivateUsage = false, reportUnknownParameterType = false },
+  # Default for the rest of your code
+  { root = "src" }
+]
 pythonVersion = "3.11"
 pythonPlatform = "All"
 
@@ -209,8 +216,10 @@ addopts = [
     "--cov-report=term-missing",
     "--cov-report=html",
     "--cov-report=xml",
-    "--cov-fail-under=95",
+    "--cov-fail-under=100",
 ]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
@@ -219,10 +228,16 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
-    "openai: tests requiring OpenAI API",
-    "anthropic: tests requiring Anthropic API",
-    "google: tests requiring Google API",
-    "aws: tests requiring AWS credentials",
+    "openai: tests requiring OpenAI provider",
+    "anthropic: tests requiring Anthropic provider",
+    "google: tests requiring Google provider",
+    "cerebras: tests requiring Cerebras provider",
+    "cohere: tests requiring Cohere provider",
+    "grok: tests requiring Grok provider",
+    "groq: tests requiring Groq provider",
+    "bare_install: tests with no optional dependencies",
+    "all_extras: tests with all optional dependencies",
+    "vcr: tests using VCR cassettes",
 ]
 filterwarnings = [
     "error",
@@ -255,13 +270,4 @@ exclude_lines = [
 ]
 
 [tool.codespell]
-skip = "*.git,*.lock,*.json,__pycache__,*.pyc,*.egg-info"
-ignore-words-list = [
-    "openai",
-    "gemini",
-    "cerebras",
-    "cohere",
-    "groq",
-    "replicate",
-    "huggingface",
-]
+skip = "*.git,*.lock,*.json,__pycache__,*.pyc,*.egg-info,htmlcov,.coverage,coverage.xml,tests/integration/cassettes"

@@ -1,0 +1,123 @@
+name: Feature Request
+description: Suggest a new feature or enhancement for Chimeric
+title: "[FEATURE] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! Please provide as much detail as possible to help us understand your request.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission Checks
+      description: Please confirm you have completed these steps
+      options:
+        - label: I have searched existing issues to ensure this feature hasn't been requested
+          required: true
+        - label: I have read the documentation to confirm this feature doesn't already exist
+          required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Feature Summary
+      description: A clear and concise description of the feature you'd like to see
+      placeholder: I would like Chimeric to support...
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve? What is the motivation?
+      placeholder: Currently, when I try to... I have to... This is frustrating because...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How would you like this feature to work?
+      placeholder: I would like to be able to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What alternative solutions or workarounds have you considered?
+      placeholder: I've considered... but it doesn't work because...
+    validations:
+      required: false
+
+  - type: dropdown
+    id: providers
+    attributes:
+      label: Relevant Providers
+      description: Which providers would this feature affect? (Select all that apply)
+      multiple: true
+      options:
+        - OpenAI
+        - Anthropic
+        - Google
+        - Cohere
+        - Groq
+        - Cerebras
+        - Grok
+        - All providers
+        - Core functionality (provider-agnostic)
+        - Not provider-specific
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Low - Nice to have
+        - Medium - Would be helpful
+        - High - Important for my use case
+        - Critical - Blocking my use case
+    validations:
+      required: true
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Usage Examples
+      description: Provide code examples of how this feature would be used
+      render: python
+      placeholder: |
+        from chimeric import Chimeric
+        
+        client = Chimeric()
+        # Example of how the new feature would work
+        result = client.new_feature()
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any other information that would help us understand your request
+      placeholder: This feature would be useful because... Similar libraries have...
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Would you be interested in contributing to this feature?
+      options:
+        - label: I would be willing to contribute to implementing this feature
+        - label: I would be willing to help test this feature
+        - label: I would be willing to help write documentation for this feature
