@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout (official GitHub action)
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           # Important for versioning plugins:
           fetch-depth: 0
