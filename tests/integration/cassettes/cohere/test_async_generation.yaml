@@ -1,7 +1,7 @@
 interactions:
 - request:
-    body: '{"model": "command-r", "messages": [{"role": "user", "content": "Hello,
-      respond briefly."}], "tools": null, "max_tokens": 20, "stream": false}'
+    body: '{"model":"command-r-08-2024","messages":[{"role":"user","content":"Hello,
+      respond briefly."}],"stream":false,"max_tokens":20}'
     headers:
       accept:
       - '*/*'
@@ -10,60 +10,56 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '142'
+      - '125'
       content-type:
       - application/json
       host:
       - api.cohere.com
-      x-fern-language:
-      - Python
-      x-fern-sdk-name:
-      - cohere
-      x-fern-sdk-version:
-      - 5.15.0
     method: POST
     uri: https://api.cohere.com/v2/chat
   response:
     body:
-      string: "{\"id\":\"e4f00377-b79d-4c4e-a140-463a1a9591f9\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"Hi
-        there! Hello briefly to you \U0001F642 How's your day going so far?\"}]},\"finish_reason\":\"COMPLETE\",\"usage\":{\"billed_units\":{\"input_tokens\":5,\"output_tokens\":16},\"tokens\":{\"input_tokens\":71,\"output_tokens\":16}}}"
+      string: '{"id":"e7c7178e-1393-48c3-b82e-5e36bd4cbc35","message":{"role":"assistant","content":[{"type":"text","text":"Hello!
+        How can I assist you today?"}]},"finish_reason":"COMPLETE","usage":{"billed_units":{"input_tokens":5,"output_tokens":9},"tokens":{"input_tokens":205,"output_tokens":9},"cached_tokens":192}}'
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
-      Content-Length:
-      - '316'
+      Transfer-Encoding:
+      - chunked
       Via:
       - 1.1 google
       access-control-expose-headers:
       - X-Debug-Trace-ID
       cache-control:
       - no-cache, no-store, no-transform, must-revalidate, private, max-age=0
+      content-length:
+      - '305'
       content-type:
       - application/json
       date:
-      - Tue, 29 Jul 2025 18:04:24 GMT
+      - Tue, 17 Feb 2026 23:15:02 GMT
       expires:
       - Thu, 01 Jan 1970 00:00:00 GMT
       num_chars:
-      - '438'
+      - '1200'
       num_tokens:
-      - '21'
+      - '14'
       pragma:
       - no-cache
       vary:
-      - Origin
+      - Origin,Accept-Encoding
       x-accel-expires:
       - '0'
       x-debug-trace-id:
-      - 8f466e3961ce7db53cdfbd0eaf04147d
+      - 7dbd6b38cb41abcd1c406a68c25c5133
       x-endpoint-monthly-call-limit:
       - '1000'
       x-envoy-upstream-service-time:
-      - '206'
+      - '239'
       x-trial-endpoint-call-limit:
-      - '10'
+      - '20'
       x-trial-endpoint-call-remaining:
-      - '8'
+      - '18'
     status:
       code: 200
       message: OK

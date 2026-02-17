@@ -276,7 +276,7 @@ def test_cohere_structured_output_sync(api_keys):
 
     with get_vcr().use_cassette(cassette_path):
         response = chimeric.generate(
-            model="command-r",
+            model="command-r-08-2024",
             messages=[{"role": "user", "content": _MATH_PROMPT}],
             response_model=MathAnswer,
             max_tokens=150,
@@ -299,7 +299,7 @@ def test_cohere_structured_output_streaming(api_keys):
     with get_vcr().use_cassette(cassette_path):
         chunks = list(
             chimeric.generate(
-                model="command-r",
+                model="command-r-08-2024",
                 messages=[{"role": "user", "content": _MATH_PROMPT}],
                 response_model=MathAnswer,
                 stream=True,

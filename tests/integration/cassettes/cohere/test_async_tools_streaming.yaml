@@ -1,18 +1,12 @@
 interactions:
 - request:
-    body: '{"model": "command-r", "messages": [{"role": "user", "content": "What is
-      2+2-4? Tell me a joke."}], "tools": [{"type": "function", "function": {"name":
-      "add", "description": "Adds two numbers together.", "parameters": {"type": "object",
-      "strict": true, "properties": {"x": {"type": "integer", "description": "the
-      first number"}, "y": {"type": "integer", "description": "the second number"}},
-      "required": ["x", "y"], "additionalProperties": false}}}, {"type": "function",
-      "function": {"name": "subtract", "description": "Subtracts the second number
-      from the first.", "parameters": {"type": "object", "strict": true, "properties":
-      {"x": {"type": "integer", "description": "the first number"}, "y": {"type":
-      "integer", "description": "the second number"}}, "required": ["x", "y"], "additionalProperties":
-      false}}}, {"type": "function", "function": {"name": "joke", "description": "Returns
-      a joke.", "parameters": {"type": "object", "strict": true, "properties": {},
-      "additionalProperties": false}}}], "stream": true}'
+    body: '{"model":"command-r-08-2024","messages":[{"role":"user","content":"What
+      is 2+2-4? Tell me a joke."}],"stream":true,"tools":[{"type":"function","function":{"name":"add","description":"Adds
+      two numbers together.","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false}}},{"type":"function","function":{"name":"subtract","description":"Subtracts
+      the second number from the first.","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false}}},{"type":"function","function":{"name":"joke","description":"Returns
+      a joke.","parameters":{"type":"object","strict":true,"properties":{},"additionalProperties":false}}}]}'
     headers:
       accept:
       - '*/*'
@@ -21,24 +15,18 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1013'
+      - '940'
       content-type:
       - application/json
       host:
       - api.cohere.com
-      x-fern-language:
-      - Python
-      x-fern-sdk-name:
-      - cohere
-      x-fern-sdk-version:
-      - 5.15.0
     method: POST
     uri: https://api.cohere.com/v2/chat
   response:
     body:
       string: 'event: message-start
 
-        data: {"id":"0563455e-101e-4690-8f80-d4f13c365e63","type":"message-start","delta":{"message":{"role":"assistant","content":[],"tool_plan":"","tool_calls":[],"citations":[]}}}
+        data: {"id":"0dff11e6-73f8-4abb-9056-a6a082b92f00","type":"message-start","delta":{"message":{"role":"assistant","content":[],"tool_plan":"","tool_calls":[],"citations":[]}}}
 
 
         event: tool-plan-delta
@@ -63,22 +51,22 @@ interactions:
 
         event: tool-plan-delta
 
-        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" add"}}}
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" ''"}}}
 
 
         event: tool-plan-delta
 
-        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" and"}}}
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":"add"}}}
 
 
         event: tool-plan-delta
 
-        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" subtract"}}}
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":"''"}}}
 
 
         event: tool-plan-delta
 
-        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" tools"}}}
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" tool"}}}
 
 
         event: tool-plan-delta
@@ -89,21 +77,6 @@ interactions:
         event: tool-plan-delta
 
         data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" calculate"}}}
-
-
-        event: tool-plan-delta
-
-        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" the"}}}
-
-
-        event: tool-plan-delta
-
-        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" answer"}}}
-
-
-        event: tool-plan-delta
-
-        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" to"}}}
 
 
         event: tool-plan-delta
@@ -123,17 +96,77 @@ interactions:
 
         event: tool-plan-delta
 
-        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":"-"}}}
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" and"}}}
 
 
         event: tool-plan-delta
 
-        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":"4"}}}
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" then"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" the"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" ''"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":"subtract"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":"''"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" tool"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" to"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" subtract"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" 4"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" from"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" the"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" result"}}}
 
 
         event: tool-plan-delta
 
         data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":"."}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" Then"}}}
 
 
         event: tool-plan-delta
@@ -148,11 +181,6 @@ interactions:
 
         event: tool-plan-delta
 
-        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" also"}}}
-
-
-        event: tool-plan-delta
-
         data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" use"}}}
 
 
@@ -163,7 +191,22 @@ interactions:
 
         event: tool-plan-delta
 
-        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" joke"}}}
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" ''"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":"j"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":"oke"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":"''"}}}
 
 
         event: tool-plan-delta
@@ -193,37 +236,12 @@ interactions:
 
         event: tool-plan-delta
 
-        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" to"}}}
-
-
-        event: tool-plan-delta
-
-        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" share"}}}
-
-
-        event: tool-plan-delta
-
-        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" with"}}}
-
-
-        event: tool-plan-delta
-
-        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" the"}}}
-
-
-        event: tool-plan-delta
-
-        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" user"}}}
-
-
-        event: tool-plan-delta
-
         data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":"."}}}
 
 
         event: tool-call-start
 
-        data: {"type":"tool-call-start","index":0,"delta":{"message":{"tool_calls":{"id":"add_wyxz8dtfq9x8","type":"function","function":{"name":"add","arguments":""}}}}}
+        data: {"type":"tool-call-start","index":0,"delta":{"message":{"tool_calls":{"id":"add_rcg58yt519h5","type":"function","function":{"name":"add","arguments":""}}}}}
 
 
         event: tool-call-delta
@@ -304,102 +322,9 @@ interactions:
         data: {"type":"tool-call-end","index":0}
 
 
-        event: tool-call-start
-
-        data: {"type":"tool-call-start","index":1,"delta":{"message":{"tool_calls":{"id":"subtract_1yw4yskavky0","type":"function","function":{"name":"subtract","arguments":""}}}}}
-
-
-        event: tool-call-delta
-
-        data: {"type":"tool-call-delta","index":1,"delta":{"message":{"tool_calls":{"function":{"arguments":"{\n    \""}}}}}
-
-
-        event: tool-call-delta
-
-        data: {"type":"tool-call-delta","index":1,"delta":{"message":{"tool_calls":{"function":{"arguments":"x"}}}}}
-
-
-        event: tool-call-delta
-
-        data: {"type":"tool-call-delta","index":1,"delta":{"message":{"tool_calls":{"function":{"arguments":"\":"}}}}}
-
-
-        event: tool-call-delta
-
-        data: {"type":"tool-call-delta","index":1,"delta":{"message":{"tool_calls":{"function":{"arguments":"
-        "}}}}}
-
-
-        event: tool-call-delta
-
-        data: {"type":"tool-call-delta","index":1,"delta":{"message":{"tool_calls":{"function":{"arguments":"4"}}}}}
-
-
-        event: tool-call-delta
-
-        data: {"type":"tool-call-delta","index":1,"delta":{"message":{"tool_calls":{"function":{"arguments":","}}}}}
-
-
-        event: tool-call-delta
-
-        data: {"type":"tool-call-delta","index":1,"delta":{"message":{"tool_calls":{"function":{"arguments":"\n   "}}}}}
-
-
-        event: tool-call-delta
-
-        data: {"type":"tool-call-delta","index":1,"delta":{"message":{"tool_calls":{"function":{"arguments":"
-        \""}}}}}
-
-
-        event: tool-call-delta
-
-        data: {"type":"tool-call-delta","index":1,"delta":{"message":{"tool_calls":{"function":{"arguments":"y"}}}}}
-
-
-        event: tool-call-delta
-
-        data: {"type":"tool-call-delta","index":1,"delta":{"message":{"tool_calls":{"function":{"arguments":"\":"}}}}}
-
-
-        event: tool-call-delta
-
-        data: {"type":"tool-call-delta","index":1,"delta":{"message":{"tool_calls":{"function":{"arguments":"
-        "}}}}}
-
-
-        event: tool-call-delta
-
-        data: {"type":"tool-call-delta","index":1,"delta":{"message":{"tool_calls":{"function":{"arguments":"2"}}}}}
-
-
-        event: tool-call-delta
-
-        data: {"type":"tool-call-delta","index":1,"delta":{"message":{"tool_calls":{"function":{"arguments":"\n"}}}}}
-
-
-        event: tool-call-delta
-
-        data: {"type":"tool-call-delta","index":1,"delta":{"message":{"tool_calls":{"function":{"arguments":"}"}}}}}
-
-
-        event: tool-call-end
-
-        data: {"type":"tool-call-end","index":1}
-
-
-        event: tool-call-start
-
-        data: {"type":"tool-call-start","index":2,"delta":{"message":{"tool_calls":{"id":"joke_aq682vsbs4xq","type":"function","function":{"name":"joke","arguments":""}}}}}
-
-
-        event: tool-call-end
-
-        data: {"type":"tool-call-end","index":2}
-
-
         event: message-end
 
-        data: {"type":"message-end","delta":{"finish_reason":"TOOL_CALL","usage":{"billed_units":{"input_tokens":57,"output_tokens":60},"tokens":{"input_tokens":995,"output_tokens":135}}}}
+        data: {"type":"message-end","delta":{"finish_reason":"TOOL_CALL","usage":{"billed_units":{"input_tokens":57,"output_tokens":54},"tokens":{"input_tokens":995,"output_tokens":90},"cached_tokens":992}}}
 
 
         data: [DONE]
@@ -420,7 +345,7 @@ interactions:
       content-type:
       - text/event-stream
       date:
-      - Tue, 29 Jul 2025 18:08:14 GMT
+      - Tue, 17 Feb 2026 23:27:36 GMT
       expires:
       - Thu, 01 Jan 1970 00:00:00 GMT
       pragma:
@@ -430,32 +355,27 @@ interactions:
       x-accel-expires:
       - '0'
       x-debug-trace-id:
-      - e88564fac2c5b85619eb85f455084abe
+      - 0adda74933aabbbbc43c78c32622ed90
       x-endpoint-monthly-call-limit:
       - '1000'
       x-envoy-upstream-service-time:
       - '124'
       x-trial-endpoint-call-limit:
-      - '10'
+      - '20'
       x-trial-endpoint-call-remaining:
-      - '9'
+      - '11'
     status:
       code: 200
       message: OK
 - request:
-    body: '{"model": "command-r", "messages": [{"role": "user", "content": "What is
-      2+2-4? Tell me a joke."}], "tools": [{"type": "function", "function": {"name":
-      "add", "description": "Adds two numbers together.", "parameters": {"type": "object",
-      "strict": true, "properties": {"x": {"type": "integer", "description": "the
-      first number"}, "y": {"type": "integer", "description": "the second number"}},
-      "required": ["x", "y"], "additionalProperties": false}}}, {"type": "function",
-      "function": {"name": "subtract", "description": "Subtracts the second number
-      from the first.", "parameters": {"type": "object", "strict": true, "properties":
-      {"x": {"type": "integer", "description": "the first number"}, "y": {"type":
-      "integer", "description": "the second number"}}, "required": ["x", "y"], "additionalProperties":
-      false}}}, {"type": "function", "function": {"name": "joke", "description": "Returns
-      a joke.", "parameters": {"type": "object", "strict": true, "properties": {},
-      "additionalProperties": false}}}], "stream": false}'
+    body: '{"model":"command-r-08-2024","messages":[{"role":"user","content":"What
+      is 2+2-4? Tell me a joke."},{"role":"assistant","content":"","tool_calls":[{"id":"add_rcg58yt519h5","type":"function","function":{"name":"add","arguments":"{\n    \"x\":
+      2,\n    \"y\": 2\n}"}}]},{"role":"tool","tool_call_id":"add_rcg58yt519h5","content":"4"}],"stream":true,"tools":[{"type":"function","function":{"name":"add","description":"Adds
+      two numbers together.","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false}}},{"type":"function","function":{"name":"subtract","description":"Subtracts
+      the second number from the first.","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false}}},{"type":"function","function":{"name":"joke","description":"Returns
+      a joke.","parameters":{"type":"object","strict":true,"properties":{},"additionalProperties":false}}}]}'
     headers:
       accept:
       - '*/*'
@@ -464,208 +384,351 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1014'
+      - '1171'
       content-type:
       - application/json
       host:
       - api.cohere.com
-      x-fern-language:
-      - Python
-      x-fern-sdk-name:
-      - cohere
-      x-fern-sdk-version:
-      - 5.15.0
-    method: POST
-    uri: https://api.cohere.com/v2/chat
-  response:
-    body:
-      string: '{"id":"5c06ab3b-1774-48ec-9e11-abcf3c8271dc","message":{"role":"assistant","tool_plan":"I
-        will first calculate the answer to 2+2-4, then search for a joke to include
-        in the answer.","tool_calls":[{"id":"add_1s15p8vf0sjy","type":"function","function":{"name":"add","arguments":"{\"x\":2,\"y\":2}"}},{"id":"subtract_rf9dgwf3fzxv","type":"function","function":{"name":"subtract","arguments":"{\"x\":4,\"y\":2}"}},{"id":"joke_fpg9gytqk6e6","type":"function","function":{"name":"joke","arguments":"{}"}}]},"finish_reason":"TOOL_CALL","usage":{"billed_units":{"input_tokens":57,"output_tokens":48},"tokens":{"input_tokens":995,"output_tokens":123}}}'
-    headers:
-      Alt-Svc:
-      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
-      Content-Length:
-      - '643'
-      Via:
-      - 1.1 google
-      access-control-expose-headers:
-      - X-Debug-Trace-ID
-      cache-control:
-      - no-cache, no-store, no-transform, must-revalidate, private, max-age=0
-      content-type:
-      - application/json
-      date:
-      - Tue, 29 Jul 2025 18:08:16 GMT
-      expires:
-      - Thu, 01 Jan 1970 00:00:00 GMT
-      num_chars:
-      - '4640'
-      num_tokens:
-      - '105'
-      pragma:
-      - no-cache
-      vary:
-      - Origin
-      x-accel-expires:
-      - '0'
-      x-debug-trace-id:
-      - ce8ab6345a7ead7e122c86f931d1e01e
-      x-endpoint-monthly-call-limit:
-      - '1000'
-      x-envoy-upstream-service-time:
-      - '974'
-      x-trial-endpoint-call-limit:
-      - '10'
-      x-trial-endpoint-call-remaining:
-      - '8'
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"model": "command-r", "messages": [{"role": "user", "content": "What is
-      2+2-4? Tell me a joke."}, {"role": "assistant", "tool_plan": "I will first calculate
-      the answer to 2+2-4, then search for a joke to include in the answer.", "tool_calls":
-      [{"id": "add_1s15p8vf0sjy", "type": "function", "function": {"name": "add",
-      "arguments": "{\"x\":2,\"y\":2}"}}, {"id": "subtract_rf9dgwf3fzxv", "type":
-      "function", "function": {"name": "subtract", "arguments": "{\"x\":4,\"y\":2}"}},
-      {"id": "joke_fpg9gytqk6e6", "type": "function", "function": {"name": "joke",
-      "arguments": "{}"}}]}, {"role": "tool", "tool_call_id": "add_1s15p8vf0sjy",
-      "content": [{"type": "document", "document": {"data": "4"}}]}, {"role": "tool",
-      "tool_call_id": "subtract_rf9dgwf3fzxv", "content": [{"type": "document", "document":
-      {"data": "2"}}]}, {"role": "tool", "tool_call_id": "joke_fpg9gytqk6e6", "content":
-      [{"type": "document", "document": {"data": "Why did the chicken cross the road?
-      To get to the other side!"}}]}], "tools": [{"type": "function", "function":
-      {"name": "add", "description": "Adds two numbers together.", "parameters": {"type":
-      "object", "strict": true, "properties": {"x": {"type": "integer", "description":
-      "the first number"}, "y": {"type": "integer", "description": "the second number"}},
-      "required": ["x", "y"], "additionalProperties": false}}}, {"type": "function",
-      "function": {"name": "subtract", "description": "Subtracts the second number
-      from the first.", "parameters": {"type": "object", "strict": true, "properties":
-      {"x": {"type": "integer", "description": "the first number"}, "y": {"type":
-      "integer", "description": "the second number"}}, "required": ["x", "y"], "additionalProperties":
-      false}}}, {"type": "function", "function": {"name": "joke", "description": "Returns
-      a joke.", "parameters": {"type": "object", "strict": true, "properties": {},
-      "additionalProperties": false}}}], "stream": false}'
-    headers:
-      accept:
-      - '*/*'
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '1906'
-      content-type:
-      - application/json
-      host:
-      - api.cohere.com
-      x-fern-language:
-      - Python
-      x-fern-sdk-name:
-      - cohere
-      x-fern-sdk-version:
-      - 5.15.0
-    method: POST
-    uri: https://api.cohere.com/v2/chat
-  response:
-    body:
-      string: '{"id":"a1f0c1bb-5297-4547-9967-275a05a3d0f6","message":{"role":"assistant","content":[{"type":"text","text":"The
-        answer to 2+2-4 is 2. \n\nHere''s a joke for you: Why did the chicken cross
-        the road? To get to the other side!"}],"citations":[{"start":23,"end":24,"text":"2","sources":[{"type":"tool","id":"add_1s15p8vf0sjy:0","tool_output":{"content":"4"}},{"type":"tool","id":"subtract_rf9dgwf3fzxv:0","tool_output":{"content":"2"}}],"type":"TEXT_CONTENT"},{"start":51,"end":111,"text":"Why
-        did the chicken cross the road? To get to the other side","sources":[{"type":"tool","id":"joke_fpg9gytqk6e6:0","tool_output":{"content":"Why
-        did the chicken cross the road? To get to the other side!"}}],"type":"TEXT_CONTENT"}]},"finish_reason":"COMPLETE","usage":{"billed_units":{"input_tokens":125,"output_tokens":37},"tokens":{"input_tokens":1194,"output_tokens":129}}}'
-    headers:
-      Alt-Svc:
-      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
-      Content-Length:
-      - '861'
-      Via:
-      - 1.1 google
-      access-control-expose-headers:
-      - X-Debug-Trace-ID
-      cache-control:
-      - no-cache, no-store, no-transform, must-revalidate, private, max-age=0
-      content-type:
-      - application/json
-      date:
-      - Tue, 29 Jul 2025 18:08:17 GMT
-      expires:
-      - Thu, 01 Jan 1970 00:00:00 GMT
-      num_chars:
-      - '5384'
-      num_tokens:
-      - '162'
-      pragma:
-      - no-cache
-      vary:
-      - Origin
-      x-accel-expires:
-      - '0'
-      x-debug-trace-id:
-      - 4ddccc90c08996ae9d5ae645e222eeb5
-      x-endpoint-monthly-call-limit:
-      - '1000'
-      x-envoy-upstream-service-time:
-      - '1061'
-      x-trial-endpoint-call-limit:
-      - '10'
-      x-trial-endpoint-call-remaining:
-      - '7'
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"model": "command-r", "messages": [{"role": "user", "content": "What is
-      2+2-4? Tell me a joke."}, {"role": "assistant", "tool_plan": "I will first calculate
-      the answer to 2+2-4, then search for a joke to include in the answer.", "tool_calls":
-      [{"id": "add_1s15p8vf0sjy", "type": "function", "function": {"name": "add",
-      "arguments": "{\"x\":2,\"y\":2}"}}, {"id": "subtract_rf9dgwf3fzxv", "type":
-      "function", "function": {"name": "subtract", "arguments": "{\"x\":4,\"y\":2}"}},
-      {"id": "joke_fpg9gytqk6e6", "type": "function", "function": {"name": "joke",
-      "arguments": "{}"}}]}, {"role": "tool", "tool_call_id": "add_1s15p8vf0sjy",
-      "content": [{"type": "document", "document": {"data": "4"}}]}, {"role": "tool",
-      "tool_call_id": "subtract_rf9dgwf3fzxv", "content": [{"type": "document", "document":
-      {"data": "2"}}]}, {"role": "tool", "tool_call_id": "joke_fpg9gytqk6e6", "content":
-      [{"type": "document", "document": {"data": "Why did the chicken cross the road?
-      To get to the other side!"}}]}], "tools": [{"type": "function", "function":
-      {"name": "add", "description": "Adds two numbers together.", "parameters": {"type":
-      "object", "strict": true, "properties": {"x": {"type": "integer", "description":
-      "the first number"}, "y": {"type": "integer", "description": "the second number"}},
-      "required": ["x", "y"], "additionalProperties": false}}}, {"type": "function",
-      "function": {"name": "subtract", "description": "Subtracts the second number
-      from the first.", "parameters": {"type": "object", "strict": true, "properties":
-      {"x": {"type": "integer", "description": "the first number"}, "y": {"type":
-      "integer", "description": "the second number"}}, "required": ["x", "y"], "additionalProperties":
-      false}}}, {"type": "function", "function": {"name": "joke", "description": "Returns
-      a joke.", "parameters": {"type": "object", "strict": true, "properties": {},
-      "additionalProperties": false}}}], "stream": true}'
-    headers:
-      accept:
-      - '*/*'
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '1905'
-      content-type:
-      - application/json
-      host:
-      - api.cohere.com
-      x-fern-language:
-      - Python
-      x-fern-sdk-name:
-      - cohere
-      x-fern-sdk-version:
-      - 5.15.0
     method: POST
     uri: https://api.cohere.com/v2/chat
   response:
     body:
       string: 'event: message-start
 
-        data: {"id":"21b16548-b4e0-419c-90f1-ad1ed1d2831e","type":"message-start","delta":{"message":{"role":"assistant","content":[],"tool_plan":"","tool_calls":[],"citations":[]}}}
+        data: {"id":"7379c4ec-b7a6-4a04-8777-f6569ba59ffa","type":"message-start","delta":{"message":{"role":"assistant","content":[],"tool_plan":"","tool_calls":[],"citations":[]}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":"2"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":"+"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":"2"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" is"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" equal"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" to"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" 4"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":"."}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" Now"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" I"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" need"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" to"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" subtract"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" 4"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" from"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":" 4"}}}
+
+
+        event: tool-plan-delta
+
+        data: {"type":"tool-plan-delta","delta":{"message":{"tool_plan":"."}}}
+
+
+        event: tool-call-start
+
+        data: {"type":"tool-call-start","index":0,"delta":{"message":{"tool_calls":{"id":"subtract_hf5cn6gmqcd7","type":"function","function":{"name":"subtract","arguments":""}}}}}
+
+
+        event: tool-call-delta
+
+        data: {"type":"tool-call-delta","index":0,"delta":{"message":{"tool_calls":{"function":{"arguments":"{\n    \""}}}}}
+
+
+        event: tool-call-delta
+
+        data: {"type":"tool-call-delta","index":0,"delta":{"message":{"tool_calls":{"function":{"arguments":"x"}}}}}
+
+
+        event: tool-call-delta
+
+        data: {"type":"tool-call-delta","index":0,"delta":{"message":{"tool_calls":{"function":{"arguments":"\":"}}}}}
+
+
+        event: tool-call-delta
+
+        data: {"type":"tool-call-delta","index":0,"delta":{"message":{"tool_calls":{"function":{"arguments":"
+        "}}}}}
+
+
+        event: tool-call-delta
+
+        data: {"type":"tool-call-delta","index":0,"delta":{"message":{"tool_calls":{"function":{"arguments":"4"}}}}}
+
+
+        event: tool-call-delta
+
+        data: {"type":"tool-call-delta","index":0,"delta":{"message":{"tool_calls":{"function":{"arguments":","}}}}}
+
+
+        event: tool-call-delta
+
+        data: {"type":"tool-call-delta","index":0,"delta":{"message":{"tool_calls":{"function":{"arguments":"\n   "}}}}}
+
+
+        event: tool-call-delta
+
+        data: {"type":"tool-call-delta","index":0,"delta":{"message":{"tool_calls":{"function":{"arguments":"
+        \""}}}}}
+
+
+        event: tool-call-delta
+
+        data: {"type":"tool-call-delta","index":0,"delta":{"message":{"tool_calls":{"function":{"arguments":"y"}}}}}
+
+
+        event: tool-call-delta
+
+        data: {"type":"tool-call-delta","index":0,"delta":{"message":{"tool_calls":{"function":{"arguments":"\":"}}}}}
+
+
+        event: tool-call-delta
+
+        data: {"type":"tool-call-delta","index":0,"delta":{"message":{"tool_calls":{"function":{"arguments":"
+        "}}}}}
+
+
+        event: tool-call-delta
+
+        data: {"type":"tool-call-delta","index":0,"delta":{"message":{"tool_calls":{"function":{"arguments":"4"}}}}}
+
+
+        event: tool-call-delta
+
+        data: {"type":"tool-call-delta","index":0,"delta":{"message":{"tool_calls":{"function":{"arguments":"\n"}}}}}
+
+
+        event: tool-call-delta
+
+        data: {"type":"tool-call-delta","index":0,"delta":{"message":{"tool_calls":{"function":{"arguments":"}"}}}}}
+
+
+        event: tool-call-end
+
+        data: {"type":"tool-call-end","index":0}
+
+
+        event: message-end
+
+        data: {"type":"message-end","delta":{"finish_reason":"TOOL_CALL","usage":{"billed_units":{"input_tokens":67,"output_tokens":30},"tokens":{"input_tokens":1067,"output_tokens":67},"cached_tokens":1056}}}
+
+
+        data: [DONE]
+
+
+        '
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Transfer-Encoding:
+      - chunked
+      Via:
+      - 1.1 google
+      access-control-expose-headers:
+      - X-Debug-Trace-ID
+      cache-control:
+      - no-cache, no-store, no-transform, must-revalidate, private, max-age=0
+      content-type:
+      - text/event-stream
+      date:
+      - Tue, 17 Feb 2026 23:27:38 GMT
+      expires:
+      - Thu, 01 Jan 1970 00:00:00 GMT
+      pragma:
+      - no-cache
+      vary:
+      - Origin
+      x-accel-expires:
+      - '0'
+      x-debug-trace-id:
+      - 83bced2bb3b58e0dc380208d313404bd
+      x-endpoint-monthly-call-limit:
+      - '1000'
+      x-envoy-upstream-service-time:
+      - '24'
+      x-trial-endpoint-call-limit:
+      - '20'
+      x-trial-endpoint-call-remaining:
+      - '10'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"model":"command-r-08-2024","messages":[{"role":"user","content":"What
+      is 2+2-4? Tell me a joke."},{"role":"assistant","content":"","tool_calls":[{"id":"add_rcg58yt519h5","type":"function","function":{"name":"add","arguments":"{\n    \"x\":
+      2,\n    \"y\": 2\n}"}}]},{"role":"tool","tool_call_id":"add_rcg58yt519h5","content":"4"},{"role":"assistant","content":"","tool_calls":[{"id":"subtract_hf5cn6gmqcd7","type":"function","function":{"name":"subtract","arguments":"{\n    \"x\":
+      4,\n    \"y\": 4\n}"}}]},{"role":"tool","tool_call_id":"subtract_hf5cn6gmqcd7","content":"0"}],"stream":true,"tools":[{"type":"function","function":{"name":"add","description":"Adds
+      two numbers together.","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false}}},{"type":"function","function":{"name":"subtract","description":"Subtracts
+      the second number from the first.","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false}}},{"type":"function","function":{"name":"joke","description":"Returns
+      a joke.","parameters":{"type":"object","strict":true,"properties":{},"additionalProperties":false}}}]}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1417'
+      content-type:
+      - application/json
+      host:
+      - api.cohere.com
+    method: POST
+    uri: https://api.cohere.com/v2/chat
+  response:
+    body:
+      string: 'event: message-start
+
+        data: {"id":"47893e96-d1c6-40ab-98e4-88bcf2d77fd0","type":"message-start","delta":{"message":{"role":"assistant","content":[],"tool_plan":"","tool_calls":[],"citations":[]}}}
+
+
+        event: tool-call-start
+
+        data: {"type":"tool-call-start","index":0,"delta":{"message":{"tool_calls":{"id":"joke_ek19ks839e1n","type":"function","function":{"name":"joke","arguments":""}}}}}
+
+
+        event: tool-call-end
+
+        data: {"type":"tool-call-end","index":0}
+
+
+        event: message-end
+
+        data: {"type":"message-end","delta":{"finish_reason":"TOOL_CALL","usage":{"billed_units":{"input_tokens":77,"output_tokens":3},"tokens":{"input_tokens":1139,"output_tokens":24},"cached_tokens":1136}}}
+
+
+        data: [DONE]
+
+
+        '
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Transfer-Encoding:
+      - chunked
+      Via:
+      - 1.1 google
+      access-control-expose-headers:
+      - X-Debug-Trace-ID
+      cache-control:
+      - no-cache, no-store, no-transform, must-revalidate, private, max-age=0
+      content-type:
+      - text/event-stream
+      date:
+      - Tue, 17 Feb 2026 23:27:42 GMT
+      expires:
+      - Thu, 01 Jan 1970 00:00:00 GMT
+      pragma:
+      - no-cache
+      vary:
+      - Origin
+      x-accel-expires:
+      - '0'
+      x-debug-trace-id:
+      - 23885655a50765f0c88d84b781f4bfcc
+      x-endpoint-monthly-call-limit:
+      - '1000'
+      x-envoy-upstream-service-time:
+      - '17'
+      x-trial-endpoint-call-limit:
+      - '20'
+      x-trial-endpoint-call-remaining:
+      - '9'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"model":"command-r-08-2024","messages":[{"role":"user","content":"What
+      is 2+2-4? Tell me a joke."},{"role":"assistant","content":"","tool_calls":[{"id":"add_rcg58yt519h5","type":"function","function":{"name":"add","arguments":"{\n    \"x\":
+      2,\n    \"y\": 2\n}"}}]},{"role":"tool","tool_call_id":"add_rcg58yt519h5","content":"4"},{"role":"assistant","content":"","tool_calls":[{"id":"subtract_hf5cn6gmqcd7","type":"function","function":{"name":"subtract","arguments":"{\n    \"x\":
+      4,\n    \"y\": 4\n}"}}]},{"role":"tool","tool_call_id":"subtract_hf5cn6gmqcd7","content":"0"},{"role":"assistant","content":"","tool_calls":[{"id":"joke_ek19ks839e1n","type":"function","function":{"name":"joke","arguments":"{}"}}]},{"role":"tool","tool_call_id":"joke_ek19ks839e1n","content":"Why
+      did the chicken cross the road? To get to the other side!"}],"stream":true,"tools":[{"type":"function","function":{"name":"add","description":"Adds
+      two numbers together.","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false}}},{"type":"function","function":{"name":"subtract","description":"Subtracts
+      the second number from the first.","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false}}},{"type":"function","function":{"name":"joke","description":"Returns
+      a joke.","parameters":{"type":"object","strict":true,"properties":{},"additionalProperties":false}}}]}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1680'
+      content-type:
+      - application/json
+      host:
+      - api.cohere.com
+    method: POST
+    uri: https://api.cohere.com/v2/chat
+  response:
+    body:
+      string: 'event: message-start
+
+        data: {"id":"d4aa0e13-e293-4292-b17a-3721e6f83000","type":"message-start","delta":{"message":{"role":"assistant","content":[],"tool_plan":"","tool_calls":[],"citations":[]}}}
 
 
         event: content-start
@@ -725,18 +788,22 @@ interactions:
         event: content-delta
 
         data: {"type":"content-delta","index":0,"delta":{"message":{"content":{"text":"
-        2"}}}}
+        **"}}}}
 
 
         event: content-delta
 
-        data: {"type":"content-delta","index":0,"delta":{"message":{"content":{"text":"."}}}}
+        data: {"type":"content-delta","index":0,"delta":{"message":{"content":{"text":"0"}}}}
 
 
         event: content-delta
 
-        data: {"type":"content-delta","index":0,"delta":{"message":{"content":{"text":"
-        \n\nHere"}}}}
+        data: {"type":"content-delta","index":0,"delta":{"message":{"content":{"text":"**."}}}}
+
+
+        event: content-delta
+
+        data: {"type":"content-delta","index":0,"delta":{"message":{"content":{"text":"\n\nHere"}}}}
 
 
         event: content-delta
@@ -771,6 +838,11 @@ interactions:
         event: content-delta
 
         data: {"type":"content-delta","index":0,"delta":{"message":{"content":{"text":":"}}}}
+
+
+        event: content-delta
+
+        data: {"type":"content-delta","index":0,"delta":{"message":{"content":{"text":"\n\n\u003e"}}}}
 
 
         event: content-delta
@@ -863,7 +935,7 @@ interactions:
 
         event: citation-start
 
-        data: {"type":"citation-start","index":0,"delta":{"message":{"citations":{"start":23,"end":24,"text":"2","sources":[{"type":"tool","id":"add_1s15p8vf0sjy:0","tool_output":{"content":"4"}},{"type":"tool","id":"subtract_rf9dgwf3fzxv:0","tool_output":{"content":"2"}}],"type":"TEXT_CONTENT"}}}}
+        data: {"type":"citation-start","index":0,"delta":{"message":{"citations":{"start":25,"end":26,"text":"0","sources":[{"type":"tool","id":"add_rcg58yt519h5:0","tool_output":{"content":"4"}},{"type":"tool","id":"subtract_hf5cn6gmqcd7:0","tool_output":{"content":"0"}}],"type":"TEXT_CONTENT"}}}}
 
 
         event: citation-end
@@ -873,8 +945,8 @@ interactions:
 
         event: citation-start
 
-        data: {"type":"citation-start","index":1,"delta":{"message":{"citations":{"start":51,"end":111,"text":"Why
-        did the chicken cross the road? To get to the other side","sources":[{"type":"tool","id":"joke_fpg9gytqk6e6:0","tool_output":{"content":"Why
+        data: {"type":"citation-start","index":1,"delta":{"message":{"citations":{"start":57,"end":117,"text":"Why
+        did the chicken cross the road? To get to the other side","sources":[{"type":"tool","id":"joke_ek19ks839e1n:0","tool_output":{"content":"Why
         did the chicken cross the road? To get to the other side!"}}],"type":"TEXT_CONTENT"}}}}
 
 
@@ -890,7 +962,7 @@ interactions:
 
         event: message-end
 
-        data: {"type":"message-end","delta":{"finish_reason":"COMPLETE","usage":{"billed_units":{"input_tokens":125,"output_tokens":37},"tokens":{"input_tokens":1194,"output_tokens":129}}}}
+        data: {"type":"message-end","delta":{"finish_reason":"COMPLETE","usage":{"billed_units":{"input_tokens":100,"output_tokens":40},"tokens":{"input_tokens":1210,"output_tokens":137},"cached_tokens":1200}}}
 
 
         data: [DONE]
@@ -911,7 +983,7 @@ interactions:
       content-type:
       - text/event-stream
       date:
-      - Tue, 29 Jul 2025 18:08:17 GMT
+      - Tue, 17 Feb 2026 23:27:43 GMT
       expires:
       - Thu, 01 Jan 1970 00:00:00 GMT
       pragma:
@@ -921,15 +993,15 @@ interactions:
       x-accel-expires:
       - '0'
       x-debug-trace-id:
-      - 4cd2a5f597207c679c6cdb2dc6b9799b
+      - 41a9a94045d5cedfce9cd6f2d1e5b872
       x-endpoint-monthly-call-limit:
       - '1000'
       x-envoy-upstream-service-time:
-      - '47'
+      - '20'
       x-trial-endpoint-call-limit:
-      - '10'
+      - '20'
       x-trial-endpoint-call-remaining:
-      - '6'
+      - '8'
     status:
       code: 200
       message: OK

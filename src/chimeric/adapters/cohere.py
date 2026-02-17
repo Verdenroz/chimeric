@@ -87,7 +87,7 @@ class CohereAdapter:
                 ToolCall(
                     call_id=b["id"],
                     name=b["function"]["name"],
-                    arguments=json.dumps(b["function"].get("arguments", {})),
+                    arguments=_ensure_arguments_string(b["function"].get("arguments", {})),
                 )
                 for b in tool_blocks
             ]
@@ -96,7 +96,7 @@ class CohereAdapter:
             ToolCall(
                 call_id=tc["id"],
                 name=tc["function"]["name"],
-                arguments=json.dumps(tc["function"].get("arguments", {})),
+                arguments=_ensure_arguments_string(tc["function"].get("arguments", {})),
             )
             for tc in tool_calls
         ]
@@ -177,7 +177,7 @@ class CohereAdapter:
             ToolCall(
                 call_id=tc["id"],
                 name=tc["name"],
-                arguments=tc.get("arguments", "{}"),
+                arguments=tc.get("arguments", "{}") or "{}",
             )
             for tc in state.tool_calls.values()
         ]
@@ -203,6 +203,13 @@ class CohereAdapter:
 # ---------------------------------------------------------------------------
 
 
+def _ensure_arguments_string(arguments: Any) -> str:
+    """Return arguments as a JSON string, handling both str and dict inputs."""
+    if isinstance(arguments, str):
+        return arguments
+    return json.dumps(arguments)
+
+
 def _serialize_message(msg: Message) -> dict[str, Any]:
     """Convert a Message to Cohere v2 wire format."""
     if msg.role == "tool":
@@ -222,7 +229,7 @@ def _serialize_message(msg: Message) -> dict[str, Any]:
             {
                 "id": tc.call_id,
                 "type": "function",
-                "function": {"name": tc.name, "arguments": json.loads(tc.arguments)},
+                "function": {"name": tc.name, "arguments": tc.arguments or "{}"},
             }
             for tc in msg.tool_calls
         ]
