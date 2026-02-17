@@ -1,52 +1,46 @@
+"""Shared test fixtures and base utilities."""
+
 from chimeric import ToolManager
 from chimeric.types import Message
 
 
 class BaseProviderTestSuite:
-    """Base test suite that can be reused for all provider clients.
+    """Reusable base class for provider-specific test suites.
 
-    Subclasses should implement the abstract properties to customize for each provider.
+    Subclasses should override the abstract properties to supply
+    provider-specific sample data.
     """
 
-    # Provider-specific configuration - override in subclasses
-    client_class = None
-    provider_name = None
-    mock_client_path = None
-
-    # Sample test data
     @property
-    def sample_model(self):
+    def sample_model(self) -> str:
         return "test-model"
 
     @property
-    def sample_messages(self):
+    def sample_messages(self) -> list[Message]:
         return [Message(role="user", content="Hello")]
 
     @property
-    def sample_response(self):
-        """Override in subclass to return provider-specific response."""
+    def sample_response(self) -> object:
+        """Override in subclass to return a provider-specific response dict."""
         raise NotImplementedError
 
     @property
-    def sample_stream_events(self):
-        """Override in subclass to return provider-specific stream events."""
+    def sample_stream_events(self) -> list[object]:
+        """Override in subclass to return provider-specific SSE payloads."""
         raise NotImplementedError
 
-    def create_tool_manager(self):
-        """Create a tool manager with test tools."""
+    def create_tool_manager(self) -> ToolManager:
+        """Create a ToolManager pre-populated with test tools."""
         tool_manager = ToolManager()
 
-        # Register sync tool
         def test_tool(x: int) -> str:
             """Test tool."""
             return f"Result: {x}"
 
-        # Register async tool
         async def async_test_tool(x: int) -> str:
             """Async test tool."""
             return f"Async result: {x}"
 
-        # Register error tool
         def error_tool(x: int) -> str:
             """Tool that raises an error."""
             raise ValueError("Tool error")
@@ -54,5 +48,4 @@ class BaseProviderTestSuite:
         tool_manager.register(test_tool)
         tool_manager.register(async_test_tool)
         tool_manager.register(error_tool)
-
         return tool_manager
