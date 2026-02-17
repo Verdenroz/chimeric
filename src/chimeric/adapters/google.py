@@ -43,6 +43,8 @@ class GoogleAdapter:
         """Build a Gemini generateContent POST body.
 
         System messages are converted to a "system_instruction" field.
+        Generation parameters (temperature, max_output_tokens, etc.) are
+        converted from snake_case to camelCase and placed in "generationConfig".
         """
         system_parts: list[str] = []
         contents: list[dict[str, Any]] = []
@@ -53,17 +55,27 @@ class GoogleAdapter:
             else:
                 contents.append(_serialize_message(msg))
 
-        body: dict[str, Any] = {"contents": contents, **kwargs}
+        body: dict[str, Any] = {"contents": contents}
         if system_parts:
             body["system_instruction"] = {"parts": [{"text": "\n".join(system_parts)}]}
         if tools:
             body["tools"] = [{"functionDeclarations": [_serialize_tool(t) for t in tools]}]
+        if kwargs:
+            gen_config: dict[str, Any] = {}
+            for k, v in kwargs.items():
+                if k == "generationConfig":
+                    # Already-formatted structured output config — merge directly
+                    gen_config.update(v)
+                else:
+                    gen_config[_snake_to_camel(k)] = v
+            body["generationConfig"] = gen_config
         return body
 
     def get_completion_path(self, model: str, stream: bool) -> str:
         """Return the model-specific endpoint path."""
-        action = "streamGenerateContent" if stream else "generateContent"
-        return f"/models/{model}:{action}"
+        if stream:
+            return f"/models/{model}:streamGenerateContent?alt=sse"
+        return f"/models/{model}:generateContent"
 
     # ------------------------------------------------------------------
     # Non-streaming response parsing
@@ -230,11 +242,20 @@ def _serialize_message(msg: Message) -> dict[str, Any]:
     return {"role": role, "parts": [{"text": msg.content or ""}]}
 
 
+def _snake_to_camel(name: str) -> str:
+    """Convert snake_case to camelCase (e.g. max_output_tokens → maxOutputTokens)."""
+    parts = name.split("_")
+    return parts[0] + "".join(p.title() for p in parts[1:])
+
+
 def _serialize_tool(tool: Tool) -> dict[str, Any]:
     """Convert a Tool to a Gemini functionDeclaration."""
     schema: dict[str, Any] = {}
     if tool.parameters:
         schema = tool.parameters.model_dump(exclude_none=True)
+        # Remove OpenAI-specific fields that Gemini doesn't support
+        schema.pop("strict", None)
+        schema.pop("additionalProperties", None)
     return {
         "name": tool.name,
         "description": tool.description,

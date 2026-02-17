@@ -40,10 +40,10 @@ def test_google_sync_generation(api_keys):
 
     with get_vcr().use_cassette(cassette_path):
         response = chimeric.generate(
-            model="gemini-1.5-flash",
+            model="gemini-2.5-flash",
             messages=[{"role": "user", "content": "Hello, respond briefly."}],
             stream=False,
-            max_output_tokens=20,
+            max_output_tokens=200,
         )
 
         assert response is not None
@@ -62,10 +62,10 @@ async def test_google_async_generation(api_keys):
 
     with get_vcr().use_cassette(cassette_path):
         response = await chimeric.agenerate(
-            model="gemini-1.5-flash",
+            model="gemini-2.5-flash",
             messages=[{"role": "user", "content": "Hello, respond briefly."}],
             stream=False,
-            max_output_tokens=20,
+            max_output_tokens=200,
         )
 
         assert response is not None
@@ -125,8 +125,8 @@ def test_google_sync_tools_non_streaming(api_keys):
             return "Why did the chicken cross the road? To get to the other side!"
 
         response = chimeric.generate(
-            model="gemini-1.5-flash",
-            messages=[{"role": "user", "content": "What is 2+2-4-10+50? Tell me a joke."}],
+            model="gemini-2.5-flash",
+            messages=[{"role": "user", "content": "What is 2+2-4? Tell me a joke."}],
             stream=False,
         )
 
@@ -195,8 +195,8 @@ def test_google_sync_tools_streaming(api_keys):
             return "Why did the chicken cross the road? To get to the other side!"
 
         response = chimeric.generate(
-            model="gemini-1.5-flash",
-            messages=[{"role": "user", "content": "What is 2+2-4-10+50? Tell me a joke."}],
+            model="gemini-2.5-flash",
+            messages=[{"role": "user", "content": "What is 2+2-4? Tell me a joke."}],
             stream=True,
         )
 
@@ -270,8 +270,8 @@ async def test_google_async_tools_streaming(api_keys):
             return "Why did the chicken cross the road? To get to the other side!"
 
         response = await chimeric.agenerate(
-            model="gemini-1.5-flash",
-            messages=[{"role": "user", "content": "What is 2+2-4-10+50? Tell me a joke."}],
+            model="gemini-2.5-flash",
+            messages=[{"role": "user", "content": "What is 2+2-4? Tell me a joke."}],
             stream=True,
         )
 
@@ -348,8 +348,8 @@ async def test_google_async_tools_non_streaming(api_keys):
             return "Why did the chicken cross the road? To get to the other side!"
 
         response = await chimeric.agenerate(
-            model="gemini-1.5-flash",
-            messages=[{"role": "user", "content": "What is 2+2-4-10+50? Tell me a joke."}],
+            model="gemini-2.5-flash",
+            messages=[{"role": "user", "content": "What is 2+2-4? Tell me a joke."}],
             stream=False,
         )
 
@@ -387,10 +387,10 @@ def test_google_init_kwargs_propagation(api_keys):
     with get_vcr().use_cassette(cassette_path):
         # Test with generation kwargs
         response = chimeric.generate(
-            model="gemini-1.5-flash",
+            model="gemini-2.5-flash",
             messages=[{"role": "user", "content": "Hello, respond briefly."}],
             temperature=0.1,
-            max_output_tokens=20,
+            max_output_tokens=200,
             stream=False,
         )
 
@@ -411,7 +411,7 @@ def test_google_invalid_generate_kwargs_raises_provider_error(api_keys):
         # Test with an invalid parameter that doesn't exist in Google API
         with pytest.raises(ProviderError) as exc_info:
             chimeric.generate(
-                model="gemini-1.5-flash",
+                model="gemini-2.5-flash",
                 messages=[{"role": "user", "content": "Hello"}],
                 invalid_google_parameter="this_should_fail",
                 stream=False,
