@@ -1,53 +1,35 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "user", "content": "Hello, respond briefly."}],
-      "model": "llama3.1-8b", "max_tokens": 20, "stream": false, "tools": null}'
+    body: '{"model":"llama3.1-8b","messages":[{"role":"user","content":"Hello, respond
+      briefly."}],"stream":false,"max_tokens":20}'
     headers:
       accept:
-      - application/json
+      - '*/*'
       accept-encoding:
       - gzip, deflate
       connection:
       - keep-alive
       content-length:
-      - '144'
+      - '119'
       content-type:
       - application/json
       host:
       - api.cerebras.ai
-      x-stainless-arch:
-      - x64
-      x-stainless-async:
-      - async:asyncio
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - Linux
-      x-stainless-package-version:
-      - 1.35.0
-      x-stainless-read-timeout:
-      - '60'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.13.5
     method: POST
     uri: https://api.cerebras.ai/v1/chat/completions
   response:
     body:
-      string: '{"id":"chatcmpl-d0e69a76-0131-4332-be00-0b20bfb42203","choices":[{"finish_reason":"stop","index":0,"message":{"content":"Hello,
-        how can I assist you?","role":"assistant"}}],"created":1753812081,"model":"llama3.1-8b","system_fingerprint":"fp_390dc65d3f27cee4c692","object":"chat.completion","usage":{"prompt_tokens":40,"completion_tokens":9,"total_tokens":49,"prompt_tokens_details":{"cached_tokens":0}},"time_info":{"queue_time":0.000385779,"prompt_time":0.002021345,"completion_time":0.003955824,"total_time":0.0073125362396240234,"created":1753812081}}'
+      string: '{"id":"chatcmpl-d7defb8d-8325-4437-8179-6762a16b5f28","choices":[{"finish_reason":"stop","index":0,"message":{"content":"Hello.  How
+        can I assist you?","role":"assistant"}}],"created":1771369402,"model":"llama3.1-8b","system_fingerprint":"fp_5198798116a66ebf301b","object":"chat.completion","usage":{"total_tokens":50,"completion_tokens":10,"completion_tokens_details":{"accepted_prediction_tokens":0,"rejected_prediction_tokens":0,"reasoning_tokens":0},"prompt_tokens":40,"prompt_tokens_details":{"cached_tokens":0}},"time_info":{"queue_time":6.325e-05,"prompt_time":0.001973317,"completion_time":0.004005501,"total_time":0.0072460174560546875,"created":1771369402.4820788}}'
     headers:
       CF-RAY:
-      - 966e8567be2fda8d-EWR
+      - 9cf8ead3acfd43d7-EWR
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Tue, 29 Jul 2025 18:01:22 GMT
+      - Tue, 17 Feb 2026 23:03:18 GMT
       Transfer-Encoding:
       - chunked
       alt-svc:
@@ -55,9 +37,9 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       content-length:
-      - '554'
+      - '675'
       inference-id:
-      - chatcmpl-d0e69a76-0131-4332-be00-0b20bfb42203
+      - chatcmpl-d7defb8d-8325-4437-8179-6762a16b5f28
       referrer-policy:
       - strict-origin-when-cross-origin
       strict-transport-security:
@@ -66,16 +48,28 @@ interactions:
       - nosniff
       x-ratelimit-limit-requests-day:
       - '14400'
+      x-ratelimit-limit-requests-hour:
+      - '900'
+      x-ratelimit-limit-requests-minute:
+      - '30'
+      x-ratelimit-limit-tokens-day:
+      - '1000000'
+      x-ratelimit-limit-tokens-hour:
+      - '1000000'
       x-ratelimit-limit-tokens-minute:
       - '60000'
       x-ratelimit-remaining-requests-day:
-      - '14396'
+      - '14399'
+      x-ratelimit-remaining-requests-hour:
+      - '0'
+      x-ratelimit-remaining-requests-minute:
+      - '29'
+      x-ratelimit-remaining-tokens-day:
+      - '999975'
+      x-ratelimit-remaining-tokens-hour:
+      - '0'
       x-ratelimit-remaining-tokens-minute:
-      - '59957'
-      x-ratelimit-reset-requests-day:
-      - '21518.01786327362'
-      x-ratelimit-reset-tokens-minute:
-      - '38.017863273620605'
+      - '59975'
     status:
       code: 200
       message: OK

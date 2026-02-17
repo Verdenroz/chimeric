@@ -1,0 +1,91 @@
+interactions:
+- request:
+    body: '{"model":"llama3.1-8b","messages":[{"role":"user","content":"What is 6
+      multiplied by 7? Return the numeric result and a one-sentence explanation."}],"stream":true,"max_tokens":150,"response_format":{"type":"json_schema","json_schema":{"name":"MathAnswer","schema":{"description":"Simple
+      arithmetic answer used across all provider tests.","properties":{"result":{"title":"Result","type":"integer"},"explanation":{"title":"Explanation","type":"string"}},"required":["result","explanation"],"type":"object","additionalProperties":false},"strict":true}}}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '550'
+      content-type:
+      - application/json
+      host:
+      - api.cerebras.ai
+    method: POST
+    uri: https://api.cerebras.ai/v1/chat/completions
+  response:
+    body:
+      string: 'data: {"id":"chatcmpl-e5827226-0afc-4e53-8892-c1779ba8136b","choices":[{"delta":{"role":"assistant"},"index":0}],"created":1771369829,"model":"llama3.1-8b","system_fingerprint":"fp_5198798116a66ebf301b","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-e5827226-0afc-4e53-8892-c1779ba8136b","choices":[{"delta":{"content":"{\""},"index":0}],"created":1771369829,"model":"llama3.1-8b","system_fingerprint":"fp_5198798116a66ebf301b","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-e5827226-0afc-4e53-8892-c1779ba8136b","choices":[{"delta":{"content":"result\":
+        42, \"explanation\": \"The product of"},"index":0}],"created":1771369829,"model":"llama3.1-8b","system_fingerprint":"fp_5198798116a66ebf301b","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-e5827226-0afc-4e53-8892-c1779ba8136b","choices":[{"delta":{"content":"
+        6 and 7 is 42.\"}"},"index":0}],"created":1771369829,"model":"llama3.1-8b","system_fingerprint":"fp_5198798116a66ebf301b","object":"chat.completion.chunk"}
+
+
+        data: {"id":"chatcmpl-e5827226-0afc-4e53-8892-c1779ba8136b","choices":[{"delta":{},"finish_reason":"stop","index":0}],"created":1771369829,"model":"llama3.1-8b","system_fingerprint":"fp_5198798116a66ebf301b","object":"chat.completion.chunk","usage":{"total_tokens":231,"completion_tokens":25,"completion_tokens_details":{"accepted_prediction_tokens":0,"rejected_prediction_tokens":0,"reasoning_tokens":0},"prompt_tokens":206,"prompt_tokens_details":{"cached_tokens":128}},"time_info":{"queue_time":0.002471333,"prompt_time":0.00630046,"completion_time":0.010147668,"total_time":0.021168231964111328,"created":1771369829.576}}
+
+
+        '
+    headers:
+      CF-RAY:
+      - 9cf8f54118a25ed0-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - text/event-stream; charset=utf-8
+      Date:
+      - Tue, 17 Feb 2026 23:10:25 GMT
+      Transfer-Encoding:
+      - chunked
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      inference-id:
+      - chatcmpl-e5827226-0afc-4e53-8892-c1779ba8136b
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      strict-transport-security:
+      - max-age=3600; includeSubDomains
+      x-content-type-options:
+      - nosniff
+      x-ratelimit-limit-requests-day:
+      - '14400'
+      x-ratelimit-limit-requests-hour:
+      - '900'
+      x-ratelimit-limit-requests-minute:
+      - '30'
+      x-ratelimit-limit-tokens-day:
+      - '1000000'
+      x-ratelimit-limit-tokens-hour:
+      - '1000000'
+      x-ratelimit-limit-tokens-minute:
+      - '60000'
+      x-ratelimit-remaining-requests-day:
+      - '14399'
+      x-ratelimit-remaining-requests-hour:
+      - '0'
+      x-ratelimit-remaining-requests-minute:
+      - '29'
+      x-ratelimit-remaining-tokens-day:
+      - '997187'
+      x-ratelimit-remaining-tokens-hour:
+      - '0'
+      x-ratelimit-remaining-tokens-minute:
+      - '59829'
+    status:
+      code: 200
+      message: OK
+version: 1
