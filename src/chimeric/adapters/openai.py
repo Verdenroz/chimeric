@@ -33,6 +33,9 @@ class OpenAIAdapter:
         **kwargs: Any,
     ) -> dict[str, Any]:
         """Build a /v1/chat/completions POST body."""
+        # OpenAI uses max_tokens; normalize the Anthropic/Google alias
+        if "max_output_tokens" in kwargs:
+            kwargs.setdefault("max_tokens", kwargs.pop("max_output_tokens"))
         body: dict[str, Any] = {
             "model": model,
             "messages": [_serialize_message(m) for m in messages],

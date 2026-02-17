@@ -1,0 +1,77 @@
+interactions:
+- request:
+    body: '{"model":"gpt-4o-mini","messages":[{"role":"user","content":"What is 6
+      multiplied by 7? Return the numeric result and a one-sentence explanation."}],"stream":false,"max_tokens":150,"response_format":{"type":"json_schema","json_schema":{"name":"MathAnswer","schema":{"description":"Simple
+      arithmetic answer used across all provider tests.","properties":{"result":{"title":"Result","type":"integer"},"explanation":{"title":"Explanation","type":"string"}},"required":["result","explanation"],"type":"object","additionalProperties":false},"strict":true}}}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '551'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=RhZu9n3sSJjM0bK_E5GVOErgwipurlZYm5OhVDRaLiM-1771365349.3077743-1.0.1.1-WGeu3iPMFLwDiTzF0dxJMNDCba.rONcK6tL_zqw8jVh3gQgTeAt61c7buUVWBvdUrulMs.8JI_mAqc9b6MveKsreAbsDZlo1ZP3KKPMV_V6SaUayPqVHNFWnJ65bQVgw
+      host:
+      - api.openai.com
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-DANKorliA1TFHI5djTg7gezokDRnd\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1771365350,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"result\\\":42,\\\"explanation\\\":\\\"6
+        multiplied by 7 equals 42.\\\"}\",\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 84,\n    \"completion_tokens\":
+        18,\n    \"total_tokens\": 102,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_fc706eab22\"\n}\n"
+    headers:
+      CF-RAY:
+      - 9cf88803084c7d06-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 17 Feb 2026 21:55:51 GMT
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '872'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '9980'
+      x-ratelimit-remaining-tokens:
+      - '199977'
+      x-ratelimit-reset-requests:
+      - 2m51.811s
+      x-ratelimit-reset-tokens:
+      - 6ms
+    status:
+      code: 200
+      message: OK
+version: 1

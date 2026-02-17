@@ -1,7 +1,8 @@
 interactions:
 - request:
-    body: '{"model":"gpt-4o-mini","messages":[{"role":"user","content":"Hello, respond
-      briefly."}],"stream":false,"max_tokens":20}'
+    body: '{"model":"gpt-4o-mini","messages":[{"role":"user","content":"What is 6
+      multiplied by 7? Return the numeric result and a one-sentence explanation."}],"stream":false,"max_tokens":150,"response_format":{"type":"json_schema","json_schema":{"name":"MathAnswer","schema":{"description":"Simple
+      arithmetic answer used across all provider tests.","properties":{"result":{"title":"Result","type":"integer"},"explanation":{"title":"Explanation","type":"string"}},"required":["result","explanation"],"type":"object","additionalProperties":false},"strict":true}}}'
     headers:
       accept:
       - '*/*'
@@ -10,37 +11,36 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '119'
+      - '551'
       content-type:
       - application/json
-      cookie:
-      - __cf_bm=kz.zEaBcUVc94NkA1vZzjH9I4ZA2Gv_FtTYVajvBaaM-1771365304.864863-1.0.1.1-KwlwVNY..u3VZvFXtnkfArVzIf5awvq8LwgmXQxkHWcXyhn.at1czeOtPC.TqcHwLT0fkl.g0IjYYqHc37rIxvbhgFHUak4v8lMR_1pDb4Fdfr61jpQAtw3oi6VYVFqc
       host:
       - api.openai.com
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-DANK6nb2qcl5WuQvaOZ7WUWRWuZlH\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1771365306,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      string: "{\n  \"id\": \"chatcmpl-DANKuypnRQcjzjjcEoplCifN5m4Cd\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1771365356,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"Hello! How can I help you today?\",\n
-        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        12,\n    \"completion_tokens\": 9,\n    \"total_tokens\": 21,\n    \"prompt_tokens_details\":
-        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        \"assistant\",\n        \"content\": \"{\\\"result\\\":42,\\\"explanation\\\":\\\"6
+        multiplied by 7 equals 42.\\\"}\",\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 84,\n    \"completion_tokens\":
+        18,\n    \"total_tokens\": 102,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
         \"default\",\n  \"system_fingerprint\": \"fp_fc706eab22\"\n}\n"
     headers:
       CF-RAY:
-      - 9cf886ed6b6043e7-EWR
+      - 9cf88822ffcbe60b-IAD
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Tue, 17 Feb 2026 21:55:07 GMT
+      - Tue, 17 Feb 2026 21:55:56 GMT
       Strict-Transport-Security:
       - max-age=31536000; includeSubDomains; preload
       Transfer-Encoding:
@@ -54,7 +54,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       content-length:
-      - '838'
+      - '872'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
@@ -62,13 +62,13 @@ interactions:
       x-ratelimit-limit-tokens:
       - '200000'
       x-ratelimit-remaining-requests:
-      - '9999'
+      - '9978'
       x-ratelimit-remaining-tokens:
-      - '199992'
+      - '199977'
       x-ratelimit-reset-requests:
-      - 8.64s
+      - 3m3.988s
       x-ratelimit-reset-tokens:
-      - 2ms
+      - 6ms
     status:
       code: 200
       message: OK
