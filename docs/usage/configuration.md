@@ -22,7 +22,7 @@ export GEMINI_API_KEY="AIza..."
 
 # Cohere (supports both variable names)
 export COHERE_API_KEY="your-key"
-# or  
+# or
 export CO_API_KEY="your-key"
 
 # Groq
@@ -31,11 +31,16 @@ export GROQ_API_KEY="gsk_..."
 # Cerebras
 export CEREBRAS_API_KEY="csk-..."
 
-# Grok (supports both variable names)
+# Grok / xAI (supports both variable names)
 export GROK_API_KEY="xai-..."
 # or
-export GROK_API_TOKEN="xai-..."
+export XAI_API_KEY="xai-..."
+
+# OpenRouter
+export OPENROUTER_API_KEY="sk-or-..."
 ```
+
+Any provider with a discoverable key is registered automatically; providers without one are silently skipped.
 
 ### Direct Initialization
 
@@ -51,100 +56,108 @@ client = Chimeric(
     cohere_api_key="your-key",
     groq_api_key="gsk_...",
     cerebras_api_key="csk-...",
-    grok_api_key="xai-..."
+    grok_api_key="xai-...",
+    openrouter_api_key="sk-or-...",
 )
 ```
+
+Explicit keys take precedence over environment variables.
 
 ### Mixed Configuration
 
 Combine environment variables with direct initialization:
 
 ```python
-# Some keys from environment, others provided directly
-client = Chimeric(
-    openai_api_key="sk-...",  # Explicit key
-    # anthropic_api_key will be read from ANTHROPIC_API_KEY env var
-    # google_api_key will be read from GOOGLE_API_KEY env var
-)
-```
-
-### Provider-Specific Configuration
-
-Pass any provider-specific configuration options directly to Chimeric. Chimeric uses signature introspection to automatically filter kwargs, ensuring each provider only receives parameters its constructor accepts:
-
-```python
-# All kwargs are passed to every provider, but automatically filtered
+# Explicit key overrides env var; other providers read from env vars automatically
 client = Chimeric(
     openai_api_key="sk-...",
-    anthropic_api_key="sk-ant-...",
-    # Google-specific parameters (ignored by other providers)
-    vertexai=True,
+    # ANTHROPIC_API_KEY, GOOGLE_API_KEY, etc. are picked up from the environment
 )
 ```
 
-### Common Configuration Options
+### Timeout
 
-Parameters that work across multiple providers:
+The `timeout` parameter sets the HTTP request timeout (in seconds) for all providers:
 
 ```python
-client = Chimeric(
-    openai_api_key="sk-...",
-    anthropic_api_key="sk-ant-...",
-    google_api_key="AIza...",
-    
-    # HTTP/Connection settings (widely supported)
-    timeout=60,                    # Request timeout
-    max_retries=3,                # Retry configuration
-    
-    # Custom endpoints (where supported)
-    base_url="https://api.your-company.com/v1",
-    
-    # Headers (where supported)
-    default_headers={"User-Agent": "YourApp/1.0"},
-)
+client = Chimeric(timeout=120.0)  # default is 60.0
 ```
 
-**Key Benefits:**
-- **Signature-Based Filtering**: Uses Python introspection to validate parameters
-- **No TypeErrors**: Invalid parameters are automatically filtered out
-- **Cross-Provider Compatibility**: Same parameters work where applicable
-- **Unified Configuration**: Configure all providers with one constructor call
+## Provider Routing
 
-## Provider Configuration
+### Automatic Model Routing
 
-### Provider Information
-
-Get information about configured providers:
+Chimeric routes each request to the correct provider by matching the model name against each provider's model list. This happens at initialisation time and is cached:
 
 ```python
 client = Chimeric()
 
-# List all configured providers
-print("Available providers:", client.available_providers)
-
-# Check capabilities across all providers
-print("Merged capabilities:", client.capabilities)
-
-# Check capabilities for a specific provider
-if "openai" in client.available_providers:
-    openai_caps = client.get_capabilities("openai")
-    print(f"OpenAI capabilities: {openai_caps}")
+# Each call is automatically routed to the right provider
+client.generate("gpt-4o", "Hello")                      # → OpenAI
+client.generate("claude-3-5-sonnet-20241022", "Hello")  # → Anthropic
+client.generate("gemini-1.5-pro", "Hello")              # → Google
 ```
 
-## Model Configuration
+### Explicit Provider Selection
 
-### Model Discovery
-
-Discover available models across providers:
+Force a specific provider with the `provider` parameter, using either a string or the `Provider` enum:
 
 ```python
-# List all models from all providers
+from chimeric import Chimeric, Provider
+
+client = Chimeric()
+
+# String form
+response = client.generate(
+    model="llama-3.3-70b-versatile",
+    messages="Hello",
+    provider="groq",
+)
+
+# Enum form (IDE-friendly, no typos)
+response = client.generate(
+    model="llama-3.3-70b-versatile",
+    messages="Hello",
+    provider=Provider.GROQ,
+)
+```
+
+### Provider Inspection
+
+```python
+# List all configured providers
+print(client.available_providers)  # ["openai", "anthropic", "google", ...]
+```
+
+## Model Discovery
+
+List available models from one or all configured providers:
+
+```python
+# All providers
 all_models = client.list_models()
 for model in all_models:
     print(f"{model.id} ({model.provider})")
 
-# List models from a specific provider
+# One provider
 openai_models = client.list_models("openai")
 for model in openai_models:
-    print(f"OpenAI: {model.id}")
+    print(model.id)
 ```
+
+The async counterpart is `alist_models()`.
+
+## Provider Pass-Through
+
+Extra keyword arguments passed to `generate()` / `agenerate()` are forwarded directly to the provider's API:
+
+```python
+response = client.generate(
+    model="gpt-4o",
+    messages="Write a haiku",
+    temperature=0.9,
+    max_tokens=100,
+)
+```
+
+Supported parameters vary by provider — consult each provider's API documentation for the full list.

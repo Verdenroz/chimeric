@@ -63,7 +63,7 @@ make nox
 **Requirements for acceptance:**
 
 - All tests pass
-- Maintain 100% code coverage
+- Maintain 80% code coverage
 - Update documentation for new features
 - Follow code style (run `make lint`)
 
