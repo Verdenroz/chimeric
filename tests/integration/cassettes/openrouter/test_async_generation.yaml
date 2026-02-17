@@ -1,0 +1,49 @@
+interactions:
+- request:
+    body: '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Hello,
+      respond briefly."}],"stream":false,"max_tokens":20}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '126'
+      content-type:
+      - application/json
+      host:
+      - openrouter.ai
+    method: POST
+    uri: https://openrouter.ai/api/v1/chat/completions
+  response:
+    body:
+      string: "\n         \n{\"id\":\"gen-1771372133-JPH0WuHmRE01JIbqB1Vd\",\"provider\":\"OpenAI\",\"model\":\"openai/gpt-4o-mini\",\"object\":\"chat.completion\",\"created\":1771372133,\"choices\":[{\"logprobs\":null,\"finish_reason\":\"stop\",\"native_finish_reason\":\"stop\",\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"Hello!
+        How can I assist you today?\",\"refusal\":null,\"reasoning\":null}}],\"system_fingerprint\":\"fp_084a28d6e8\",\"usage\":{\"prompt_tokens\":12,\"completion_tokens\":9,\"total_tokens\":21,\"cost\":0.0000072,\"is_byok\":false,\"prompt_tokens_details\":{\"cached_tokens\":0,\"audio_tokens\":0},\"cost_details\":{\"upstream_inference_cost\":0.0000072,\"upstream_inference_prompt_cost\":0.0000018,\"upstream_inference_completions_cost\":0.0000054},\"completion_tokens_details\":{\"reasoning_tokens\":0,\"audio_tokens\":0}}}"
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      CF-RAY:
+      - 9cf92d9aac0d0f3e-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 17 Feb 2026 23:48:53 GMT
+      Permissions-Policy:
+      - payment=(self "https://checkout.stripe.com" "https://connect-js.stripe.com"
+        "https://js.stripe.com" "https://*.js.stripe.com" "https://hooks.stripe.com")
+      Referrer-Policy:
+      - no-referrer, strict-origin-when-cross-origin
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      content-length:
+      - '767'
+    status:
+      code: 200
+      message: OK
+version: 1

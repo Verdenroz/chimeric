@@ -446,3 +446,102 @@ def test_grok_structured_output_streaming(api_keys):
     final = next(c for c in reversed(chunks) if c.finish_reason is not None)
     assert isinstance(final.parsed, MathAnswer)
     assert final.parsed.result == 42
+
+
+# ---------------------------------------------------------------------------
+# OpenRouter
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.openrouter
+def test_openrouter_structured_output_sync(api_keys):
+    """OpenRouter: response_model populates parsed on a non-streaming response."""
+    if "openrouter_api_key" not in api_keys:
+        pytest.skip("OpenRouter API key not found")
+
+    chimeric = Chimeric(openrouter_api_key=api_keys["openrouter_api_key"])
+    cassette_path = get_cassette_path("openrouter", "test_structured_output_sync")
+
+    with get_vcr().use_cassette(cassette_path):
+        response = chimeric.generate(
+            model="openai/gpt-4o-mini",
+            messages=[{"role": "user", "content": _MATH_PROMPT}],
+            response_model=MathAnswer,
+            max_tokens=150,
+        )
+
+    assert isinstance(response.parsed, MathAnswer)
+    assert response.parsed.result == 42
+    assert response.parsed.explanation
+
+
+@pytest.mark.openrouter
+def test_openrouter_structured_output_streaming(api_keys):
+    """OpenRouter: response_model sets parsed on the final streaming chunk."""
+    if "openrouter_api_key" not in api_keys:
+        pytest.skip("OpenRouter API key not found")
+
+    chimeric = Chimeric(openrouter_api_key=api_keys["openrouter_api_key"])
+    cassette_path = get_cassette_path("openrouter", "test_structured_output_streaming")
+
+    with get_vcr().use_cassette(cassette_path):
+        chunks = list(
+            chimeric.generate(
+                model="openai/gpt-4o-mini",
+                messages=[{"role": "user", "content": _MATH_PROMPT}],
+                response_model=MathAnswer,
+                stream=True,
+                max_tokens=150,
+            )
+        )
+
+    final = next(c for c in reversed(chunks) if c.finish_reason is not None)
+    assert isinstance(final.parsed, MathAnswer)
+    assert final.parsed.result == 42
+    intermediate = [c for c in chunks if c.finish_reason is None]
+    assert all(c.parsed is None for c in intermediate)
+
+
+@pytest.mark.openrouter
+@pytest.mark.asyncio
+async def test_openrouter_structured_output_async(api_keys):
+    """OpenRouter: agenerate with response_model populates parsed."""
+    if "openrouter_api_key" not in api_keys:
+        pytest.skip("OpenRouter API key not found")
+
+    chimeric = Chimeric(openrouter_api_key=api_keys["openrouter_api_key"])
+    cassette_path = get_cassette_path("openrouter", "test_structured_output_async")
+
+    with get_vcr().use_cassette(cassette_path):
+        response = await chimeric.agenerate(
+            model="openai/gpt-4o-mini",
+            messages=[{"role": "user", "content": _MATH_PROMPT}],
+            response_model=MathAnswer,
+            max_tokens=150,
+        )
+
+    assert isinstance(response.parsed, MathAnswer)
+    assert response.parsed.result == 42
+
+
+@pytest.mark.openrouter
+def test_openrouter_structured_output_extraction(api_keys):
+    """OpenRouter: extraction of nested fields into a Pydantic model."""
+    if "openrouter_api_key" not in api_keys:
+        pytest.skip("OpenRouter API key not found")
+
+    chimeric = Chimeric(openrouter_api_key=api_keys["openrouter_api_key"])
+    cassette_path = get_cassette_path("openrouter", "test_structured_output_extraction")
+
+    with get_vcr().use_cassette(cassette_path):
+        response = chimeric.generate(
+            model="openai/gpt-4o-mini",
+            messages=[{"role": "user", "content": _EXTRACT_PROMPT}],
+            response_model=PersonInfo,
+            max_tokens=150,
+        )
+
+    assert isinstance(response.parsed, PersonInfo)
+    assert response.parsed.name == "Alice"
+    assert response.parsed.age == 30
+    assert response.parsed.city == "Paris"
