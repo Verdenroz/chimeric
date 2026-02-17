@@ -8,6 +8,7 @@ from .exceptions import (
     ProviderError,
     ProviderNotFoundError,
     RateLimitError,
+    StructuredOutputError,
     ToolRegistrationError,
 )
 from .tools import ToolManager
@@ -43,6 +44,7 @@ __all__ = [
     "ProviderNotFoundError",
     "RateLimitError",
     "StreamChunk",
+    "StructuredOutputError",
     "Tool",
     "ToolCall",
     "ToolCallChunk",

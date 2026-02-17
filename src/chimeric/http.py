@@ -193,29 +193,6 @@ class HttpClient:
             current_messages = adapter.build_tool_result_messages(
                 current_messages, tool_calls, results
             )
-            # Reset state and continue loop for next (non-streaming) turn
-            # We switch to non-streaming for tool result turns to keep logic simple
-            while True:
-                body2 = adapter.build_request_body(current_messages, model, False, tools, **kwargs)
-                url2 = _get_completion_url(config, adapter, model, stream=False, api_key=api_key)
-                response2 = self._sync().post(url2, json=body2, headers=headers)
-                _raise_for_status(response2, config.name)
-                data2 = response2.json()
-
-                more_calls = adapter.parse_tool_calls(data2)
-                if not more_calls:
-                    final = adapter.parse_response(data2, model)
-                    yield StreamChunk(
-                        content=final.content if isinstance(final.content, str) else "",
-                        delta=final.content if isinstance(final.content, str) else None,
-                        finish_reason="stop",
-                    )
-                    return
-
-                results2 = _execute_tools_sync(more_calls, tools)
-                current_messages = adapter.build_tool_result_messages(
-                    current_messages, more_calls, results2
-                )
 
     # ------------------------------------------------------------------
     # Async internals
@@ -286,28 +263,6 @@ class HttpClient:
             current_messages = adapter.build_tool_result_messages(
                 current_messages, tool_calls, results
             )
-            # Continue with non-streaming for subsequent tool turns
-            while True:
-                body2 = adapter.build_request_body(current_messages, model, False, tools, **kwargs)
-                url2 = _get_completion_url(config, adapter, model, stream=False, api_key=api_key)
-                response2 = await self._async().post(url2, json=body2, headers=headers)
-                _raise_for_status(response2, config.name)
-                data2 = response2.json()
-
-                more_calls = adapter.parse_tool_calls(data2)
-                if not more_calls:
-                    final = adapter.parse_response(data2, model)
-                    yield StreamChunk(
-                        content=final.content if isinstance(final.content, str) else "",
-                        delta=final.content if isinstance(final.content, str) else None,
-                        finish_reason="stop",
-                    )
-                    return
-
-                results2 = await _execute_tools_async(more_calls, tools)
-                current_messages = adapter.build_tool_result_messages(
-                    current_messages, more_calls, results2
-                )
 
     # ------------------------------------------------------------------
     # Client accessors (lazy init)

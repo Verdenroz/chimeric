@@ -136,12 +136,14 @@ class CompletionResponse(BaseModel):
         usage: Token usage statistics.
         model: Model that produced the response.
         metadata: Provider-specific extras (finish_reason, request ID, etc.).
+        parsed: Parsed Pydantic model instance when response_model is used (excluded from serialization).
     """
 
     content: str | list[Any] = Field(default_factory=list)
     usage: Usage | None = None
     model: str | None = None
     metadata: Metadata | None = None
+    parsed: Any = Field(default=None, exclude=True)
 
     def __str__(self) -> str:
         """Return response text."""
@@ -196,12 +198,14 @@ class StreamChunk(BaseModel):
         delta: Incremental text added in this chunk (None for metadata-only chunks).
         finish_reason: Why the model stopped (present only on the final chunk).
         metadata: Provider-specific extras (token counts, request IDs, etc.).
+        parsed: Parsed Pydantic model instance set on the final chunk when response_model is used (excluded from serialization).
     """
 
     content: str | list[Any] = Field(default_factory=list)
     delta: str | None = None
     finish_reason: str | None = None
     metadata: Metadata | None = None
+    parsed: Any = Field(default=None, exclude=True)
 
     def __str__(self) -> str:
         """Return the incremental delta, or empty string."""

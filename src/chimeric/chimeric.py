@@ -1,28 +1,27 @@
-"""Chimeric — unified interface for multiple LLM providers.
-
-The Chimeric class is the single entry point for applications.  It:
-  - discovers configured providers from API keys (explicit or env vars),
-  - routes model names to the correct provider via a canonical-name cache,
-  - delegates all HTTP and serialisation work to HttpClient + adapters.
-
-No provider SDK is imported here.  Adding a new provider means adding one
-entry to PROVIDER_REGISTRY in config.py.
-"""
+"""Chimeric — unified interface for multiple LLM providers."""
 
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from .config import PROVIDER_REGISTRY
-from .exceptions import ModelNotSupportedError, ProviderError, ProviderNotFoundError
+from .exceptions import (
+    ModelNotSupportedError,
+    ProviderError,
+    ProviderNotFoundError,
+    StructuredOutputError,
+)
 from .http import HttpClient
+from .schema import build_response_format_kwargs, extract_json_schema, parse_json_response
 from .tools import ToolManager
 from .types import Provider
 from .utils import normalize_messages, normalize_tools
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable, Generator
+
+    from pydantic import BaseModel
 
     from .config import ProviderConfig
     from .types import CompletionResponse, Input, ModelSummary, StreamChunk, Tool, Tools
@@ -72,7 +71,7 @@ class Chimeric:
         groq_api_key: str | None = None,
         openrouter_api_key: str | None = None,
         timeout: float = 60.0,
-        **_kwargs: Any,
+        **__kwargs: Any,
     ) -> None:
         """Initialise Chimeric with provider configuration.
 
@@ -86,14 +85,14 @@ class Chimeric:
             groq_api_key: Groq API key (env: GROQ_API_KEY).
             openrouter_api_key: OpenRouter key (env: OPENROUTER_API_KEY).
             timeout: HTTP request timeout in seconds.
-            **_kwargs: Accepted but ignored for forward-compatibility.
+            **__kwargs: Accepted but ignored for forward-compatibility.
         """
         self._http = HttpClient(timeout=timeout)
         self._tool_manager = ToolManager()
 
         # provider_name -> (ProviderConfig, api_key)
         self._providers: dict[str, tuple[ProviderConfig, str]] = {}
-        # canonical model name -> provider name
+        # model id -> provider name
         self._model_cache: dict[str, str] = {}
 
         # Explicit keys take precedence over env vars
@@ -134,7 +133,7 @@ class Chimeric:
         self._populate_model_cache(name, config, api_key)
 
     def _populate_model_cache(self, name: str, config: ProviderConfig, api_key: str) -> None:
-        """Fetch available models and index them by canonical name."""
+        """Fetch available models and index them by model id."""
         try:
             models = self._http.list_models(config, api_key)
         except Exception:
@@ -144,9 +143,8 @@ class Chimeric:
 
         for model in models:
             for raw in (model.id, model.name):
-                canon = _canonical(raw)
-                if canon:
-                    self._model_cache[canon] = name
+                if raw:
+                    self._model_cache[raw] = name
 
     # ------------------------------------------------------------------
     # Sync public API
@@ -160,6 +158,7 @@ class Chimeric:
         tools: Tools = None,
         auto_tool: bool = True,
         provider: str | Provider | None = None,
+        response_model: type[BaseModel] | None = None,
         **kwargs: Any,
     ) -> CompletionResponse | Generator[StreamChunk, None, None]:
         """Generate a chat completion.
@@ -171,21 +170,37 @@ class Chimeric:
             tools: Tools to make available for function calling.
             auto_tool: Include all registered tools when tools is None.
             provider: Force a specific provider instead of auto-routing.
+            response_model: Pydantic model class to parse the response into.
+                Mutually exclusive with ``tools``.  When set, ``parsed`` is
+                populated on the returned ``CompletionResponse`` (or on the
+                final ``StreamChunk`` when streaming).
             **kwargs: Provider pass-through (temperature, max_tokens, etc.).
 
         Returns:
             CompletionResponse for non-streaming; Generator[StreamChunk] for streaming.
 
         Raises:
+            ValueError: If both ``response_model`` and ``tools`` are supplied.
             ModelNotSupportedError: Model not found in any configured provider.
             ProviderNotFoundError: Explicit provider not configured.
             ProviderError: Provider API call failed.
+            StructuredOutputError: Response could not be parsed into ``response_model``.
         """
+        if response_model is not None and tools is not None:
+            raise ValueError("`response_model` and `tools` are mutually exclusive")
+
         config, api_key = self._resolve_provider(model, provider)
+
+        if response_model is not None:
+            auto_tool = False
+            schema_name, schema = extract_json_schema(response_model)
+            format_kwargs = build_response_format_kwargs(Provider(config.name), schema_name, schema)
+            kwargs = {**kwargs, **format_kwargs}
+
         resolved_tools = self._resolve_tools(tools, auto_tool)
         normalized = normalize_messages(messages)
 
-        return self._http.complete(
+        result = self._http.complete(
             config=config,
             api_key=api_key,
             messages=normalized,
@@ -194,6 +209,27 @@ class Chimeric:
             tools=resolved_tools or None,
             **kwargs,
         )
+
+        if response_model is None:
+            return result
+
+        if stream:
+            return self._wrap_stream_with_parsing(
+                cast("Generator[StreamChunk, None, None]", result), response_model
+            )
+
+        # Non-streaming: parse JSON content into the model
+        completion = cast("CompletionResponse", result)
+        content = completion.content if isinstance(completion.content, str) else ""
+        try:
+            completion.parsed = parse_json_response(content, response_model)
+        except Exception as exc:
+            raise StructuredOutputError(
+                model_name=response_model.__name__,
+                reason=str(exc),
+                raw_content=content,
+            ) from exc
+        return completion
 
     def list_models(self, provider: str | Provider | None = None) -> list[ModelSummary]:
         """List available models from one or all configured providers.
@@ -210,8 +246,9 @@ class Chimeric:
         if provider:
             config, api_key = self._get_provider(provider)
             models = self._http.list_models(config, api_key)
+            provider_name = provider.value if isinstance(provider, Provider) else provider
             for m in models:
-                m.provider = provider
+                m.provider = provider_name
             return models
 
         all_models: list[ModelSummary] = []
@@ -237,6 +274,7 @@ class Chimeric:
         tools: Tools = None,
         auto_tool: bool = True,
         provider: str | Provider | None = None,
+        response_model: type[BaseModel] | None = None,
         **kwargs: Any,
     ) -> CompletionResponse | AsyncGenerator[StreamChunk, None]:
         """Async version of generate().
@@ -248,16 +286,32 @@ class Chimeric:
             tools: Tools to make available for function calling.
             auto_tool: Include all registered tools when tools is None.
             provider: Force a specific provider.
+            response_model: Pydantic model class to parse the response into.
+                Mutually exclusive with ``tools``.
             **kwargs: Provider pass-through options.
 
         Returns:
             Awaitable CompletionResponse or AsyncGenerator[StreamChunk].
+
+        Raises:
+            ValueError: If both ``response_model`` and ``tools`` are supplied.
+            StructuredOutputError: Response could not be parsed into ``response_model``.
         """
+        if response_model is not None and tools is not None:
+            raise ValueError("`response_model` and `tools` are mutually exclusive")
+
         config, api_key = self._resolve_provider(model, provider)
+
+        if response_model is not None:
+            auto_tool = False
+            schema_name, schema = extract_json_schema(response_model)
+            format_kwargs = build_response_format_kwargs(Provider(config.name), schema_name, schema)
+            kwargs = {**kwargs, **format_kwargs}
+
         resolved_tools = self._resolve_tools(tools, auto_tool)
         normalized = normalize_messages(messages)
 
-        return await self._http.acomplete(
+        result = await self._http.acomplete(
             config=config,
             api_key=api_key,
             messages=normalized,
@@ -267,13 +321,35 @@ class Chimeric:
             **kwargs,
         )
 
+        if response_model is None:
+            return result
+
+        if stream:
+            return self._wrap_async_stream_with_parsing(
+                cast("AsyncGenerator[StreamChunk, None]", result), response_model
+            )
+
+        # Non-streaming: parse JSON content into the model
+        completion = cast("CompletionResponse", result)
+        content = completion.content if isinstance(completion.content, str) else ""
+        try:
+            completion.parsed = parse_json_response(content, response_model)
+        except Exception as exc:
+            raise StructuredOutputError(
+                model_name=response_model.__name__,
+                reason=str(exc),
+                raw_content=content,
+            ) from exc
+        return completion
+
     async def alist_models(self, provider: str | Provider | None = None) -> list[ModelSummary]:
         """Async version of list_models()."""
         if provider:
             config, api_key = self._get_provider(provider)
             models = await self._http.alist_models(config, api_key)
+            provider_name = provider.value if isinstance(provider, Provider) else provider
             for m in models:
-                m.provider = provider
+                m.provider = provider_name
             return models
 
         all_models: list[ModelSummary] = []
@@ -325,6 +401,11 @@ class Chimeric:
         return self._tool_manager.get_all_tools()
 
     @property
+    def providers(self) -> dict[Provider, tuple[ProviderConfig, str]]:
+        """Configured providers keyed by Provider enum."""
+        return {Provider(name): (config, key) for name, (config, key) in self._providers.items()}
+
+    @property
     def available_providers(self) -> list[str]:
         """Names of all configured providers."""
         return list(self._providers.keys())
@@ -346,7 +427,9 @@ class Chimeric:
             raise ProviderNotFoundError(key, list(self._providers.keys()))
         return self._providers[key]
 
-    def _resolve_provider(self, model: str, provider: str | Provider | None) -> tuple[ProviderConfig, str]:
+    def _resolve_provider(
+        self, model: str, provider: str | Provider | None
+    ) -> tuple[ProviderConfig, str]:
         """Return (config, api_key) for the target provider.
 
         If provider is explicit, validate and return it.  Otherwise route
@@ -365,10 +448,8 @@ class Chimeric:
         Raises:
             ModelNotSupportedError: No configured provider recognises the model.
         """
-        canon = _canonical(model)
-
         # Fast path: check pre-populated cache
-        provider_name = self._model_cache.get(canon)
+        provider_name = self._model_cache.get(model)
         if provider_name and provider_name in self._providers:
             return self._providers[provider_name]
 
@@ -380,11 +461,13 @@ class Chimeric:
                 continue
 
             for m in models:
-                self._model_cache[_canonical(m.id)] = name
-                self._model_cache[_canonical(m.name)] = name
+                if m.id:
+                    self._model_cache[m.id] = name
+                if m.name:
+                    self._model_cache[m.name] = name
 
-            if canon in self._model_cache:
-                return self._providers[self._model_cache[canon]]
+            if model in self._model_cache:
+                return self._providers[self._model_cache[model]]
 
         # Build a best-effort list of known models for the error message
         available: list[str] = list(self._model_cache)
@@ -411,11 +494,69 @@ class Chimeric:
         for name, (config, api_key) in self._providers.items():
             self._populate_model_cache(name, config, api_key)
 
+    @staticmethod
+    def _wrap_stream_with_parsing(
+        stream: Generator[StreamChunk, None, None],
+        response_model: type[BaseModel],
+    ) -> Generator[StreamChunk, None, None]:
+        """Wrap a sync stream to parse the final chunk into *response_model*.
+
+        Args:
+            stream: The upstream streaming generator.
+            response_model: Pydantic model class to parse the accumulated content.
+
+        Yields:
+            Each chunk unchanged; the final chunk (identified by a non-None
+            ``finish_reason``) has its ``parsed`` attribute set.
+
+        Raises:
+            StructuredOutputError: Final chunk content is not valid JSON or
+                does not match the model schema.
+        """
+        for chunk in stream:
+            if chunk.finish_reason is not None:
+                content = chunk.content if isinstance(chunk.content, str) else ""
+                try:
+                    chunk.parsed = parse_json_response(content, response_model)
+                except Exception as exc:
+                    raise StructuredOutputError(
+                        model_name=response_model.__name__,
+                        reason=str(exc),
+                        raw_content=content,
+                    ) from exc
+            yield chunk
+
+    @staticmethod
+    async def _wrap_async_stream_with_parsing(
+        stream: AsyncGenerator[StreamChunk, None],
+        response_model: type[BaseModel],
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """Async version of _wrap_stream_with_parsing.
+
+        Args:
+            stream: The upstream async streaming generator.
+            response_model: Pydantic model class to parse the accumulated content.
+
+        Yields:
+            Each chunk unchanged; the final chunk has its ``parsed`` attribute set.
+
+        Raises:
+            StructuredOutputError: Final chunk content is not valid JSON or
+                does not match the model schema.
+        """
+        async for chunk in stream:
+            if chunk.finish_reason is not None:
+                content = chunk.content if isinstance(chunk.content, str) else ""
+                try:
+                    chunk.parsed = parse_json_response(content, response_model)
+                except Exception as exc:
+                    raise StructuredOutputError(
+                        model_name=response_model.__name__,
+                        reason=str(exc),
+                        raw_content=content,
+                    ) from exc
+            yield chunk
+
     def __repr__(self) -> str:
         """Return a concise string representation."""
         return f"Chimeric(providers={self.available_providers})"
-
-
-def _canonical(name: str) -> str:
-    """Reduce a model name to alphanumeric lowercase for fuzzy matching."""
-    return "".join(ch for ch in name.lower() if ch.isalnum())

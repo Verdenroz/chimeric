@@ -30,6 +30,7 @@ class ProviderConfig:
         auth_style: "header" sends the key in a header; "query_param" appends it to the URL.
         auth_query_param: Query-param name when auth_style == "query_param".
         default_kwargs: Extra body fields injected into every request (e.g. max_tokens).
+        default_kwargs: Extra body fields injected into every request (e.g. max_tokens).
     """
 
     name: str

@@ -11,6 +11,7 @@ __all__ = [
     "ProviderError",
     "ProviderNotFoundError",
     "RateLimitError",
+    "StructuredOutputError",
     "ToolRegistrationError",
 ]
 
@@ -127,6 +128,33 @@ class RateLimitError(ChimericError):
         details: dict[str, Any] = {"provider": provider, "status_code": 429}
         super().__init__(msg, details)
         self.provider = provider
+
+
+class StructuredOutputError(ChimericError):
+    """Raised when a model response cannot be parsed into the requested structured output.
+
+    Attributes:
+        model_name: Name of the Pydantic model that parsing was attempted against.
+        reason: Description of why parsing failed.
+        raw_content: The raw response content that failed to parse.
+    """
+
+    def __init__(
+        self,
+        model_name: str,
+        reason: str,
+        raw_content: str | None = None,
+    ) -> None:
+        message = f"Structured output parsing failed for '{model_name}': {reason}"
+        details: dict[str, Any] = {
+            "model_name": model_name,
+            "reason": reason,
+            "raw_content": raw_content,
+        }
+        super().__init__(message, details)
+        self.model_name = model_name
+        self.reason = reason
+        self.raw_content = raw_content
 
 
 class ToolRegistrationError(ChimericError):

@@ -5,10 +5,11 @@ import os
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+from pydantic import BaseModel
 import pytest
 
 from chimeric import Chimeric
-from chimeric.exceptions import ModelNotSupportedError, ProviderNotFoundError
+from chimeric.exceptions import ModelNotSupportedError, ProviderNotFoundError, StructuredOutputError
 from chimeric.types import CompletionResponse, ModelSummary, StreamChunk, Usage
 
 # ---------------------------------------------------------------------------
@@ -253,6 +254,131 @@ class TestToolManagement:
 # ---------------------------------------------------------------------------
 # list_models()
 # ---------------------------------------------------------------------------
+
+
+class TestStructuredOutput:
+    class Contact(BaseModel):
+        name: str
+        email: str
+
+    def test_response_model_sets_parsed(self, chimeric):
+        client, mock = chimeric
+        mock.complete.return_value = CompletionResponse(
+            content='{"name": "Alice", "email": "alice@example.com"}',
+            model="gpt-4o",
+        )
+        response = client.generate("gpt-4o", "Extract contact", response_model=self.Contact)
+        assert isinstance(response, CompletionResponse)
+        assert isinstance(response.parsed, self.Contact)
+        assert response.parsed.name == "Alice"
+        assert response.parsed.email == "alice@example.com"
+
+    def test_response_model_and_tools_raises_value_error(self, chimeric):
+        from chimeric.types import Tool
+
+        client, _ = chimeric
+        tool = Tool(name="my_tool", description="A tool")
+        with pytest.raises(ValueError, match="mutually exclusive"):
+            client.generate("gpt-4o", "Hello", response_model=self.Contact, tools=[tool])
+
+    def test_response_model_invalid_json_raises_structured_output_error(self, chimeric):
+        client, mock = chimeric
+        mock.complete.return_value = CompletionResponse(
+            content="not valid json at all",
+            model="gpt-4o",
+        )
+        with pytest.raises(StructuredOutputError) as exc_info:
+            client.generate("gpt-4o", "Hello", response_model=self.Contact)
+        assert exc_info.value.model_name == "Contact"
+        assert exc_info.value.raw_content == "not valid json at all"
+
+    def test_response_model_none_backward_compatible(self, chimeric):
+        client, mock = chimeric
+        mock.complete.return_value = CompletionResponse(content="Hello!", model="gpt-4o")
+        response = client.generate("gpt-4o", "Hello")
+        assert isinstance(response, CompletionResponse)
+        assert response.content == "Hello!"
+        assert response.parsed is None
+
+    def test_response_model_injects_format_kwargs(self, chimeric):
+        client, mock = chimeric
+        mock.complete.return_value = CompletionResponse(
+            content='{"name": "Bob", "email": "bob@x.com"}',
+            model="gpt-4o",
+        )
+        client.generate("gpt-4o", "Hello", response_model=self.Contact)
+        call_kwargs = mock.complete.call_args.kwargs
+        # OpenAI adapter expects response_format
+        assert "response_format" in call_kwargs
+        assert call_kwargs["response_format"]["type"] == "json_schema"
+
+    def test_response_model_disables_auto_tool(self, chimeric):
+        client, mock = chimeric
+
+        @client.tool()
+        def my_tool(x: int) -> str:
+            """A test tool."""
+            return str(x)
+
+        mock.complete.return_value = CompletionResponse(
+            content='{"name": "Bob", "email": "bob@x.com"}',
+            model="gpt-4o",
+        )
+        client.generate("gpt-4o", "Hello", response_model=self.Contact)
+        call_kwargs = mock.complete.call_args.kwargs
+        assert not call_kwargs.get("tools")
+
+    def test_streaming_parses_final_chunk(self, chimeric):
+        client, mock = chimeric
+
+        def _stream():
+            yield StreamChunk(content='{"name": "Car', delta='{"name": "Car')
+            yield StreamChunk(
+                content='{"name": "Carol", "email": "carol@x.com"}',
+                delta='ol", "email": "carol@x.com"}',
+                finish_reason="stop",
+            )
+
+        mock.complete.return_value = _stream()
+        chunks = list(client.generate("gpt-4o", "Hello", stream=True, response_model=self.Contact))
+        final = chunks[-1]
+        assert isinstance(final.parsed, self.Contact)
+        assert final.parsed.name == "Carol"
+        # Non-final chunk should not have parsed set
+        assert chunks[0].parsed is None
+
+    def test_streaming_invalid_json_raises_structured_output_error(self, chimeric):
+        client, mock = chimeric
+
+        def _stream():
+            yield StreamChunk(content="bad", delta="bad", finish_reason="stop")
+
+        mock.complete.return_value = _stream()
+        with pytest.raises(StructuredOutputError):
+            list(client.generate("gpt-4o", "Hello", stream=True, response_model=self.Contact))
+
+    async def test_agenerate_response_model_sets_parsed(self, chimeric):
+        client, mock = chimeric
+
+        async def _coro(*args: Any, **kwargs: Any) -> CompletionResponse:
+            return CompletionResponse(
+                content='{"name": "Dave", "email": "dave@x.com"}',
+                model="gpt-4o",
+            )
+
+        mock.acomplete.side_effect = _coro
+        response = await client.agenerate("gpt-4o", "Hello", response_model=self.Contact)
+        assert isinstance(response, CompletionResponse)
+        assert isinstance(response.parsed, self.Contact)
+        assert response.parsed.name == "Dave"
+
+    async def test_agenerate_response_model_and_tools_raises(self, chimeric):
+        from chimeric.types import Tool
+
+        client, _ = chimeric
+        tool = Tool(name="t", description="desc")
+        with pytest.raises(ValueError, match="mutually exclusive"):
+            await client.agenerate("gpt-4o", "Hello", response_model=self.Contact, tools=[tool])
 
 
 class TestListModels:
