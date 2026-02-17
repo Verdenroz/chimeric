@@ -207,6 +207,8 @@ markers = [
     "groq: tests requiring Groq provider",
     "openrouter: tests requiring OpenRouter provider",
     "vcr: tests using VCR cassettes",
+    "all_extras: tests requiring all providers configured",
+    "bare_install: tests for bare installation with no API keys",
 ]
 filterwarnings = [
     "error",
