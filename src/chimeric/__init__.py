@@ -1,30 +1,22 @@
-from .base import (
-    ChimericAsyncClient,
-    ChimericClient,
-    ChunkType,
-    CompletionResponseType,
-    StreamProcessor,
-)
-from .chimeric import PROVIDER_CLIENTS, Chimeric
+"""Chimeric — unified LLM interface for multiple providers."""
+
+from .chimeric import Chimeric
 from .exceptions import (
+    AuthenticationError,
     ChimericError,
     ModelNotSupportedError,
     ProviderError,
     ProviderNotFoundError,
+    RateLimitError,
     ToolRegistrationError,
 )
 from .tools import ToolManager
 from .types import (
-    Capability,
-    ChimericCompletionResponse,
-    ChimericStreamChunk,
     CompletionResponse,
     Input,
     Message,
     Metadata,
     ModelSummary,
-    NativeCompletionType,
-    NativeStreamType,
     Provider,
     StreamChunk,
     Tool,
@@ -37,29 +29,20 @@ from .types import (
 )
 
 __all__ = [
-    "PROVIDER_CLIENTS",
-    "Capability",
+    "AuthenticationError",
     "Chimeric",
-    "ChimericAsyncClient",
-    "ChimericClient",
-    "ChimericCompletionResponse",
     "ChimericError",
-    "ChimericStreamChunk",
-    "ChunkType",
     "CompletionResponse",
-    "CompletionResponseType",
     "Input",
     "Message",
     "Metadata",
     "ModelNotSupportedError",
     "ModelSummary",
-    "NativeCompletionType",
-    "NativeStreamType",
     "Provider",
     "ProviderError",
     "ProviderNotFoundError",
+    "RateLimitError",
     "StreamChunk",
-    "StreamProcessor",
     "Tool",
     "ToolCall",
     "ToolCallChunk",

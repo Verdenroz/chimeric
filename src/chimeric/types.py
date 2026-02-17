@@ -1,22 +1,23 @@
+"""Core data models for the Chimeric library.
+
+All provider interactions are expressed in terms of these types, keeping
+application code independent of which provider is being used.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
 from enum import Enum
-from typing import Any, Generic, TypeAlias, TypeVar
+from typing import Any, TypeAlias
 
 from pydantic import BaseModel, ConfigDict, Field
 
 __all__ = [
-    "Capability",
-    "ChimericCompletionResponse",
-    "ChimericStreamChunk",
     "CompletionResponse",
     "Input",
     "Message",
     "Metadata",
     "ModelSummary",
-    "NativeCompletionType",
-    "NativeStreamType",
     "Provider",
     "StreamChunk",
     "Tool",
@@ -28,11 +29,7 @@ __all__ = [
     "Usage",
 ]
 
-# Generic type variables for native responses
-NativeCompletionType = TypeVar("NativeCompletionType")
-NativeStreamType = TypeVar("NativeStreamType")
-
-# Generic type aliases
+# Flexible input types accepted by generate()/agenerate()
 Tools: TypeAlias = Iterable[Any] | None
 Metadata: TypeAlias = dict[str, Any]
 
@@ -46,11 +43,11 @@ class Message(BaseModel):
     """Standardized message format for cross-provider compatibility.
 
     Attributes:
-        role: The role of the message sender ("system", "user", "assistant", "tool").
-        content: The message content, either as a string or list of content parts.
-        name: Optional name identifier for the message sender.
-        tool_calls: Optional list of tool calls made by the assistant.
-        tool_call_id: Optional ID linking this message to a specific tool call.
+        role: Sender role — "system", "user", "assistant", or "tool".
+        content: Text string or list of content parts (multimodal / tool results).
+        name: Optional sender identifier.
+        tool_calls: Tool calls issued by the assistant in this message.
+        tool_call_id: Links a "tool" role message to its originating call.
     """
 
     role: str
@@ -60,7 +57,7 @@ class Message(BaseModel):
     tool_call_id: str | None = None
 
 
-# Input type alias for all possible user inputs to generate methods
+# Accepts plain strings, dicts, Message objects, or lists thereof
 Input: TypeAlias = str | dict[str, Any] | list[Any] | Message | list[Message]
 
 
@@ -72,7 +69,7 @@ Input: TypeAlias = str | dict[str, Any] | list[Any] | Message | list[Message]
 class Provider(Enum):
     """Supported LLM providers.
 
-    Enum values correspond to the string identifiers used in configuration.
+    Enum values match the string keys used in PROVIDER_REGISTRY.
     """
 
     OPENAI = "openai"
@@ -82,6 +79,7 @@ class Provider(Enum):
     COHERE = "cohere"
     GROK = "grok"
     GROQ = "groq"
+    OPENROUTER = "openrouter"
 
 
 ###################
@@ -89,31 +87,17 @@ class Provider(Enum):
 ###################
 
 
-class Capability(BaseModel):
-    """Features supported by an LLM provider or a specific model.
-
-    Attributes:
-        streaming: Indicates if responses can be streamed token-by-token.
-        tools: Indicates if function/tool calling capabilities are supported.
-    """
-
-    model_config = ConfigDict(frozen=True)
-
-    streaming: bool = False
-    tools: bool = False
-
-
 class ModelSummary(BaseModel):
-    """Concise summary of a model's attributes, often from a model listing operation.
+    """Lightweight description of a model returned by list_models().
 
     Attributes:
-        id: Unique identifier for the model (e.g., "gpt-4", "claude-2").
-        name: Human-readable name of the model.
-        description: Optional brief description of the model's capabilities or purpose.
-        owned_by: Optional identifier of the entity that owns or provides the model (e.g., "openai", "anthropic").
-        created_at: Optional epoch timestamp (seconds since epoch) indicating when the model entry was created or made available.
-        metadata: Optional dictionary for any other relevant model metadata not covered by specific fields.
-        provider: Optional name or identifier of the LLM provider offering this model.
+        id: Canonical model identifier (e.g. "gpt-4o", "claude-3-5-sonnet-20241022").
+        name: Human-readable display name.
+        description: Optional capability summary.
+        owned_by: Entity that publishes this model.
+        created_at: Unix timestamp of when the model entry was created.
+        metadata: Provider-specific extras.
+        provider: Name of the provider that offers this model.
     """
 
     id: str
@@ -125,7 +109,7 @@ class ModelSummary(BaseModel):
     provider: str | None = None
 
     def __str__(self) -> str:
-        """Return a string representation of the model summary."""
+        """Return a brief string representation."""
         return f"{self.name} ({self.provider})"
 
 
@@ -135,13 +119,7 @@ class ModelSummary(BaseModel):
 
 
 class Usage(BaseModel):
-    """Token-usage summary for a completion request.
-
-    Attributes:
-        prompt_tokens: Number of tokens in the input prompt.
-        completion_tokens: Number of tokens generated in the response by the model.
-        total_tokens: Total tokens processed, typically the sum of `prompt_tokens` and `completion_tokens`.
-    """
+    """Token-usage statistics for a completion request."""
 
     model_config = ConfigDict(extra="allow")
 
@@ -151,13 +129,13 @@ class Usage(BaseModel):
 
 
 class CompletionResponse(BaseModel):
-    """common response from a chat completion call.
+    """Unified response from a chat completion call.
 
     Attributes:
-        content: The primary response content, typically text generated by the LLM.
-        usage: Optional `Usage` object detailing token usage statistics for the completion.
-        model: Optional string identifier of the model that generated the response.
-        metadata: Optional `Metadata` containing additional provider-specific information about the response.
+        content: Generated text (or list of content parts).
+        usage: Token usage statistics.
+        model: Model that produced the response.
+        metadata: Provider-specific extras (finish_reason, request ID, etc.).
     """
 
     content: str | list[Any] = Field(default_factory=list)
@@ -166,7 +144,7 @@ class CompletionResponse(BaseModel):
     metadata: Metadata | None = None
 
     def __str__(self) -> str:
-        """Return a string representation of the completion response."""
+        """Return response text."""
         return (
             self.content
             if isinstance(self.content, str)
@@ -175,13 +153,13 @@ class CompletionResponse(BaseModel):
 
 
 class ToolCall(BaseModel):
-    """Represents a tool call with its essential information.
+    """A single tool call issued by the model.
 
     Attributes:
-        call_id: Provider-specific call identifier.
-        name: Name of the tool being called.
-        arguments: Arguments JSON string for the tool call.
-        metadata: Optional dictionary for provider-specific metadata.
+        call_id: Provider-specific call identifier (used to match results).
+        name: Name of the tool/function being called.
+        arguments: JSON-encoded arguments string.
+        metadata: Provider-specific extras.
     """
 
     call_id: str
@@ -191,15 +169,15 @@ class ToolCall(BaseModel):
 
 
 class ToolCallChunk(BaseModel):
-    """Information about a tool call in a streaming response.
+    """Streaming tool call information, built up across SSE chunks.
 
     Attributes:
-        id: Unique identifier for the tool call.
+        id: Unique identifier for this tool call.
         call_id: Provider-specific call identifier.
-        name: Name of the tool being called.
+        name: Name of the function being called.
         arguments: Accumulated arguments JSON string.
-        arguments_delta: Incremental change to arguments in this chunk.
-        status: Current status of the tool call (e.g., 'started', 'arguments_streaming', 'completed').
+        arguments_delta: Fragment added in the latest chunk.
+        status: Lifecycle state ("started" | "arguments_streaming" | "completed").
     """
 
     id: str
@@ -211,17 +189,13 @@ class ToolCallChunk(BaseModel):
 
 
 class StreamChunk(BaseModel):
-    """Single chunk in a streaming chat response.
+    """A single chunk in a streaming chat response.
 
     Attributes:
-        content: Text content of the current chunk. For some providers or configurations,
-                 this might represent the full accumulated message up to this chunk.
-        delta: Optional incremental text change in this chunk. If present, this is typically
-               the new piece of text to append to the stream.
-        finish_reason: Optional string indicating why the model stopped generating tokens,
-                       usually sent with the final chunk of the stream.
-        metadata: Optional `Metadata,` which may be sent with any chunk, or exclusively
-                  with the final chunk, containing details like token counts or request IDs.
+        content: Accumulated text content up to this chunk.
+        delta: Incremental text added in this chunk (None for metadata-only chunks).
+        finish_reason: Why the model stopped (present only on the final chunk).
+        metadata: Provider-specific extras (token counts, request IDs, etc.).
     """
 
     content: str | list[Any] = Field(default_factory=list)
@@ -230,7 +204,7 @@ class StreamChunk(BaseModel):
     metadata: Metadata | None = None
 
     def __str__(self) -> str:
-        """Return a string representation of the stream chunk."""
+        """Return the incremental delta, or empty string."""
         return self.delta if self.delta is not None else ""
 
 
@@ -240,7 +214,7 @@ class StreamChunk(BaseModel):
 
 
 class ToolParameters(BaseModel):
-    """JSON Schema for tool parameters with flexible additional properties."""
+    """JSON Schema definition for tool parameters."""
 
     model_config = ConfigDict(extra="allow")
 
@@ -251,18 +225,18 @@ class ToolParameters(BaseModel):
     additionalProperties: bool = False
 
     def model_dump(self, exclude_none: bool = True, **kwargs: Any) -> dict[str, Any]:
-        """Return dictionary representation, optionally excluding None values."""
+        """Return dictionary representation, excluding None values by default."""
         return super().model_dump(exclude_none=exclude_none, **kwargs)
 
 
 class Tool(BaseModel):
-    """Definition for a callable tool/function exposed to models.
+    """A callable function exposed to the model via function-calling.
 
     Attributes:
-        name: Unique identifier for this tool, used by the model to specify which tool to call.
-        description: Human-readable explanation of what the tool does, its purpose, and when to use it.
-        parameters: Optional `ToolParameters` (JSON Schema) defining the arguments the tool accepts.
-        function: Optional Python callable that implements the tool's functionality. Not serialized.
+        name: Unique identifier used by the model to invoke this tool.
+        description: What the tool does and when to use it.
+        parameters: JSON Schema for the arguments it accepts.
+        function: Python callable implementing the tool (excluded from serialization).
     """
 
     name: str
@@ -271,20 +245,20 @@ class Tool(BaseModel):
     function: Callable[..., Any] | None = Field(default=None, exclude=True)
 
     def __str__(self) -> str:
-        """Return a string representation of the tool."""
+        """Return a brief string representation."""
         return f"Tool({self.name}: {self.description[:50]}...)"
 
 
 class ToolExecutionResult(BaseModel):
-    """Result of executing a tool.
+    """Outcome of executing a single tool call.
 
     Attributes:
-        call_id: The ID of the tool call that was executed.
-        name: The name of the tool that was executed.
-        arguments: The arguments that were passed to the tool.
-        result: The result of the tool execution, if successful.
-        error: The error message, if execution failed.
-        is_error: Boolean indicating if execution resulted in an error.
+        call_id: ID of the originating tool call.
+        name: Tool that was called.
+        arguments: Arguments that were passed.
+        result: Return value, if successful.
+        error: Error message, if execution failed.
+        is_error: True when execution raised an exception.
     """
 
     call_id: str
@@ -294,42 +268,3 @@ class ToolExecutionResult(BaseModel):
     result: str | None = None
     error: str | None = None
     is_error: bool = False
-
-
-###################
-# COMBINED RESPONSE TYPES
-###################
-
-
-class ChimericCompletionResponse(BaseModel, Generic[NativeCompletionType]):
-    """Combined response containing both native and common completion responses.
-
-    This type allows methods to return both the provider's native response format and
-    the common Chimeric format, giving users flexibility to use either as needed.
-
-    Attributes:
-        native: The provider's native completion response object.
-        common: The common CompletionResponse in Chimeric's format.
-    """
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    native: NativeCompletionType
-    common: CompletionResponse
-
-
-class ChimericStreamChunk(BaseModel, Generic[NativeStreamType]):
-    """Combined stream chunk containing both native and common formats.
-
-    This type provides access to both provider-specific stream chunk details and
-    Chimeric's common format for streaming responses.
-
-    Attributes:
-        native: The provider's native stream chunk object.
-        common: The common StreamChunk in Chimeric's format.
-    """
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    native: NativeStreamType
-    common: StreamChunk
