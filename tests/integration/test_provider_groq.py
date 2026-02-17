@@ -270,7 +270,7 @@ async def test_groq_async_tools_streaming(api_keys):
             return "Why did the chicken cross the road? To get to the other side!"
 
         response = await chimeric.agenerate(
-            model="meta-llama/llama-4-maverick-17b-128e-instruct",
+            model="llama-3.1-8b-instant",
             messages=[{"role": "user", "content": "What is 3+5-2? Then tell me a joke."}],
             stream=True,
         )
@@ -348,7 +348,7 @@ async def test_groq_async_tools_non_streaming(api_keys):
             return "Why did the chicken cross the road? To get to the other side!"
 
         response = await chimeric.agenerate(
-            model="meta-llama/llama-4-maverick-17b-128e-instruct",
+            model="llama-3.1-8b-instant",
             messages=[{"role": "user", "content": "What is 3+5-2? Then tell me a joke."}],
             stream=False,
         )

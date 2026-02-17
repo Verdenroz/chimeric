@@ -65,6 +65,26 @@ def _openai_format(schema_name: str, schema: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _groq_format(schema_name: str, schema: dict[str, Any]) -> dict[str, Any]:
+    """Groq best-effort structured output format.
+
+    Groq only supports strict=true on openai/gpt-oss-* models.  All other
+    supported models (llama-4-scout, llama-4-maverick, kimi-k2) require
+    strict=false.  Note: streaming is not supported with structured outputs
+    on Groq regardless of the mode.
+    """
+    return {
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+                "name": schema_name,
+                "schema": schema,
+                "strict": False,
+            },
+        }
+    }
+
+
 def _anthropic_format(_schema_name: str, schema: dict[str, Any]) -> dict[str, Any]:
     return {"output_config": {"format": {"type": "json_schema", "schema": _enforce_additional_properties(schema)}}}
 
@@ -81,7 +101,7 @@ def _cohere_format(_schema_name: str, schema: dict[str, Any]) -> dict[str, Any]:
 # OpenAI-compatible providers share _openai_format; only their base_url differs.
 _FORMAT_BUILDERS: dict[Provider, _Builder] = {
     Provider.OPENAI: _openai_format,
-    Provider.GROQ: _openai_format,
+    Provider.GROQ: _groq_format,
     Provider.CEREBRAS: _openai_format,
     Provider.GROK: _openai_format,
     Provider.OPENROUTER: _openai_format,

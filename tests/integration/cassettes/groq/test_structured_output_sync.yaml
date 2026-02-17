@@ -1,0 +1,69 @@
+interactions:
+- request:
+    body: '{"model":"meta-llama/llama-4-scout-17b-16e-instruct","messages":[{"role":"user","content":"What
+      is 6 multiplied by 7? Return the numeric result and a one-sentence explanation."}],"stream":false,"max_tokens":150,"response_format":{"type":"json_schema","json_schema":{"name":"MathAnswer","schema":{"description":"Simple
+      arithmetic answer used across all provider tests.","properties":{"result":{"title":"Result","type":"integer"},"explanation":{"title":"Explanation","type":"string"}},"required":["result","explanation"],"type":"object"},"strict":false}}}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '553'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=CU7FwW6j4j1BAUYvZqG7FBHgmNlR78epNTx8STP.Q30-1771371575.932371-1.0.1.1-HsJBjdbVBxTKi9NFwx3Z1TLIQHqBLKkHlG1poX8R0mXBRI3qYD3Ws802d1ybI9J5jcbew6BZOq0YOui7H6ByBGTQKId.ucUhpQSRBT4_1lvOq4BHie1XgAMjDVXObFNg
+      host:
+      - api.groq.com
+    method: POST
+    uri: https://api.groq.com/openai/v1/chat/completions
+  response:
+    body:
+      string: '{"id":"chatcmpl-07f4dfe7-f962-4a69-8296-8ad4adbd2162","object":"chat.completion","created":1771371577,"model":"meta-llama/llama-4-scout-17b-16e-instruct","choices":[{"index":0,"message":{"role":"assistant","content":"{\n\"result\":
+        42,\n  \"explanation\": \"6 multiplied by 7 equals 42.\"\n}"},"logprobs":null,"finish_reason":"stop"}],"usage":{"queue_time":0.145738419,"prompt_tokens":124,"prompt_time":0.004811813,"completion_tokens":25,"completion_time":0.062218239,"total_tokens":149,"total_time":0.067030052},"usage_breakdown":null,"system_fingerprint":"fp_5bd1e7ad73","x_groq":{"id":"req_01khpzjgabf1v8hk16x5mz2za0","seed":901646508},"service_tier":"on_demand"}
+
+        '
+    headers:
+      CF-RAY:
+      - 9cf920085f1ae572-EWR
+      Cache-Control:
+      - private, max-age=0, no-store, no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 17 Feb 2026 23:39:37 GMT
+      Strict-Transport-Security:
+      - max-age=15552000
+      Transfer-Encoding:
+      - chunked
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '667'
+      vary:
+      - Origin
+      x-groq-region:
+      - msp
+      x-ratelimit-limit-requests:
+      - '1000'
+      x-ratelimit-limit-tokens:
+      - '30000'
+      x-ratelimit-remaining-requests:
+      - '999'
+      x-ratelimit-remaining-tokens:
+      - '29875'
+      x-ratelimit-reset-requests:
+      - 1m26.4s
+      x-ratelimit-reset-tokens:
+      - 250ms
+    status:
+      code: 200
+      message: OK
+version: 1

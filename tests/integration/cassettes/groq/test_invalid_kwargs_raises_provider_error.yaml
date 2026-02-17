@@ -1,0 +1,52 @@
+interactions:
+- request:
+    body: '{"model":"llama-3.1-8b-instant","messages":[{"role":"user","content":"Hello"}],"stream":false,"invalid_groq_parameter":"this_should_fail"}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '138'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=AgrjzyB9F7RxAbhcUCtVr9Y8kXkEmLsr2_C10T9sl6w-1771371260.3370175-1.0.1.1-F3cH9D48cLPQloHR_dTwuWDJujJfMYf_gup0fJaYs7Nl4EvECPJMdl95L3_wY7E_mderuLMtPinCG.kt0jesLKDcWL_MRjt.2LhPS6s0vP0WdU5o1UpP5llpFtAe7IDm
+      host:
+      - api.groq.com
+    method: POST
+    uri: https://api.groq.com/openai/v1/chat/completions
+  response:
+    body:
+      string: '{"error":{"message":"property ''invalid_groq_parameter'' is unsupported","type":"invalid_request_error"}}
+
+        '
+    headers:
+      CF-RAY:
+      - 9cf918534a48488c-EWR
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '104'
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 17 Feb 2026 23:34:22 GMT
+      Strict-Transport-Security:
+      - max-age=15552000
+      alt-svc:
+      - h3=":443"; ma=86400
+      cache-control:
+      - private, max-age=0, no-store, no-cache, must-revalidate
+      cf-cache-status:
+      - DYNAMIC
+      vary:
+      - Origin
+      x-groq-region:
+      - yul
+    status:
+      code: 400
+      message: Bad Request
+version: 1
