@@ -417,7 +417,7 @@ def test_cerebras_structured_output_streaming(api_keys):
 
 
 # ---------------------------------------------------------------------------
-# Grok  (no VCR — consistent with test_provider_grok.py)
+# Grok  (no VCR)
 # ---------------------------------------------------------------------------
 
 

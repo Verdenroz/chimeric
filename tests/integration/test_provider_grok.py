@@ -130,7 +130,7 @@ def test_grok_sync_tools_streaming(api_keys):
         return "Why did the chicken cross the road? To get to the other side!"
 
     response = chimeric.generate(
-        model="grok-3-latest",
+        model="grok-3",
         messages=[{"role": "user", "content": "What is 2+2-4? Tell me a joke."}],
         stream=True,
     )
@@ -207,7 +207,7 @@ async def test_grok_async_tools_non_streaming(api_keys):
         return "Why did the chicken cross the road? To get to the other side!"
 
     response = await chimeric.agenerate(
-        model="grok-3-latest",
+        model="grok-3",
         messages=[{"role": "user", "content": "What is 2+2-4? Tell me a joke."}],
         stream=False,
     )
@@ -261,23 +261,7 @@ def test_grok_init_kwargs_propagation(api_keys):
 def test_grok_invalid_generate_kwargs_raises_provider_error(api_keys):
     """Test that invalid kwargs in generate raise ProviderError.
 
-    Note: This test makes real API calls as VCR cannot record gRPC interactions.
+    Note: The xAI API is OpenAI-compatible and silently ignores unknown parameters
+    rather than returning a 400 error. This test is skipped for Grok.
     """
-    if "grok_api_key" not in api_keys:
-        pytest.skip("Grok API key not found")
-
-    # No VCR - xai-sdk uses gRPC which VCR cannot record
-    chimeric = Chimeric(grok_api_key=api_keys["grok_api_key"])
-
-    # Test with an invalid parameter that doesn't exist in Grok API
-    with pytest.raises(ProviderError) as exc_info:
-        chimeric.generate(
-            model="grok-3-mini",
-            messages=[{"role": "user", "content": "Hello"}],
-            invalid_grok_parameter="this_should_fail",
-            stream=False,
-        )
-
-    # Verify the error contains provider information
-    assert "Grok" in str(exc_info.value) or "grok" in str(exc_info.value).lower()
-    print(f"ProviderError raised as expected: {exc_info.value}")
+    pytest.skip("xAI API silently ignores unknown parameters; no ProviderError is raised")
