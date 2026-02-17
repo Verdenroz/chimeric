@@ -1,20 +1,15 @@
 interactions:
 - request:
-    body: '{"max_tokens": 4096, "messages": [{"role": "user", "content": "What is
-      2+2-4-10+50? Tell me a joke."}], "model": "claude-3-5-haiku-latest", "stream":
-      false, "tools": [{"name": "add", "description": "Adds two numbers together.",
-      "input_schema": {"type": "object", "strict": true, "properties": {"x": {"type":
-      "integer", "description": "the first number"}, "y": {"type": "integer", "description":
-      "the second number"}}, "required": ["x", "y"], "additionalProperties": false}},
-      {"name": "subtract", "description": "Subtracts the second number from the first.",
-      "input_schema": {"type": "object", "strict": true, "properties": {"x": {"type":
-      "integer", "description": "the first number"}, "y": {"type": "integer", "description":
-      "the second number"}}, "required": ["x", "y"], "additionalProperties": false}},
-      {"name": "joke", "description": "Returns a joke.", "input_schema": {"type":
-      "object", "strict": true, "properties": {}, "additionalProperties": false}}]}'
+    body: '{"model":"claude-3-5-haiku-20241022","messages":[{"role":"user","content":"What
+      is 2+2-4-10+50? Tell me a joke."}],"stream":false,"max_tokens":4096,"tools":[{"name":"add","description":"Adds
+      two numbers together.","input_schema":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false}},{"name":"subtract","description":"Subtracts
+      the second number from the first.","input_schema":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false}},{"name":"joke","description":"Returns
+      a joke.","input_schema":{"type":"object","strict":true,"properties":{},"additionalProperties":false}}]}'
     headers:
       accept:
-      - application/json
+      - '*/*'
       accept-encoding:
       - gzip, deflate
       anthropic-version:
@@ -22,47 +17,29 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '958'
+      - '886'
       content-type:
       - application/json
       host:
       - api.anthropic.com
-      x-stainless-arch:
-      - x64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - Linux
-      x-stainless-package-version:
-      - 0.52.2
-      x-stainless-read-timeout:
-      - '600'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.13.5
-      x-stainless-timeout:
-      - '600'
     method: POST
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: '{"id":"msg_0122PidEaASFMRdQNHKpDr4w","type":"message","role":"assistant","model":"claude-3-5-haiku-20241022","content":[{"type":"text","text":"I''ll
-        help you solve the arithmetic problem and then tell you a joke. Let''s break
-        it down step by step:\n\nFirst, I''ll calculate 2+2:"},{"type":"tool_use","id":"toolu_01LytYWku1xxUdrXXw1QdAoH","name":"add","input":{"x":2,"y":2}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":525,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":104,"service_tier":"standard"}}'
+      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_01DTiHxwuG2J7CapLYoFoKuK","type":"message","role":"assistant","content":[{"type":"text","text":"I''ll
+        help you calculate that and then tell you a joke. Let me break this down step
+        by step using the available tools.\n\nFirst, let''s calculate the arithmetic:"},{"type":"tool_use","id":"toolu_01BfRW3Bduoz9t8i5MxJ8nEf","name":"add","input":{"x":2,"y":2},"caller":{"type":"direct"}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":525,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":104,"service_tier":"standard","inference_geo":"not_available"}}'
     headers:
       CF-RAY:
-      - 966fea2fbe15b1d5-EWR
+      - 9cf8881c8de2acf1-EWR
       Connection:
       - keep-alive
+      Content-Security-Policy:
+      - default-src 'none'; frame-ancestors 'none'
       Content-Type:
       - application/json
       Date:
-      - Tue, 29 Jul 2025 22:04:57 GMT
+      - Tue, 17 Feb 2026 21:55:57 GMT
       Transfer-Encoding:
       - chunked
       X-Robots-Tag:
@@ -72,174 +49,49 @@ interactions:
       anthropic-ratelimit-input-tokens-remaining:
       - '50000'
       anthropic-ratelimit-input-tokens-reset:
-      - '2025-07-29T22:04:56Z'
+      - '2026-02-17T21:55:55Z'
       anthropic-ratelimit-output-tokens-limit:
       - '10000'
       anthropic-ratelimit-output-tokens-remaining:
       - '10000'
       anthropic-ratelimit-output-tokens-reset:
-      - '2025-07-29T22:04:58Z'
-      anthropic-ratelimit-requests-limit:
-      - '50'
-      anthropic-ratelimit-requests-remaining:
-      - '48'
-      anthropic-ratelimit-requests-reset:
-      - '2025-07-29T22:04:57Z'
-      anthropic-ratelimit-tokens-limit:
-      - '60000'
-      anthropic-ratelimit-tokens-remaining:
-      - '60000'
-      anthropic-ratelimit-tokens-reset:
-      - '2025-07-29T22:04:56Z'
-      cf-cache-status:
-      - DYNAMIC
-      content-length:
-      - '553'
-      request-id:
-      - req_011CRc4uGVspCqNbCca78LSh
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      via:
-      - 1.1 google
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"max_tokens": 4096, "messages": [{"role": "user", "content": "What is
-      2+2-4-10+50? Tell me a joke."}, {"role": "assistant", "content": [{"type": "text",
-      "text": "I''ll help you solve the arithmetic problem and then tell you a joke.
-      Let''s break it down step by step:\n\nFirst, I''ll calculate 2+2:"}, {"type":
-      "tool_use", "id": "toolu_01LytYWku1xxUdrXXw1QdAoH", "name": "add", "input":
-      {"x": 2, "y": 2}}]}, {"role": "user", "content": [{"type": "tool_result", "tool_use_id":
-      "toolu_01LytYWku1xxUdrXXw1QdAoH", "content": "4", "is_error": false}]}], "model":
-      "claude-3-5-haiku-latest", "stream": false, "tools": [{"name": "add", "description":
-      "Adds two numbers together.", "input_schema": {"type": "object", "strict": true,
-      "properties": {"x": {"type": "integer", "description": "the first number"},
-      "y": {"type": "integer", "description": "the second number"}}, "required": ["x",
-      "y"], "additionalProperties": false}}, {"name": "subtract", "description": "Subtracts
-      the second number from the first.", "input_schema": {"type": "object", "strict":
-      true, "properties": {"x": {"type": "integer", "description": "the first number"},
-      "y": {"type": "integer", "description": "the second number"}}, "required": ["x",
-      "y"], "additionalProperties": false}}, {"name": "joke", "description": "Returns
-      a joke.", "input_schema": {"type": "object", "strict": true, "properties": {},
-      "additionalProperties": false}}]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      anthropic-version:
-      - '2023-06-01'
-      connection:
-      - keep-alive
-      content-length:
-      - '1400'
-      content-type:
-      - application/json
-      host:
-      - api.anthropic.com
-      x-stainless-arch:
-      - x64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - Linux
-      x-stainless-package-version:
-      - 0.52.2
-      x-stainless-read-timeout:
-      - '600'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.13.5
-      x-stainless-timeout:
-      - '600'
-    method: POST
-    uri: https://api.anthropic.com/v1/messages
-  response:
-    body:
-      string: '{"id":"msg_01TrY8bP4A9MGsHLvayW7N7R","type":"message","role":"assistant","model":"claude-3-5-haiku-20241022","content":[{"type":"text","text":"Then,
-        I''ll subtract 4:"},{"type":"tool_use","id":"toolu_01XY6TjLcW6ppcr8youn4df2","name":"subtract","input":{"x":4,"y":4}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":641,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":78,"service_tier":"standard"}}'
-    headers:
-      CF-RAY:
-      - 966fea3bdae4b1d5-EWR
-      Connection:
-      - keep-alive
-      Content-Type:
-      - application/json
-      Date:
-      - Tue, 29 Jul 2025 22:04:58 GMT
-      Transfer-Encoding:
-      - chunked
-      X-Robots-Tag:
-      - none
-      anthropic-ratelimit-input-tokens-limit:
-      - '50000'
-      anthropic-ratelimit-input-tokens-remaining:
-      - '50000'
-      anthropic-ratelimit-input-tokens-reset:
-      - '2025-07-29T22:04:58Z'
-      anthropic-ratelimit-output-tokens-limit:
-      - '10000'
-      anthropic-ratelimit-output-tokens-remaining:
-      - '10000'
-      anthropic-ratelimit-output-tokens-reset:
-      - '2025-07-29T22:04:59Z'
+      - '2026-02-17T21:55:57Z'
       anthropic-ratelimit-requests-limit:
       - '50'
       anthropic-ratelimit-requests-remaining:
       - '49'
       anthropic-ratelimit-requests-reset:
-      - '2025-07-29T22:04:58Z'
+      - '2026-02-17T21:55:56Z'
       anthropic-ratelimit-tokens-limit:
       - '60000'
       anthropic-ratelimit-tokens-remaining:
       - '60000'
       anthropic-ratelimit-tokens-reset:
-      - '2025-07-29T22:04:58Z'
+      - '2026-02-17T21:55:55Z'
       cf-cache-status:
       - DYNAMIC
       content-length:
-      - '447'
+      - '718'
       request-id:
-      - req_011CRc4uQqBTtUHozmdm3kbt
+      - req_011CYEPRJ2J7uVdoy1kCQrR5
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
-      via:
-      - 1.1 google
+      x-envoy-upstream-service-time:
+      - '2083'
     status:
       code: 200
       message: OK
 - request:
-    body: '{"max_tokens": 4096, "messages": [{"role": "user", "content": "What is
-      2+2-4-10+50? Tell me a joke."}, {"role": "assistant", "content": [{"type": "text",
-      "text": "I''ll help you solve the arithmetic problem and then tell you a joke.
-      Let''s break it down step by step:\n\nFirst, I''ll calculate 2+2:"}, {"type":
-      "tool_use", "id": "toolu_01LytYWku1xxUdrXXw1QdAoH", "name": "add", "input":
-      {"x": 2, "y": 2}}]}, {"role": "user", "content": [{"type": "tool_result", "tool_use_id":
-      "toolu_01LytYWku1xxUdrXXw1QdAoH", "content": "4", "is_error": false}]}, {"role":
-      "assistant", "content": [{"type": "text", "text": "Then, I''ll subtract 4:"},
-      {"type": "tool_use", "id": "toolu_01XY6TjLcW6ppcr8youn4df2", "name": "subtract",
-      "input": {"x": 4, "y": 4}}]}, {"role": "user", "content": [{"type": "tool_result",
-      "tool_use_id": "toolu_01XY6TjLcW6ppcr8youn4df2", "content": "0", "is_error":
-      false}]}], "model": "claude-3-5-haiku-latest", "stream": false, "tools": [{"name":
-      "add", "description": "Adds two numbers together.", "input_schema": {"type":
-      "object", "strict": true, "properties": {"x": {"type": "integer", "description":
-      "the first number"}, "y": {"type": "integer", "description": "the second number"}},
-      "required": ["x", "y"], "additionalProperties": false}}, {"name": "subtract",
-      "description": "Subtracts the second number from the first.", "input_schema":
-      {"type": "object", "strict": true, "properties": {"x": {"type": "integer", "description":
-      "the first number"}, "y": {"type": "integer", "description": "the second number"}},
-      "required": ["x", "y"], "additionalProperties": false}}, {"name": "joke", "description":
-      "Returns a joke.", "input_schema": {"type": "object", "strict": true, "properties":
-      {}, "additionalProperties": false}}]}'
+    body: '{"model":"claude-3-5-haiku-20241022","messages":[{"role":"user","content":"What
+      is 2+2-4-10+50? Tell me a joke."},{"role":"assistant","content":[{"type":"tool_use","id":"toolu_01BfRW3Bduoz9t8i5MxJ8nEf","name":"add","input":{"x":2,"y":2}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_01BfRW3Bduoz9t8i5MxJ8nEf","content":"4"}]}],"stream":false,"max_tokens":4096,"tools":[{"name":"add","description":"Adds
+      two numbers together.","input_schema":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false}},{"name":"subtract","description":"Subtracts
+      the second number from the first.","input_schema":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false}},{"name":"joke","description":"Returns
+      a joke.","input_schema":{"type":"object","strict":true,"properties":{},"additionalProperties":false}}]}'
     headers:
       accept:
-      - application/json
+      - '*/*'
       accept-encoding:
       - gzip, deflate
       anthropic-version:
@@ -247,46 +99,27 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1737'
+      - '1124'
       content-type:
       - application/json
       host:
       - api.anthropic.com
-      x-stainless-arch:
-      - x64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - Linux
-      x-stainless-package-version:
-      - 0.52.2
-      x-stainless-read-timeout:
-      - '600'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.13.5
-      x-stainless-timeout:
-      - '600'
     method: POST
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: '{"id":"msg_019CtcC4TEvBtxRYHHNGZcNt","type":"message","role":"assistant","model":"claude-3-5-haiku-20241022","content":[{"type":"text","text":"Next,
-        subtract 10:"},{"type":"tool_use","id":"toolu_01NFo8ZF6wm1rXnVCsVLT9ek","name":"subtract","input":{"x":0,"y":10}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":731,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":76,"service_tier":"standard"}}'
+      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_01RvDRhM7Du9HwEZnbHFDbV4","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01KSVdJWhGcAF5Cix4ZAjirg","name":"subtract","input":{"x":4,"y":4},"caller":{"type":"direct"}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":606,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":69,"service_tier":"standard","inference_geo":"not_available"}}'
     headers:
       CF-RAY:
-      - 966fea448ff1b1d5-EWR
+      - 9cf88829cd89acf1-EWR
       Connection:
       - keep-alive
+      Content-Security-Policy:
+      - default-src 'none'; frame-ancestors 'none'
       Content-Type:
       - application/json
       Date:
-      - Tue, 29 Jul 2025 22:05:00 GMT
+      - Tue, 17 Feb 2026 21:55:58 GMT
       Transfer-Encoding:
       - chunked
       X-Robots-Tag:
@@ -296,68 +129,49 @@ interactions:
       anthropic-ratelimit-input-tokens-remaining:
       - '50000'
       anthropic-ratelimit-input-tokens-reset:
-      - '2025-07-29T22:05:00Z'
+      - '2026-02-17T21:55:58Z'
       anthropic-ratelimit-output-tokens-limit:
       - '10000'
       anthropic-ratelimit-output-tokens-remaining:
       - '10000'
       anthropic-ratelimit-output-tokens-reset:
-      - '2025-07-29T22:05:01Z'
+      - '2026-02-17T21:55:58Z'
       anthropic-ratelimit-requests-limit:
       - '50'
       anthropic-ratelimit-requests-remaining:
       - '49'
       anthropic-ratelimit-requests-reset:
-      - '2025-07-29T22:05:00Z'
+      - '2026-02-17T21:55:58Z'
       anthropic-ratelimit-tokens-limit:
       - '60000'
       anthropic-ratelimit-tokens-remaining:
       - '60000'
       anthropic-ratelimit-tokens-reset:
-      - '2025-07-29T22:05:00Z'
+      - '2026-02-17T21:55:58Z'
       cf-cache-status:
       - DYNAMIC
       content-length:
-      - '444'
+      - '537'
       request-id:
-      - req_011CRc4uWkPGcjRvPXtDrJaP
+      - req_011CYEPRT9UdnnYxjHZbfDvU
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
-      via:
-      - 1.1 google
+      x-envoy-upstream-service-time:
+      - '1476'
     status:
       code: 200
       message: OK
 - request:
-    body: '{"max_tokens": 4096, "messages": [{"role": "user", "content": "What is
-      2+2-4-10+50? Tell me a joke."}, {"role": "assistant", "content": [{"type": "text",
-      "text": "I''ll help you solve the arithmetic problem and then tell you a joke.
-      Let''s break it down step by step:\n\nFirst, I''ll calculate 2+2:"}, {"type":
-      "tool_use", "id": "toolu_01LytYWku1xxUdrXXw1QdAoH", "name": "add", "input":
-      {"x": 2, "y": 2}}]}, {"role": "user", "content": [{"type": "tool_result", "tool_use_id":
-      "toolu_01LytYWku1xxUdrXXw1QdAoH", "content": "4", "is_error": false}]}, {"role":
-      "assistant", "content": [{"type": "text", "text": "Then, I''ll subtract 4:"},
-      {"type": "tool_use", "id": "toolu_01XY6TjLcW6ppcr8youn4df2", "name": "subtract",
-      "input": {"x": 4, "y": 4}}]}, {"role": "user", "content": [{"type": "tool_result",
-      "tool_use_id": "toolu_01XY6TjLcW6ppcr8youn4df2", "content": "0", "is_error":
-      false}]}, {"role": "assistant", "content": [{"type": "text", "text": "Next,
-      subtract 10:"}, {"type": "tool_use", "id": "toolu_01NFo8ZF6wm1rXnVCsVLT9ek",
-      "name": "subtract", "input": {"x": 0, "y": 10}}]}, {"role": "user", "content":
-      [{"type": "tool_result", "tool_use_id": "toolu_01NFo8ZF6wm1rXnVCsVLT9ek", "content":
-      "-10", "is_error": false}]}], "model": "claude-3-5-haiku-latest", "stream":
-      false, "tools": [{"name": "add", "description": "Adds two numbers together.",
-      "input_schema": {"type": "object", "strict": true, "properties": {"x": {"type":
-      "integer", "description": "the first number"}, "y": {"type": "integer", "description":
-      "the second number"}}, "required": ["x", "y"], "additionalProperties": false}},
-      {"name": "subtract", "description": "Subtracts the second number from the first.",
-      "input_schema": {"type": "object", "strict": true, "properties": {"x": {"type":
-      "integer", "description": "the first number"}, "y": {"type": "integer", "description":
-      "the second number"}}, "required": ["x", "y"], "additionalProperties": false}},
-      {"name": "joke", "description": "Returns a joke.", "input_schema": {"type":
-      "object", "strict": true, "properties": {}, "additionalProperties": false}}]}'
+    body: '{"model":"claude-3-5-haiku-20241022","messages":[{"role":"user","content":"What
+      is 2+2-4-10+50? Tell me a joke."},{"role":"assistant","content":[{"type":"tool_use","id":"toolu_01BfRW3Bduoz9t8i5MxJ8nEf","name":"add","input":{"x":2,"y":2}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_01BfRW3Bduoz9t8i5MxJ8nEf","content":"4"}]},{"role":"assistant","content":[{"type":"tool_use","id":"toolu_01KSVdJWhGcAF5Cix4ZAjirg","name":"subtract","input":{"x":4,"y":4}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_01KSVdJWhGcAF5Cix4ZAjirg","content":"0"}]}],"stream":false,"max_tokens":4096,"tools":[{"name":"add","description":"Adds
+      two numbers together.","input_schema":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false}},{"name":"subtract","description":"Subtracts
+      the second number from the first.","input_schema":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false}},{"name":"joke","description":"Returns
+      a joke.","input_schema":{"type":"object","strict":true,"properties":{},"additionalProperties":false}}]}'
     headers:
       accept:
-      - application/json
+      - '*/*'
       accept-encoding:
       - gzip, deflate
       anthropic-version:
@@ -365,46 +179,27 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2073'
+      - '1367'
       content-type:
       - application/json
       host:
       - api.anthropic.com
-      x-stainless-arch:
-      - x64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - Linux
-      x-stainless-package-version:
-      - 0.52.2
-      x-stainless-read-timeout:
-      - '600'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.13.5
-      x-stainless-timeout:
-      - '600'
     method: POST
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: '{"id":"msg_01Dj1XjxGGoRpRvhuPD63X6v","type":"message","role":"assistant","model":"claude-3-5-haiku-20241022","content":[{"type":"text","text":"Finally,
-        add 50:"},{"type":"tool_use","id":"toolu_01MHrrqLb2MWk483GsMFyvfT","name":"add","input":{"x":-10,"y":50}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":820,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":77,"service_tier":"standard"}}'
+      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_01CXBcyyoPN69qEkrXivozjG","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01EEj4BmcBWR4oJiC2Bn4p8p","name":"subtract","input":{"x":0,"y":10},"caller":{"type":"direct"}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":687,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":69,"service_tier":"standard","inference_geo":"not_available"}}'
     headers:
       CF-RAY:
-      - 966fea50bda2b1d5-EWR
+      - 9cf888335db9acf1-EWR
       Connection:
       - keep-alive
+      Content-Security-Policy:
+      - default-src 'none'; frame-ancestors 'none'
       Content-Type:
       - application/json
       Date:
-      - Tue, 29 Jul 2025 22:05:02 GMT
+      - Tue, 17 Feb 2026 21:56:00 GMT
       Transfer-Encoding:
       - chunked
       X-Robots-Tag:
@@ -414,72 +209,49 @@ interactions:
       anthropic-ratelimit-input-tokens-remaining:
       - '50000'
       anthropic-ratelimit-input-tokens-reset:
-      - '2025-07-29T22:05:01Z'
+      - '2026-02-17T21:55:59Z'
       anthropic-ratelimit-output-tokens-limit:
       - '10000'
       anthropic-ratelimit-output-tokens-remaining:
       - '10000'
       anthropic-ratelimit-output-tokens-reset:
-      - '2025-07-29T22:05:02Z'
+      - '2026-02-17T21:56:00Z'
       anthropic-ratelimit-requests-limit:
       - '50'
       anthropic-ratelimit-requests-remaining:
       - '49'
       anthropic-ratelimit-requests-reset:
-      - '2025-07-29T22:05:02Z'
+      - '2026-02-17T21:56:00Z'
       anthropic-ratelimit-tokens-limit:
       - '60000'
       anthropic-ratelimit-tokens-remaining:
       - '60000'
       anthropic-ratelimit-tokens-reset:
-      - '2025-07-29T22:05:01Z'
+      - '2026-02-17T21:55:59Z'
       cf-cache-status:
       - DYNAMIC
       content-length:
-      - '439'
+      - '538'
       request-id:
-      - req_011CRc4uf4wKFQo97TaxVX6E
+      - req_011CYEPRZcujEjvtwGc9qG87
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
-      via:
-      - 1.1 google
+      x-envoy-upstream-service-time:
+      - '1561'
     status:
       code: 200
       message: OK
 - request:
-    body: '{"max_tokens": 4096, "messages": [{"role": "user", "content": "What is
-      2+2-4-10+50? Tell me a joke."}, {"role": "assistant", "content": [{"type": "text",
-      "text": "I''ll help you solve the arithmetic problem and then tell you a joke.
-      Let''s break it down step by step:\n\nFirst, I''ll calculate 2+2:"}, {"type":
-      "tool_use", "id": "toolu_01LytYWku1xxUdrXXw1QdAoH", "name": "add", "input":
-      {"x": 2, "y": 2}}]}, {"role": "user", "content": [{"type": "tool_result", "tool_use_id":
-      "toolu_01LytYWku1xxUdrXXw1QdAoH", "content": "4", "is_error": false}]}, {"role":
-      "assistant", "content": [{"type": "text", "text": "Then, I''ll subtract 4:"},
-      {"type": "tool_use", "id": "toolu_01XY6TjLcW6ppcr8youn4df2", "name": "subtract",
-      "input": {"x": 4, "y": 4}}]}, {"role": "user", "content": [{"type": "tool_result",
-      "tool_use_id": "toolu_01XY6TjLcW6ppcr8youn4df2", "content": "0", "is_error":
-      false}]}, {"role": "assistant", "content": [{"type": "text", "text": "Next,
-      subtract 10:"}, {"type": "tool_use", "id": "toolu_01NFo8ZF6wm1rXnVCsVLT9ek",
-      "name": "subtract", "input": {"x": 0, "y": 10}}]}, {"role": "user", "content":
-      [{"type": "tool_result", "tool_use_id": "toolu_01NFo8ZF6wm1rXnVCsVLT9ek", "content":
-      "-10", "is_error": false}]}, {"role": "assistant", "content": [{"type": "text",
-      "text": "Finally, add 50:"}, {"type": "tool_use", "id": "toolu_01MHrrqLb2MWk483GsMFyvfT",
-      "name": "add", "input": {"x": -10, "y": 50}}]}, {"role": "user", "content":
-      [{"type": "tool_result", "tool_use_id": "toolu_01MHrrqLb2MWk483GsMFyvfT", "content":
-      "40", "is_error": false}]}], "model": "claude-3-5-haiku-latest", "stream": false,
-      "tools": [{"name": "add", "description": "Adds two numbers together.", "input_schema":
-      {"type": "object", "strict": true, "properties": {"x": {"type": "integer", "description":
-      "the first number"}, "y": {"type": "integer", "description": "the second number"}},
-      "required": ["x", "y"], "additionalProperties": false}}, {"name": "subtract",
-      "description": "Subtracts the second number from the first.", "input_schema":
-      {"type": "object", "strict": true, "properties": {"x": {"type": "integer", "description":
-      "the first number"}, "y": {"type": "integer", "description": "the second number"}},
-      "required": ["x", "y"], "additionalProperties": false}}, {"name": "joke", "description":
-      "Returns a joke.", "input_schema": {"type": "object", "strict": true, "properties":
-      {}, "additionalProperties": false}}]}'
+    body: '{"model":"claude-3-5-haiku-20241022","messages":[{"role":"user","content":"What
+      is 2+2-4-10+50? Tell me a joke."},{"role":"assistant","content":[{"type":"tool_use","id":"toolu_01BfRW3Bduoz9t8i5MxJ8nEf","name":"add","input":{"x":2,"y":2}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_01BfRW3Bduoz9t8i5MxJ8nEf","content":"4"}]},{"role":"assistant","content":[{"type":"tool_use","id":"toolu_01KSVdJWhGcAF5Cix4ZAjirg","name":"subtract","input":{"x":4,"y":4}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_01KSVdJWhGcAF5Cix4ZAjirg","content":"0"}]},{"role":"assistant","content":[{"type":"tool_use","id":"toolu_01EEj4BmcBWR4oJiC2Bn4p8p","name":"subtract","input":{"x":0,"y":10}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_01EEj4BmcBWR4oJiC2Bn4p8p","content":"-10"}]}],"stream":false,"max_tokens":4096,"tools":[{"name":"add","description":"Adds
+      two numbers together.","input_schema":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false}},{"name":"subtract","description":"Subtracts
+      the second number from the first.","input_schema":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false}},{"name":"joke","description":"Returns
+      a joke.","input_schema":{"type":"object","strict":true,"properties":{},"additionalProperties":false}}]}'
     headers:
       accept:
-      - application/json
+      - '*/*'
       accept-encoding:
       - gzip, deflate
       anthropic-version:
@@ -487,46 +259,27 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2403'
+      - '1613'
       content-type:
       - application/json
       host:
       - api.anthropic.com
-      x-stainless-arch:
-      - x64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - Linux
-      x-stainless-package-version:
-      - 0.52.2
-      x-stainless-read-timeout:
-      - '600'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.13.5
-      x-stainless-timeout:
-      - '600'
     method: POST
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: '{"id":"msg_01R3LNHLE2Njh3sQeZWwo2K9","type":"message","role":"assistant","model":"claude-3-5-haiku-20241022","content":[{"type":"text","text":"So,
-        2+2-4-10+50 = 40.\n\nNow, let me tell you a joke:"},{"type":"tool_use","id":"toolu_01BkLABzY1TAaqHJ4GvMq6eW","name":"joke","input":{}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":909,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":63,"service_tier":"standard"}}'
+      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_01Lrwy4xjzzgrtd1KLTACQp7","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01TspkBEHb4YoHa9gBu3Q8Br","name":"add","input":{"x":-10,"y":50},"caller":{"type":"direct"}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":769,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":70,"service_tier":"standard","inference_geo":"not_available"}}'
     headers:
       CF-RAY:
-      - 966fea581e92b1d5-EWR
+      - 9cf8883d5ee3acf1-EWR
       Connection:
       - keep-alive
+      Content-Security-Policy:
+      - default-src 'none'; frame-ancestors 'none'
       Content-Type:
       - application/json
       Date:
-      - Tue, 29 Jul 2025 22:05:04 GMT
+      - Tue, 17 Feb 2026 21:56:02 GMT
       Transfer-Encoding:
       - chunked
       X-Robots-Tag:
@@ -536,163 +289,202 @@ interactions:
       anthropic-ratelimit-input-tokens-remaining:
       - '50000'
       anthropic-ratelimit-input-tokens-reset:
-      - '2025-07-29T22:05:04Z'
+      - '2026-02-17T21:56:02Z'
       anthropic-ratelimit-output-tokens-limit:
       - '10000'
       anthropic-ratelimit-output-tokens-remaining:
       - '10000'
       anthropic-ratelimit-output-tokens-reset:
-      - '2025-07-29T22:05:05Z'
-      anthropic-ratelimit-requests-limit:
-      - '50'
-      anthropic-ratelimit-requests-remaining:
-      - '48'
-      anthropic-ratelimit-requests-reset:
-      - '2025-07-29T22:05:03Z'
-      anthropic-ratelimit-tokens-limit:
-      - '60000'
-      anthropic-ratelimit-tokens-remaining:
-      - '60000'
-      anthropic-ratelimit-tokens-reset:
-      - '2025-07-29T22:05:04Z'
-      cf-cache-status:
-      - DYNAMIC
-      content-length:
-      - '463'
-      request-id:
-      - req_011CRc4uk7YrmHXFA1dE6Fnx
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      via:
-      - 1.1 google
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"max_tokens": 4096, "messages": [{"role": "user", "content": "What is
-      2+2-4-10+50? Tell me a joke."}, {"role": "assistant", "content": [{"type": "text",
-      "text": "I''ll help you solve the arithmetic problem and then tell you a joke.
-      Let''s break it down step by step:\n\nFirst, I''ll calculate 2+2:"}, {"type":
-      "tool_use", "id": "toolu_01LytYWku1xxUdrXXw1QdAoH", "name": "add", "input":
-      {"x": 2, "y": 2}}]}, {"role": "user", "content": [{"type": "tool_result", "tool_use_id":
-      "toolu_01LytYWku1xxUdrXXw1QdAoH", "content": "4", "is_error": false}]}, {"role":
-      "assistant", "content": [{"type": "text", "text": "Then, I''ll subtract 4:"},
-      {"type": "tool_use", "id": "toolu_01XY6TjLcW6ppcr8youn4df2", "name": "subtract",
-      "input": {"x": 4, "y": 4}}]}, {"role": "user", "content": [{"type": "tool_result",
-      "tool_use_id": "toolu_01XY6TjLcW6ppcr8youn4df2", "content": "0", "is_error":
-      false}]}, {"role": "assistant", "content": [{"type": "text", "text": "Next,
-      subtract 10:"}, {"type": "tool_use", "id": "toolu_01NFo8ZF6wm1rXnVCsVLT9ek",
-      "name": "subtract", "input": {"x": 0, "y": 10}}]}, {"role": "user", "content":
-      [{"type": "tool_result", "tool_use_id": "toolu_01NFo8ZF6wm1rXnVCsVLT9ek", "content":
-      "-10", "is_error": false}]}, {"role": "assistant", "content": [{"type": "text",
-      "text": "Finally, add 50:"}, {"type": "tool_use", "id": "toolu_01MHrrqLb2MWk483GsMFyvfT",
-      "name": "add", "input": {"x": -10, "y": 50}}]}, {"role": "user", "content":
-      [{"type": "tool_result", "tool_use_id": "toolu_01MHrrqLb2MWk483GsMFyvfT", "content":
-      "40", "is_error": false}]}, {"role": "assistant", "content": [{"type": "text",
-      "text": "So, 2+2-4-10+50 = 40.\n\nNow, let me tell you a joke:"}, {"type": "tool_use",
-      "id": "toolu_01BkLABzY1TAaqHJ4GvMq6eW", "name": "joke", "input": {}}]}, {"role":
-      "user", "content": [{"type": "tool_result", "tool_use_id": "toolu_01BkLABzY1TAaqHJ4GvMq6eW",
-      "content": "Why did the chicken cross the road? To get to the other side!",
-      "is_error": false}]}], "model": "claude-3-5-haiku-latest", "stream": false,
-      "tools": [{"name": "add", "description": "Adds two numbers together.", "input_schema":
-      {"type": "object", "strict": true, "properties": {"x": {"type": "integer", "description":
-      "the first number"}, "y": {"type": "integer", "description": "the second number"}},
-      "required": ["x", "y"], "additionalProperties": false}}, {"name": "subtract",
-      "description": "Subtracts the second number from the first.", "input_schema":
-      {"type": "object", "strict": true, "properties": {"x": {"type": "integer", "description":
-      "the first number"}, "y": {"type": "integer", "description": "the second number"}},
-      "required": ["x", "y"], "additionalProperties": false}}, {"name": "joke", "description":
-      "Returns a joke.", "input_schema": {"type": "object", "strict": true, "properties":
-      {}, "additionalProperties": false}}]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      anthropic-version:
-      - '2023-06-01'
-      connection:
-      - keep-alive
-      content-length:
-      - '2813'
-      content-type:
-      - application/json
-      host:
-      - api.anthropic.com
-      x-stainless-arch:
-      - x64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - Linux
-      x-stainless-package-version:
-      - 0.52.2
-      x-stainless-read-timeout:
-      - '600'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.13.5
-      x-stainless-timeout:
-      - '600'
-    method: POST
-    uri: https://api.anthropic.com/v1/messages
-  response:
-    body:
-      string: '{"id":"msg_01Jrs9q6mVDmnmNNeExLEjXm","type":"message","role":"assistant","model":"claude-3-5-haiku-20241022","content":[{"type":"text","text":"There
-        you have it! The calculation result is 40, and I hope the classic chicken
-        joke brought a smile to your face."}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":997,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":30,"service_tier":"standard"}}'
-    headers:
-      CF-RAY:
-      - 966fea6a29f0b1d5-EWR
-      Connection:
-      - keep-alive
-      Content-Type:
-      - application/json
-      Date:
-      - Tue, 29 Jul 2025 22:05:08 GMT
-      Transfer-Encoding:
-      - chunked
-      X-Robots-Tag:
-      - none
-      anthropic-ratelimit-input-tokens-limit:
-      - '50000'
-      anthropic-ratelimit-input-tokens-remaining:
-      - '50000'
-      anthropic-ratelimit-input-tokens-reset:
-      - '2025-07-29T22:05:07Z'
-      anthropic-ratelimit-output-tokens-limit:
-      - '10000'
-      anthropic-ratelimit-output-tokens-remaining:
-      - '10000'
-      anthropic-ratelimit-output-tokens-reset:
-      - '2025-07-29T22:05:08Z'
+      - '2026-02-17T21:56:02Z'
       anthropic-ratelimit-requests-limit:
       - '50'
       anthropic-ratelimit-requests-remaining:
       - '49'
       anthropic-ratelimit-requests-reset:
-      - '2025-07-29T22:05:06Z'
+      - '2026-02-17T21:56:01Z'
       anthropic-ratelimit-tokens-limit:
       - '60000'
       anthropic-ratelimit-tokens-remaining:
       - '60000'
       anthropic-ratelimit-tokens-reset:
-      - '2025-07-29T22:05:07Z'
+      - '2026-02-17T21:56:02Z'
       cf-cache-status:
       - DYNAMIC
       content-length:
-      - '441'
+      - '535'
       request-id:
-      - req_011CRc4uxYfDg1TqjxbBnbWY
+      - req_011CYEPRgdqPTu7ykaBEGZWy
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
-      via:
-      - 1.1 google
+      x-envoy-upstream-service-time:
+      - '2452'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"model":"claude-3-5-haiku-20241022","messages":[{"role":"user","content":"What
+      is 2+2-4-10+50? Tell me a joke."},{"role":"assistant","content":[{"type":"tool_use","id":"toolu_01BfRW3Bduoz9t8i5MxJ8nEf","name":"add","input":{"x":2,"y":2}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_01BfRW3Bduoz9t8i5MxJ8nEf","content":"4"}]},{"role":"assistant","content":[{"type":"tool_use","id":"toolu_01KSVdJWhGcAF5Cix4ZAjirg","name":"subtract","input":{"x":4,"y":4}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_01KSVdJWhGcAF5Cix4ZAjirg","content":"0"}]},{"role":"assistant","content":[{"type":"tool_use","id":"toolu_01EEj4BmcBWR4oJiC2Bn4p8p","name":"subtract","input":{"x":0,"y":10}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_01EEj4BmcBWR4oJiC2Bn4p8p","content":"-10"}]},{"role":"assistant","content":[{"type":"tool_use","id":"toolu_01TspkBEHb4YoHa9gBu3Q8Br","name":"add","input":{"x":-10,"y":50}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_01TspkBEHb4YoHa9gBu3Q8Br","content":"40"}]}],"stream":false,"max_tokens":4096,"tools":[{"name":"add","description":"Adds
+      two numbers together.","input_schema":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false}},{"name":"subtract","description":"Subtracts
+      the second number from the first.","input_schema":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false}},{"name":"joke","description":"Returns
+      a joke.","input_schema":{"type":"object","strict":true,"properties":{},"additionalProperties":false}}]}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '1855'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_01DMLzBVfKKjnVEey5TSSro4","type":"message","role":"assistant","content":[{"type":"text","text":"Let
+        me break down the calculation step by step:\n2 + 2 = 4\n4 - 4 = 0\n0 - 10
+        = -10\n-10 + 50 = 40\n\nSo the final result is 40.\n\nNow, let me tell you
+        a joke:"},{"type":"tool_use","id":"toolu_01XTBmkmBhTqCB3kUr9LUkXJ","name":"joke","input":{},"caller":{"type":"direct"}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":851,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":106,"service_tier":"standard","inference_geo":"not_available"}}'
+    headers:
+      CF-RAY:
+      - 9cf8884d7a7dacf1-EWR
+      Connection:
+      - keep-alive
+      Content-Security-Policy:
+      - default-src 'none'; frame-ancestors 'none'
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 17 Feb 2026 21:56:04 GMT
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-ratelimit-input-tokens-limit:
+      - '50000'
+      anthropic-ratelimit-input-tokens-remaining:
+      - '50000'
+      anthropic-ratelimit-input-tokens-reset:
+      - '2026-02-17T21:56:03Z'
+      anthropic-ratelimit-output-tokens-limit:
+      - '10000'
+      anthropic-ratelimit-output-tokens-remaining:
+      - '10000'
+      anthropic-ratelimit-output-tokens-reset:
+      - '2026-02-17T21:56:05Z'
+      anthropic-ratelimit-requests-limit:
+      - '50'
+      anthropic-ratelimit-requests-remaining:
+      - '49'
+      anthropic-ratelimit-requests-reset:
+      - '2026-02-17T21:56:04Z'
+      anthropic-ratelimit-tokens-limit:
+      - '60000'
+      anthropic-ratelimit-tokens-remaining:
+      - '60000'
+      anthropic-ratelimit-tokens-reset:
+      - '2026-02-17T21:56:03Z'
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '709'
+      request-id:
+      - req_011CYEPRsVSxpq37XVTkT4uR
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '1948'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"model":"claude-3-5-haiku-20241022","messages":[{"role":"user","content":"What
+      is 2+2-4-10+50? Tell me a joke."},{"role":"assistant","content":[{"type":"tool_use","id":"toolu_01BfRW3Bduoz9t8i5MxJ8nEf","name":"add","input":{"x":2,"y":2}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_01BfRW3Bduoz9t8i5MxJ8nEf","content":"4"}]},{"role":"assistant","content":[{"type":"tool_use","id":"toolu_01KSVdJWhGcAF5Cix4ZAjirg","name":"subtract","input":{"x":4,"y":4}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_01KSVdJWhGcAF5Cix4ZAjirg","content":"0"}]},{"role":"assistant","content":[{"type":"tool_use","id":"toolu_01EEj4BmcBWR4oJiC2Bn4p8p","name":"subtract","input":{"x":0,"y":10}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_01EEj4BmcBWR4oJiC2Bn4p8p","content":"-10"}]},{"role":"assistant","content":[{"type":"tool_use","id":"toolu_01TspkBEHb4YoHa9gBu3Q8Br","name":"add","input":{"x":-10,"y":50}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_01TspkBEHb4YoHa9gBu3Q8Br","content":"40"}]},{"role":"assistant","content":[{"type":"tool_use","id":"toolu_01XTBmkmBhTqCB3kUr9LUkXJ","name":"joke","input":{}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_01XTBmkmBhTqCB3kUr9LUkXJ","content":"Why
+      did the chicken cross the road? To get to the other side!"}]}],"stream":false,"max_tokens":4096,"tools":[{"name":"add","description":"Adds
+      two numbers together.","input_schema":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false}},{"name":"subtract","description":"Subtracts
+      the second number from the first.","input_schema":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false}},{"name":"joke","description":"Returns
+      a joke.","input_schema":{"type":"object","strict":true,"properties":{},"additionalProperties":false}}]}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '2143'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_01WhtKFrVRccV5AMvD9XKu4Z","type":"message","role":"assistant","content":[{"type":"text","text":"Let
+        me break down the calculation for you:\n2 + 2 = 4\n4 - 4 = 0\n0 - 10 = -10\n-10
+        + 50 = 40\n\nSo the final answer is 40. \n\nAnd here''s a classic joke for
+        you: Why did the chicken cross the road? To get to the other side!"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":911,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":89,"service_tier":"standard","inference_geo":"not_available"}}'
+    headers:
+      CF-RAY:
+      - 9cf88859de6bacf1-EWR
+      Connection:
+      - keep-alive
+      Content-Security-Policy:
+      - default-src 'none'; frame-ancestors 'none'
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 17 Feb 2026 21:56:07 GMT
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-ratelimit-input-tokens-limit:
+      - '50000'
+      anthropic-ratelimit-input-tokens-remaining:
+      - '50000'
+      anthropic-ratelimit-input-tokens-reset:
+      - '2026-02-17T21:56:06Z'
+      anthropic-ratelimit-output-tokens-limit:
+      - '10000'
+      anthropic-ratelimit-output-tokens-remaining:
+      - '10000'
+      anthropic-ratelimit-output-tokens-reset:
+      - '2026-02-17T21:56:07Z'
+      anthropic-ratelimit-requests-limit:
+      - '50'
+      anthropic-ratelimit-requests-remaining:
+      - '49'
+      anthropic-ratelimit-requests-reset:
+      - '2026-02-17T21:56:06Z'
+      anthropic-ratelimit-tokens-limit:
+      - '60000'
+      anthropic-ratelimit-tokens-remaining:
+      - '60000'
+      anthropic-ratelimit-tokens-reset:
+      - '2026-02-17T21:56:06Z'
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '662'
+      request-id:
+      - req_011CYEPS1zRSrt2CfSXt1gGZ
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '2396'
     status:
       code: 200
       message: OK

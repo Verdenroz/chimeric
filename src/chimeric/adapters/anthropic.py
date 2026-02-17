@@ -205,7 +205,7 @@ class AnthropicAdapter:
             ToolCall(
                 call_id=tc["id"],
                 name=tc["name"],
-                arguments=tc.get("arguments", "{}"),
+                arguments=tc.get("arguments") or "{}",
             )
             for tc in state.tool_calls.values()
         ]

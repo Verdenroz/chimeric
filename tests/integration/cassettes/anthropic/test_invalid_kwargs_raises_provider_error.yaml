@@ -1,0 +1,53 @@
+interactions:
+- request:
+    body: '{"model":"claude-3-5-haiku-20241022","messages":[{"role":"user","content":"Hello"}],"stream":false,"max_tokens":4096,"invalid_anthropic_parameter":"this_should_fail"}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '166'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: '{"type":"error","error":{"type":"invalid_request_error","message":"invalid_anthropic_parameter:
+        Extra inputs are not permitted"},"request_id":"req_011CYEPVBP42cwB49msXnTZC"}'
+    headers:
+      CF-RAY:
+      - 9cf88965fdb0bdee-EWR
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '173'
+      Content-Security-Policy:
+      - default-src 'none'; frame-ancestors 'none'
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 17 Feb 2026 21:56:47 GMT
+      X-Robots-Tag:
+      - none
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - req_011CYEPVBP42cwB49msXnTZC
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '59'
+      x-should-retry:
+      - 'false'
+    status:
+      code: 400
+      message: Bad Request
+version: 1
