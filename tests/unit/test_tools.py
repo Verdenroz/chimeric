@@ -2,8 +2,8 @@ from typing import Any
 
 import pytest
 
-from chimeric import ToolManager
 from chimeric.exceptions import ToolRegistrationError
+from chimeric.tools import ToolManager
 
 
 # noinspection PyUnusedLocal

@@ -1,0 +1,58 @@
+interactions:
+- request:
+    body: '{"contents":[{"role":"user","parts":[{"text":"What is 6 multiplied by 7?
+      Return the numeric result and a one-sentence explanation."}]}],"generationConfig":{"maxOutputTokens":150,"responseMimeType":"application/json","responseSchema":{"description":"Simple
+      arithmetic answer used across all provider tests.","properties":{"result":{"title":"Result","type":"integer"},"explanation":{"title":"Explanation","type":"string"}},"required":["result","explanation"],"type":"object"}}}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '475'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"{\\\"result\\\":42,\\\"explanation\\\":\\\"Six
+        multiplied by seven equals forty-two.\\\"}\"\n          }\n        ],\n        \"role\":
+        \"model\"\n      },\n      \"finishReason\": \"STOP\",\n      \"index\": 0\n
+        \   }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\": 21,\n    \"candidatesTokenCount\":
+        18,\n    \"totalTokenCount\": 112,\n    \"promptTokensDetails\": [\n      {\n
+        \       \"modality\": \"TEXT\",\n        \"tokenCount\": 21\n      }\n    ],\n
+        \   \"thoughtsTokenCount\": 73\n  },\n  \"modelVersion\": \"gemini-2.5-flash\",\n
+        \ \"responseId\": \"JO6UaYOhOpmJ-sAP14_Z6Qg\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 17 Feb 2026 22:39:33 GMT
+      Server-Timing:
+      - gfet4t7; dur=905
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+      content-length:
+      - '620'
+    status:
+      code: 200
+      message: OK
+version: 1

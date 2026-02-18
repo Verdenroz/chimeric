@@ -1,43 +1,40 @@
 interactions:
 - request:
-    body: '{"contents": [{"parts": [{"text": "Hello, respond briefly."}], "role":
-      "user"}], "generationConfig": {"maxOutputTokens": 20}}'
+    body: '{"contents":[{"role":"user","parts":[{"text":"Hello, respond briefly."}]}],"generationConfig":{"maxOutputTokens":200}}'
     headers:
-      Accept:
+      accept:
       - '*/*'
-      Accept-Encoding:
+      accept-encoding:
       - gzip, deflate
-      Connection:
+      connection:
       - keep-alive
-      Content-Length:
-      - '125'
-      Content-Type:
+      content-length:
+      - '118'
+      content-type:
       - application/json
-      x-goog-api-client:
-      - google-genai-sdk/1.2.0 gl-python/3.13.5
+      host:
+      - generativelanguage.googleapis.com
     method: POST
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
   response:
     body:
       string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
-        [\n          {\n            \"text\": \"Hello!\\n\"\n          }\n        ],\n
+        [\n          {\n            \"text\": \"Hello.\"\n          }\n        ],\n
         \       \"role\": \"model\"\n      },\n      \"finishReason\": \"STOP\",\n
-        \     \"avgLogprobs\": -0.058837726712226868\n    }\n  ],\n  \"usageMetadata\":
-        {\n    \"promptTokenCount\": 5,\n    \"candidatesTokenCount\": 3,\n    \"totalTokenCount\":
-        8,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
-        \       \"tokenCount\": 5\n      }\n    ],\n    \"candidatesTokensDetails\":
-        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 3\n      }\n
-        \   ]\n  },\n  \"modelVersion\": \"gemini-1.5-flash\",\n  \"responseId\":
-        \"0xOJaKPSKfbygLUPrajR6Qw\"\n}\n"
+        \     \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        6,\n    \"candidatesTokenCount\": 2,\n    \"totalTokenCount\": 26,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 6\n      }\n
+        \   ],\n    \"thoughtsTokenCount\": 18\n  },\n  \"modelVersion\": \"gemini-2.5-flash\",\n
+        \ \"responseId\": \"gu-UaevOBZ7S_uMP2PGYqQQ\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Tue, 29 Jul 2025 18:32:51 GMT
+      - Tue, 17 Feb 2026 22:45:22 GMT
       Server-Timing:
-      - gfet4t7; dur=468
+      - gfet4t7; dur=423
       Transfer-Encoding:
       - chunked
       Vary:
@@ -51,7 +48,7 @@ interactions:
       X-XSS-Protection:
       - '0'
       content-length:
-      - '650'
+      - '545'
     status:
       code: 200
       message: OK

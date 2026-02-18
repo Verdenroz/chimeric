@@ -1,0 +1,121 @@
+interactions:
+- request:
+    body: '{"model":"llama-3.1-8b-instant","messages":[{"role":"user","content":"Hello,
+      respond briefly."}],"stream":false,"max_completion_tokens":20}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '139'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=zVkfLAk891CGpPqiBKuZrrGat.Et8fE7GvbXAq.7CcU-1771371731.309185-1.0.1.1-cZ0h8XjsxrARAsC5Zs3CPQ9MjhUu9G2ZLxCF_bWxnIqD24J5UZxHhprgBD5FUNvuKir7cTVEhwwRP2aWlrMkkMxueoSBzpmU8xnvgLCaQARtUuBSJi..ROPSU4hzVd27
+      host:
+      - api.groq.com
+    method: POST
+    uri: https://api.groq.com/openai/v1/chat/completions
+  response:
+    body:
+      string: '{"id":"chatcmpl-601b7074-f171-45ba-b909-f01853eaa21c","object":"chat.completion","created":1771371732,"model":"llama-3.1-8b-instant","choices":[{"index":0,"message":{"role":"assistant","content":"Hello.
+        How can I assist you?"},"logprobs":null,"finish_reason":"stop"}],"usage":{"queue_time":0.047183794,"prompt_tokens":40,"prompt_time":0.003056264,"completion_tokens":9,"completion_time":0.034834297,"total_tokens":49,"total_time":0.037890561},"usage_breakdown":null,"system_fingerprint":"fp_8f8420ecd7","x_groq":{"id":"req_01khpzq7wzebvvf1pfk507pgyx","seed":2128873695},"service_tier":"on_demand"}
+
+        '
+    headers:
+      CF-RAY:
+      - 9cf923d28b77da06-EWR
+      Cache-Control:
+      - private, max-age=0, no-store, no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 17 Feb 2026 23:42:12 GMT
+      Strict-Transport-Security:
+      - max-age=15552000
+      Transfer-Encoding:
+      - chunked
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '598'
+      vary:
+      - Origin
+      x-groq-region:
+      - yul
+      x-ratelimit-limit-requests:
+      - '14400'
+      x-ratelimit-limit-tokens:
+      - '6000'
+      x-ratelimit-remaining-requests:
+      - '14394'
+      x-ratelimit-remaining-tokens:
+      - '4181'
+      x-ratelimit-reset-requests:
+      - 36s
+      x-ratelimit-reset-tokens:
+      - 18.189s
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents":[{"role":"user","parts":[{"text":"Hello"}]}],"generationConfig":{"invalidGoogleParameter":"this_should_fail"}}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '122'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Invalid JSON
+        payload received. Unknown name \\\"invalidGoogleParameter\\\" at 'generation_config':
+        Cannot find field.\",\n    \"status\": \"INVALID_ARGUMENT\",\n    \"details\":
+        [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.BadRequest\",\n
+        \       \"fieldViolations\": [\n          {\n            \"field\": \"generation_config\",\n
+        \           \"description\": \"Invalid JSON payload received. Unknown name
+        \\\"invalidGoogleParameter\\\" at 'generation_config': Cannot find field.\"\n
+        \         }\n        ]\n      }\n    ]\n  }\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Wed, 18 Feb 2026 22:28:24 GMT
+      Server-Timing:
+      - gfet4t7; dur=37
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+      content-length:
+      - '553'
+    status:
+      code: 400
+      message: Bad Request
+version: 1

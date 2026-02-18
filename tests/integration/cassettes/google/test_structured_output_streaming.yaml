@@ -1,0 +1,60 @@
+interactions:
+- request:
+    body: '{"contents":[{"role":"user","parts":[{"text":"What is 6 multiplied by 7?
+      Return the numeric result and a one-sentence explanation."}]}],"generationConfig":{"maxOutputTokens":150,"responseMimeType":"application/json","responseSchema":{"description":"Simple
+      arithmetic answer used across all provider tests.","properties":{"result":{"title":"Result","type":"integer"},"explanation":{"title":"Explanation","type":"string"}},"required":["result","explanation"],"type":"object"}}}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '475'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse
+  response:
+    body:
+      string: "data: {\"candidates\": [{\"content\": {\"parts\": [{\"text\": \"{\\\"\"}],\"role\":
+        \"model\"},\"index\": 0}],\"usageMetadata\": {\"promptTokenCount\": 21,\"candidatesTokenCount\":
+        1,\"totalTokenCount\": 123,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\":
+        21}],\"thoughtsTokenCount\": 101},\"modelVersion\": \"gemini-2.5-flash\",\"responseId\":
+        \"J-6UaYGvK4LyjMcP--2AqAg\"}\r\n\r\ndata: {\"candidates\": [{\"content\":
+        {\"parts\": [{\"text\": \"result\\\": 42, \\\"explanation\\\": \\\"Multiplying
+        6 by 7 results in 42.\\\"}\"}],\"role\": \"model\"},\"finishReason\": \"STOP\",\"index\":
+        0}],\"usageMetadata\": {\"promptTokenCount\": 21,\"candidatesTokenCount\":
+        25,\"totalTokenCount\": 147,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\":
+        21}],\"thoughtsTokenCount\": 101},\"modelVersion\": \"gemini-2.5-flash\",\"responseId\":
+        \"J-6UaYGvK4LyjMcP--2AqAg\"}\r\n\r\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Disposition:
+      - attachment
+      Content-Type:
+      - text/event-stream
+      Date:
+      - Tue, 17 Feb 2026 22:39:36 GMT
+      Server-Timing:
+      - gfet4t7; dur=981
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

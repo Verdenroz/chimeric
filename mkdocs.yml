@@ -67,6 +67,7 @@ nav:
   - Usage:
     - Getting Started: usage/getting-started.md
     - Configuration: usage/configuration.md
+    - Local AI: usage/local-ai.md
     - Response Types: usage/responses.md
     - Streaming: usage/streaming.md
     - Tools: usage/tools.md

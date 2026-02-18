@@ -1,51 +1,33 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "user", "content": "Hello, respond briefly."}],
-      "model": "llama-3.1-8b-instant", "max_completion_tokens": 20, "stream": false,
-      "temperature": 0.1}'
+    body: '{"model":"llama-3.1-8b-instant","messages":[{"role":"user","content":"Hello,
+      respond briefly."}],"stream":false,"temperature":0.1,"max_completion_tokens":20}'
     headers:
       accept:
-      - application/json
+      - '*/*'
       accept-encoding:
       - gzip, deflate
       connection:
       - keep-alive
       content-length:
-      - '169'
+      - '157'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=hnXAQZLI1G27FPn9QlXrrV37C.o_FzJK1a2zn.ao504-1753814288-1.0.1.1-batNpPlct7bMp4kikcHeidfe9XtQiI8se64.xnOlTyL0TbmFzpx.K7mQQWnQXnbepsCDBYI5dv._JOmN66VZSZhtcDuUi1F0tgDAwX6XBrE
+      - __cf_bm=ksmauXP24XhNl.HSAlaFfwL2JAV75rQsxBXhMguYfEE-1771371258.791747-1.0.1.1-4hUFaI0S7zvk8s5A041Kz8Dxbo6000nTAvn0JWMoZ8J2BAFh1FAoKp8OgFhglwMQ5yKn2b6PuT6ZRN88K.knn4K3n6bG6B4Gq17ZXtHgoPcq4ApytRYusedJMVzrwN.n
       host:
       - api.groq.com
-      x-stainless-arch:
-      - x64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - Linux
-      x-stainless-package-version:
-      - 0.26.0
-      x-stainless-read-timeout:
-      - '60'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.13.5
     method: POST
     uri: https://api.groq.com/openai/v1/chat/completions
   response:
     body:
-      string: '{"id":"chatcmpl-9abe6d91-3bef-4198-a3c2-0b8cc523b2b8","object":"chat.completion","created":1753814289,"model":"llama-3.1-8b-instant","choices":[{"index":0,"message":{"role":"assistant","content":"Hello."},"logprobs":null,"finish_reason":"stop"}],"usage":{"queue_time":0.20043487699999998,"prompt_tokens":40,"prompt_time":0.002524303,"completion_tokens":3,"completion_time":0.00815439,"total_tokens":43,"total_time":0.010678693},"usage_breakdown":null,"system_fingerprint":"fp_c523237e5d","x_groq":{"id":"req_01k1bqmjhrey2vs9ny4deh8wnm"},"service_tier":"on_demand"}
+      string: '{"id":"chatcmpl-efc67713-9a15-4190-9cf3-b51d299ebff5","object":"chat.completion","created":1771371260,"model":"llama-3.1-8b-instant","choices":[{"index":0,"message":{"role":"assistant","content":"Hello.
+        How can I assist you?"},"logprobs":null,"finish_reason":"stop"}],"usage":{"queue_time":0.035850611,"prompt_tokens":40,"prompt_time":0.002272496,"completion_tokens":9,"completion_time":0.015102503,"total_tokens":49,"total_time":0.017374999},"usage_breakdown":null,"system_fingerprint":"fp_8f8420ecd7","x_groq":{"id":"req_01khpz8t8wfyft1gdpg1v99948","seed":1589975448},"service_tier":"on_demand"}
 
         '
     headers:
       CF-RAY:
-      - 966ebb49bb8143a7-EWR
+      - 9cf9184819895a29-EWR
       Cache-Control:
       - private, max-age=0, no-store, no-cache, must-revalidate
       Connection:
@@ -53,7 +35,9 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 29 Jul 2025 18:38:09 GMT
+      - Tue, 17 Feb 2026 23:34:20 GMT
+      Strict-Transport-Security:
+      - max-age=15552000
       Transfer-Encoding:
       - chunked
       alt-svc:
@@ -61,25 +45,23 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       content-length:
-      - '565'
+      - '598'
       vary:
       - Origin
-      via:
-      - 1.1 google
       x-groq-region:
-      - msp
+      - yul
       x-ratelimit-limit-requests:
       - '14400'
       x-ratelimit-limit-tokens:
       - '6000'
       x-ratelimit-remaining-requests:
-      - '14399'
+      - '14398'
       x-ratelimit-remaining-tokens:
-      - '5989'
+      - '5959'
       x-ratelimit-reset-requests:
-      - 6s
+      - 12s
       x-ratelimit-reset-tokens:
-      - 110ms
+      - 410ms
     status:
       code: 200
       message: OK

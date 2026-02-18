@@ -1,0 +1,50 @@
+interactions:
+- request:
+    body: '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Extract
+      the following information: Alice is 30 years old and lives in Paris. Return
+      her name, age, and city."}],"stream":false,"max_tokens":150,"response_format":{"type":"json_schema","json_schema":{"name":"PersonInfo","schema":{"description":"Extraction
+      target for data-extraction style tests.","properties":{"name":{"title":"Name","type":"string"},"age":{"title":"Age","type":"integer"},"city":{"title":"City","type":"string"}},"required":["name","age","city"],"type":"object","additionalProperties":false},"strict":true}}}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '593'
+      content-type:
+      - application/json
+      host:
+      - openrouter.ai
+    method: POST
+    uri: https://openrouter.ai/api/v1/chat/completions
+  response:
+    body:
+      string: "\n         \n{\"id\":\"gen-1771372166-34fclQFo8Rg2oIQ4G2Tl\",\"provider\":\"OpenAI\",\"model\":\"openai/gpt-4o-mini\",\"object\":\"chat.completion\",\"created\":1771372166,\"choices\":[{\"logprobs\":null,\"finish_reason\":\"stop\",\"native_finish_reason\":\"stop\",\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"name\\\":\\\"Alice\\\",\\\"age\\\":30,\\\"city\\\":\\\"Paris\\\"}\",\"refusal\":null,\"reasoning\":null}}],\"system_fingerprint\":\"fp_084a28d6e8\",\"usage\":{\"prompt_tokens\":99,\"completion_tokens\":13,\"total_tokens\":112,\"cost\":0.00002265,\"is_byok\":false,\"prompt_tokens_details\":{\"cached_tokens\":0,\"audio_tokens\":0},\"cost_details\":{\"upstream_inference_cost\":0.00002265,\"upstream_inference_prompt_cost\":0.00001485,\"upstream_inference_completions_cost\":0.0000078},\"completion_tokens_details\":{\"reasoning_tokens\":0,\"audio_tokens\":0}}}"
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      CF-RAY:
+      - 9cf92e6b3ad614ed-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 17 Feb 2026 23:49:27 GMT
+      Permissions-Policy:
+      - payment=(self "https://checkout.stripe.com" "https://connect-js.stripe.com"
+        "https://js.stripe.com" "https://*.js.stripe.com" "https://hooks.stripe.com")
+      Referrer-Policy:
+      - no-referrer, strict-origin-when-cross-origin
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      content-length:
+      - '788'
+    status:
+      code: 200
+      message: OK
+version: 1

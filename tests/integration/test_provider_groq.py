@@ -36,7 +36,7 @@ def test_groq_sync_generation(api_keys):
         pytest.skip("Groq API key not found")
 
     chimeric = Chimeric(groq_api_key=api_keys["groq_api_key"])
-    cassette_path = get_cassette_path("google", "test_invalid_kwargs_raises_provider_error")
+    cassette_path = get_cassette_path("groq", "test_sync_generation")
 
     with get_vcr().use_cassette(cassette_path):
         response = chimeric.generate(
@@ -86,7 +86,7 @@ def test_groq_sync_tools_non_streaming(api_keys):
         tool_calls = {"add": 0, "subtract": 0, "joke": 0}
 
         @chimeric.tool()
-        def add(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
+        def add(x: int, y: int) -> int:
             """
             Adds two numbers together.
             Args:
@@ -101,7 +101,7 @@ def test_groq_sync_tools_non_streaming(api_keys):
             return x + y
 
         @chimeric.tool()
-        def subtract(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
+        def subtract(x: int, y: int) -> int:
             """
             Subtracts the second number from the first.
             Args:
@@ -116,7 +116,7 @@ def test_groq_sync_tools_non_streaming(api_keys):
             return x - y
 
         @chimeric.tool()
-        def joke() -> str:  # type: ignore[reportUnusedFunction]
+        def joke() -> str:
             """
             Returns a joke.
             """
@@ -156,7 +156,7 @@ def test_groq_sync_tools_streaming(api_keys):
         tool_calls = {"add": 0, "subtract": 0, "joke": 0}
 
         @chimeric.tool()
-        def add(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
+        def add(x: int, y: int) -> int:
             """
             Adds two numbers together.
             Args:
@@ -171,7 +171,7 @@ def test_groq_sync_tools_streaming(api_keys):
             return x + y
 
         @chimeric.tool()
-        def subtract(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
+        def subtract(x: int, y: int) -> int:
             """
             Subtracts the second number from the first.
             Args:
@@ -186,7 +186,7 @@ def test_groq_sync_tools_streaming(api_keys):
             return x - y
 
         @chimeric.tool()
-        def joke() -> str:  # type: ignore[reportUnusedFunction]
+        def joke() -> str:
             """
             Returns a joke.
             """
@@ -231,7 +231,7 @@ async def test_groq_async_tools_streaming(api_keys):
         tool_calls = {"add": 0, "subtract": 0, "joke": 0}
 
         @chimeric.tool()
-        def add(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
+        def add(x: int, y: int) -> int:
             """
             Adds two numbers together.
             Args:
@@ -246,7 +246,7 @@ async def test_groq_async_tools_streaming(api_keys):
             return x + y
 
         @chimeric.tool()
-        def subtract(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
+        def subtract(x: int, y: int) -> int:
             """
             Subtracts the second number from the first.
             Args:
@@ -261,7 +261,7 @@ async def test_groq_async_tools_streaming(api_keys):
             return x - y
 
         @chimeric.tool()
-        def joke() -> str:  # type: ignore[reportUnusedFunction]
+        def joke() -> str:
             """
             Returns a joke.
             """
@@ -270,7 +270,7 @@ async def test_groq_async_tools_streaming(api_keys):
             return "Why did the chicken cross the road? To get to the other side!"
 
         response = await chimeric.agenerate(
-            model="meta-llama/llama-4-maverick-17b-128e-instruct",
+            model="llama-3.1-8b-instant",
             messages=[{"role": "user", "content": "What is 3+5-2? Then tell me a joke."}],
             stream=True,
         )
@@ -309,7 +309,7 @@ async def test_groq_async_tools_non_streaming(api_keys):
         tool_calls = {"add": 0, "subtract": 0, "joke": 0}
 
         @chimeric.tool()
-        def add(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
+        def add(x: int, y: int) -> int:
             """
             Adds two numbers together.
             Args:
@@ -324,7 +324,7 @@ async def test_groq_async_tools_non_streaming(api_keys):
             return x + y
 
         @chimeric.tool()
-        def subtract(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
+        def subtract(x: int, y: int) -> int:
             """
             Subtracts the second number from the first.
             Args:
@@ -339,7 +339,7 @@ async def test_groq_async_tools_non_streaming(api_keys):
             return x - y
 
         @chimeric.tool()
-        def joke() -> str:  # type: ignore[reportUnusedFunction]
+        def joke() -> str:
             """
             Returns a joke.
             """
@@ -348,7 +348,7 @@ async def test_groq_async_tools_non_streaming(api_keys):
             return "Why did the chicken cross the road? To get to the other side!"
 
         response = await chimeric.agenerate(
-            model="meta-llama/llama-4-maverick-17b-128e-instruct",
+            model="llama-3.1-8b-instant",
             messages=[{"role": "user", "content": "What is 3+5-2? Then tell me a joke."}],
             stream=False,
         )

@@ -86,7 +86,7 @@ def test_cerebras_sync_tools_non_streaming(api_keys):
         tool_calls = {"add": 0, "subtract": 0, "joke": 0}
 
         @chimeric.tool()
-        def add(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
+        def add(x: int, y: int) -> int:
             """
             Adds two numbers together.
             Args:
@@ -101,7 +101,7 @@ def test_cerebras_sync_tools_non_streaming(api_keys):
             return x + y
 
         @chimeric.tool()
-        def subtract(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
+        def subtract(x: int, y: int) -> int:
             """
             Subtracts the second number from the first.
             Args:
@@ -116,7 +116,7 @@ def test_cerebras_sync_tools_non_streaming(api_keys):
             return x - y
 
         @chimeric.tool()
-        def joke() -> str:  # type: ignore[reportUnusedFunction]
+        def joke() -> str:
             """
             Returns a joke.
             """
@@ -125,7 +125,7 @@ def test_cerebras_sync_tools_non_streaming(api_keys):
             return "Why did the chicken cross the road? To get to the other side!"
 
         response = chimeric.generate(
-            model="qwen-3-32b",
+            model="llama3.1-8b",
             messages=[{"role": "user", "content": "What is 2+2-4-10+50? Tell me a joke."}],
             stream=False,
         )
@@ -156,7 +156,7 @@ def test_cerebras_sync_tools_streaming(api_keys):
         tool_calls = {"add": 0, "subtract": 0, "joke": 0}
 
         @chimeric.tool()
-        def add(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
+        def add(x: int, y: int) -> int:
             """
             Adds two numbers together.
             Args:
@@ -171,7 +171,7 @@ def test_cerebras_sync_tools_streaming(api_keys):
             return x + y
 
         @chimeric.tool()
-        def subtract(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
+        def subtract(x: int, y: int) -> int:
             """
             Subtracts the second number from the first.
             Args:
@@ -186,7 +186,7 @@ def test_cerebras_sync_tools_streaming(api_keys):
             return x - y
 
         @chimeric.tool()
-        def joke() -> str:  # type: ignore[reportUnusedFunction]
+        def joke() -> str:
             """
             Returns a joke.
             """
@@ -195,7 +195,7 @@ def test_cerebras_sync_tools_streaming(api_keys):
             return "Why did the chicken cross the road? To get to the other side!"
 
         response = chimeric.generate(
-            model="llama-4-maverick-17b-128e-instruct",
+            model="llama3.1-8b",
             messages=[{"role": "user", "content": "What is 2+2-4-10+50? Tell me a joke."}],
             stream=True,
         )
@@ -231,7 +231,7 @@ async def test_cerebras_async_tools_streaming(api_keys):
         tool_calls = {"add": 0, "subtract": 0, "joke": 0}
 
         @chimeric.tool()
-        def add(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
+        def add(x: int, y: int) -> int:
             """
             Adds two numbers together.
             Args:
@@ -246,7 +246,7 @@ async def test_cerebras_async_tools_streaming(api_keys):
             return x + y
 
         @chimeric.tool()
-        def subtract(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
+        def subtract(x: int, y: int) -> int:
             """
             Subtracts the second number from the first.
             Args:
@@ -261,7 +261,7 @@ async def test_cerebras_async_tools_streaming(api_keys):
             return x - y
 
         @chimeric.tool()
-        def joke() -> str:  # type: ignore[reportUnusedFunction]
+        def joke() -> str:
             """
             Returns a joke.
             """
@@ -270,7 +270,7 @@ async def test_cerebras_async_tools_streaming(api_keys):
             return "Why did the chicken cross the road? To get to the other side!"
 
         response = await chimeric.agenerate(
-            model="llama-4-maverick-17b-128e-instruct",
+            model="llama3.1-8b",
             messages=[{"role": "user", "content": "What is 2+2-4-10+50? Tell me a joke."}],
             stream=True,
         )
@@ -309,7 +309,7 @@ async def test_cerebras_async_tools_non_streaming(api_keys):
         tool_calls = {"add": 0, "subtract": 0, "joke": 0}
 
         @chimeric.tool()
-        def add(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
+        def add(x: int, y: int) -> int:
             """
             Adds two numbers together.
             Args:
@@ -324,7 +324,7 @@ async def test_cerebras_async_tools_non_streaming(api_keys):
             return x + y
 
         @chimeric.tool()
-        def subtract(x: int, y: int) -> int:  # type: ignore[reportUnusedFunction]
+        def subtract(x: int, y: int) -> int:
             """
             Subtracts the second number from the first.
             Args:
@@ -339,7 +339,7 @@ async def test_cerebras_async_tools_non_streaming(api_keys):
             return x - y
 
         @chimeric.tool()
-        def joke() -> str:  # type: ignore[reportUnusedFunction]
+        def joke() -> str:
             """
             Returns a joke.
             """
@@ -348,7 +348,7 @@ async def test_cerebras_async_tools_non_streaming(api_keys):
             return "Why did the chicken cross the road? To get to the other side!"
 
         response = await chimeric.agenerate(
-            model="qwen-3-32b",
+            model="llama3.1-8b",
             messages=[{"role": "user", "content": "What is 2+2-4-10+50? Tell me a joke."}],
             stream=False,
         )

@@ -1,0 +1,80 @@
+interactions:
+- request:
+    body: '{"model":"claude-haiku-4-5-20251001","messages":[{"role":"user","content":"What
+      is 6 multiplied by 7? Return the numeric result and a one-sentence explanation."}],"stream":false,"max_tokens":150,"output_config":{"format":{"type":"json_schema","schema":{"description":"Simple
+      arithmetic answer used across all provider tests.","properties":{"result":{"title":"Result","type":"integer"},"explanation":{"title":"Explanation","type":"string"}},"required":["result","explanation"],"type":"object","additionalProperties":false}}}}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '524'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: '{"model":"claude-haiku-4-5-20251001","id":"msg_0186W22MWykUZGTMqt9nhFUN","type":"message","role":"assistant","content":[{"type":"text","text":"{\"result\":
+        42, \"explanation\": \"6 multiplied by 7 equals 42, which is the basic arithmetic
+        product of these two numbers.\"}"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":223,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":37,"service_tier":"standard","inference_geo":"not_available"}}'
+    headers:
+      CF-RAY:
+      - 9cf89872be143f02-EWR
+      Connection:
+      - keep-alive
+      Content-Security-Policy:
+      - default-src 'none'; frame-ancestors 'none'
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 17 Feb 2026 22:07:06 GMT
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-ratelimit-input-tokens-limit:
+      - '50000'
+      anthropic-ratelimit-input-tokens-remaining:
+      - '50000'
+      anthropic-ratelimit-input-tokens-reset:
+      - '2026-02-17T22:07:05Z'
+      anthropic-ratelimit-output-tokens-limit:
+      - '10000'
+      anthropic-ratelimit-output-tokens-remaining:
+      - '10000'
+      anthropic-ratelimit-output-tokens-reset:
+      - '2026-02-17T22:07:06Z'
+      anthropic-ratelimit-requests-limit:
+      - '50'
+      anthropic-ratelimit-requests-remaining:
+      - '49'
+      anthropic-ratelimit-requests-reset:
+      - '2026-02-17T22:07:05Z'
+      anthropic-ratelimit-tokens-limit:
+      - '60000'
+      anthropic-ratelimit-tokens-remaining:
+      - '60000'
+      anthropic-ratelimit-tokens-reset:
+      - '2026-02-17T22:07:05Z'
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '565'
+      request-id:
+      - req_011CYEQGctUd1i6ZvdkGLxfi
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '2070'
+    status:
+      code: 200
+      message: OK
+version: 1

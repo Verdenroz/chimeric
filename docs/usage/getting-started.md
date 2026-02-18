@@ -27,7 +27,7 @@ gpt_response = client.generate(
 
 # Messages can also be provided as a string
 claude_response = client.generate(
-    model="claude-3-5-haiku-latest", 
+    model="claude-3-5-haiku-latest",
     messages="Hello, world!"
 )
 
@@ -42,23 +42,19 @@ gemini_response = client.generate(
 All providers return responses in a consistent format:
 
 ```python
-response = client.generate(model="gpt-4o", messages=[...])
+response = client.generate(model="gpt-4o", messages="Explain quantum physics")
 
-# Common interface
-print(response.content)              # Text content
-print(response.model)                # Model used
-print(response.usage.prompt_tokens)  # Input token usage
-print(response.usage.completion_tokens)  # Output token usage
-print(response.usage.total_tokens)   # Total tokens
+print(response.content)              # str | list — generated text
+print(response.model)                # str | None — model that responded
+print(response.metadata)             # dict | None — provider-specific extras
 
-# Access native provider response with native=True parameter
-native_response = client.generate(
-    model="claude-3-5-haiku-latest", 
-    messages=[...], 
-    native=True
-)
-print(native_response.stop_reason)  # Anthropic-specific stop reason
+if response.usage:
+    print(response.usage.prompt_tokens)      # int — input tokens
+    print(response.usage.completion_tokens)  # int — output tokens
+    print(response.usage.total_tokens)       # int — total tokens
 ```
+
+Provider-specific details (e.g. stop reason, request ID) are available in `response.metadata`.
 
 ### Streaming Responses
 
@@ -72,8 +68,8 @@ stream = client.generate(
 )
 
 for chunk in stream:
-    if chunk.content:
-        print(chunk.content, end="", flush=True)
+    if chunk.delta:
+        print(chunk.delta, end="", flush=True)
 ```
 
 ### Function Registration and Execution
@@ -85,17 +81,17 @@ client = Chimeric()
 
 @client.tool()
 def analyze_financial_data(
-    symbol: str, 
-    period: str = "1y", 
-    metrics: list[str] = None
+    symbol: str,
+    period: str = "1y",
+    metrics: list[str] | None = None
 ) -> dict:
     """Analyze financial performance metrics for a given symbol.
-    
+
     Args:
         symbol: Stock symbol (e.g., 'AAPL', 'MSFT')
         period: Analysis period ('1y', '6m', '3m')
         metrics: Specific metrics to analyze
-    
+
     Returns:
         Dict containing analysis results and recommendations
     """
@@ -122,29 +118,32 @@ Chimeric supports async operations for high-performance applications:
 import asyncio
 from chimeric import Chimeric
 
+
 async def main():
     client = Chimeric()
-    
+
     response = await client.agenerate(
         model="gpt-4o",
         messages=[{"role": "user", "content": "Hello!"}]
     )
-    
+
     print(response.content)
+
 
 # Async streaming
 async def stream_example():
     client = Chimeric()
-    
+
     stream = await client.agenerate(
         model="gpt-4o",
         messages=[{"role": "user", "content": "Tell me a joke"}],
         stream=True
     )
-    
+
     async for chunk in stream:
-        if chunk.content:
-            print(chunk.content, end="", flush=True)
+        if chunk.delta:
+            print(chunk.delta, end="", flush=True)
+
 
 asyncio.run(main())
 ```

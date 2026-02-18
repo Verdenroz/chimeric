@@ -1,0 +1,68 @@
+interactions:
+- request:
+    body: '{"model":"command-r-08-2024","messages":[{"role":"user","content":"What
+      is 6 multiplied by 7? Return the numeric result and a one-sentence explanation."}],"stream":false,"max_tokens":150,"response_format":{"type":"json_object","schema":{"description":"Simple
+      arithmetic answer used across all provider tests.","properties":{"result":{"title":"Result","type":"integer"},"explanation":{"title":"Explanation","type":"string"}},"required":["result","explanation"],"type":"object"}}}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '478'
+      content-type:
+      - application/json
+      host:
+      - api.cohere.com
+    method: POST
+    uri: https://api.cohere.com/v2/chat
+  response:
+    body:
+      string: '{"id":"9d50fb17-afaa-41b0-89f5-0f25614e83f9","message":{"role":"assistant","content":[{"type":"text","text":"{\n  \"result\":
+        42,\n  \"explanation\": \"The product of 6 and 7 is 42, as multiplying these
+        numbers together gives us a total of 42.\"\n}"}]},"finish_reason":"COMPLETE","usage":{"billed_units":{"input_tokens":20,"output_tokens":43},"tokens":{"input_tokens":231,"output_tokens":43},"cached_tokens":192}}'
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Transfer-Encoding:
+      - chunked
+      Via:
+      - 1.1 google
+      access-control-expose-headers:
+      - X-Debug-Trace-ID
+      cache-control:
+      - no-cache, no-store, no-transform, must-revalidate, private, max-age=0
+      content-length:
+      - '413'
+      content-type:
+      - application/json
+      date:
+      - Tue, 17 Feb 2026 23:15:41 GMT
+      expires:
+      - Thu, 01 Jan 1970 00:00:00 GMT
+      num_chars:
+      - '1362'
+      num_tokens:
+      - '63'
+      pragma:
+      - no-cache
+      vary:
+      - Origin,Accept-Encoding
+      x-accel-expires:
+      - '0'
+      x-debug-trace-id:
+      - d9f554778ee20e28f5e08d4f8219d906
+      x-endpoint-monthly-call-limit:
+      - '1000'
+      x-envoy-upstream-service-time:
+      - '6784'
+      x-trial-endpoint-call-limit:
+      - '20'
+      x-trial-endpoint-call-remaining:
+      - '5'
+    status:
+      code: 200
+      message: OK
+version: 1

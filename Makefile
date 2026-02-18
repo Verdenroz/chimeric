@@ -5,7 +5,7 @@
 .DEFAULT_GOAL := default
 
 .PHONY: default install lint test test-unit test-integration nox nox-unit nox-integration test-deps upgrade build clean docs docs-deploy
-.PHONY: test-openai test-anthropic test-google test-cerebras test-cohere test-grok test-groq
+.PHONY: test-openai test-anthropic test-google test-cerebras test-cohere test-grok test-groq test-openrouter
 .PHONY: test-bare test-all-extras clean-cassettes help
 
 default: install lint test
@@ -56,6 +56,9 @@ test-grok:
 
 test-groq:
 	uv run nox -s test_groq
+
+test-openrouter:
+	uv run nox -s test_openrouter
 
 test-bare:
 	uv run nox -s test_bare
@@ -120,6 +123,7 @@ help:
 	@echo "  make test-cohere   - Test chimeric[cohere] only"
 	@echo "  make test-grok     - Test chimeric[grok] only"
 	@echo "  make test-groq     - Test chimeric[groq] only"
+	@echo "  make test-openrouter - Test chimeric[openrouter] only"
 	@echo "  make test-bare     - Test bare installation (no extras)"
 	@echo "  make test-all-extras - Test all extras installation"
 	@echo ""

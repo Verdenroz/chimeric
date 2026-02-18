@@ -7,7 +7,7 @@ Chimeric provides comprehensive streaming support that allows you to receive AI 
 Streaming enables token-by-token delivery of responses, providing immediate feedback to users and creating more responsive applications. Chimeric's streaming system:
 
 - **Unified Interface**: Same streaming API across all providers
-- **Dual Format Support**: Access both unified and native streaming formats
+- **Cross-Provider**: Consistent chunk fields regardless of provider
 - **Advanced Features**: Tool call streaming and multi-turn conversations
 - **State Management**: Automatic content accumulation and metadata handling
 

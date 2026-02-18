@@ -1,0 +1,50 @@
+interactions:
+- request:
+    body: '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"What
+      is 6 multiplied by 7? Return the numeric result and a one-sentence explanation."}],"stream":false,"max_tokens":150,"response_format":{"type":"json_schema","json_schema":{"name":"MathAnswer","schema":{"description":"Simple
+      arithmetic answer used across all provider tests.","properties":{"result":{"title":"Result","type":"integer"},"explanation":{"title":"Explanation","type":"string"}},"required":["result","explanation"],"type":"object","additionalProperties":false},"strict":true}}}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '558'
+      content-type:
+      - application/json
+      host:
+      - openrouter.ai
+    method: POST
+    uri: https://openrouter.ai/api/v1/chat/completions
+  response:
+    body:
+      string: "\n         \n\n         \n{\"id\":\"gen-1771372164-Qss05HTYqv45xO1S2P5C\",\"provider\":\"OpenAI\",\"model\":\"openai/gpt-4o-mini\",\"object\":\"chat.completion\",\"created\":1771372164,\"choices\":[{\"logprobs\":null,\"finish_reason\":\"stop\",\"native_finish_reason\":\"stop\",\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"result\\\":42,\\\"explanation\\\":\\\"6
+        multiplied by 7 equals 42 because it is the sum of six groups of seven.\\\"}\",\"refusal\":null,\"reasoning\":null}}],\"system_fingerprint\":\"fp_084a28d6e8\",\"usage\":{\"prompt_tokens\":84,\"completion_tokens\":28,\"total_tokens\":112,\"cost\":0.0000294,\"is_byok\":false,\"prompt_tokens_details\":{\"cached_tokens\":0,\"audio_tokens\":0},\"cost_details\":{\"upstream_inference_cost\":0.0000294,\"upstream_inference_prompt_cost\":0.0000126,\"upstream_inference_completions_cost\":0.0000168},\"completion_tokens_details\":{\"reasoning_tokens\":0,\"audio_tokens\":0}}}"
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      CF-RAY:
+      - 9cf92e5aff40f2aa-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 17 Feb 2026 23:49:24 GMT
+      Permissions-Policy:
+      - payment=(self "https://checkout.stripe.com" "https://connect-js.stripe.com"
+        "https://js.stripe.com" "https://*.js.stripe.com" "https://hooks.stripe.com")
+      Referrer-Policy:
+      - no-referrer, strict-origin-when-cross-origin
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      content-length:
+      - '855'
+    status:
+      code: 200
+      message: OK
+version: 1

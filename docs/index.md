@@ -15,7 +15,7 @@ switching.
 
 ## Setup
 
-Chimeric provides a unified interface for **7 major AI providers**:
+Chimeric provides a unified interface for **8 major AI providers**:
 
 [![OpenAI](https://img.shields.io/badge/OpenAI-412991?logo=openai&logoColor=white)](https://openai.com/)
 [![Anthropic](https://img.shields.io/badge/Anthropic-191919?logo=anthropic&logoColor=white)](https://anthropic.com/)
@@ -24,24 +24,10 @@ Chimeric provides a unified interface for **7 major AI providers**:
 [![Groq](https://img.shields.io/badge/Groq-F55036?logo=groq&logoColor=white)](https://groq.com/)
 [![Cohere](https://img.shields.io/badge/Cohere-39594A?logo=cohere&logoColor=white)](https://cohere.ai/)
 [![Cerebras](https://img.shields.io/badge/Cerebras-FF6B35?logo=cerebras&logoColor=white)](https://cerebras.ai/)
-
-Each provider can be installed individually or together using extras:
+[![OpenRouter](https://img.shields.io/badge/OpenRouter-6467F2?logo=openrouter&logoColor=white)](https://openrouter.ai/)
 
 ```bash
-# Individual providers
-pip install "chimeric[openai]"
-pip install "chimeric[anthropic]"
-pip install "chimeric[google]"
-pip install "chimeric[cohere]"
-pip install "chimeric[groq]"
-pip install "chimeric[cerebras]"
-pip install "chimeric[grok]"
-
-# Multiple providers
-pip install "chimeric[openai,anthropic,google]"
-
-# All providers
-pip install "chimeric[all]"
+pip install chimeric
 ```
 
 ## Quickstart
@@ -69,21 +55,6 @@ claude_response = client.generate(model="claude-3-5-haiku-latest", messages="Wri
 gemini_response = client.generate(model="gemini-2.5-flash", messages="Summarize climate change")
 ```
 
-**Flexibility:**
-
-```python
-# Mixed usage in same application
-unified = client.generate(model="claude-3-5-haiku-latest", messages="Code review this function")
-native = client.generate(model="claude-3-5-haiku-latest", messages="Debug this error", native=True)
-
-# Use unified for consistent cross-provider code
-print(unified.content)
-
-# Use native for provider-specific features
-if hasattr(native, 'stop_reason'):
-    print(f"Claude stop reason: {native.stop_reason}")
-```
-
 **Streaming:**
 
 ```python
@@ -94,7 +65,7 @@ stream = client.generate(
 )
 
 for chunk in stream:
-    print(chunk.content, end="", flush=True)
+    print(chunk.delta or "", end="", flush=True)
 ```
 
 **Function Calling:**
@@ -135,7 +106,6 @@ asyncio.run(main())
 ## Known Limitations
 
 - **Beta Status**: API may change as we refine the interface
-- **Provider Dependencies**: Each provider requires separate installation extra
 - **Rate Limits**: Subject to individual provider rate limits and quotas
 - **Multimodal Support**: Image and audio support is untested and may vary by provider
 - **Model Availability**: Some models may not be available in all regions
@@ -143,7 +113,7 @@ asyncio.run(main())
 ## Roadmap
 
 - **Embeddings Support**: Unified interface for text embeddings across providers
-- **Mutli-Modal Support**: Enhanced support for images and audio
+- **Multi-Modal Support**: Enhanced support for images and audio
 - **Cost Tracking**: Built-in usage and cost monitoring
 - **Advanced Routing**: Load balancing and failover between providers
 

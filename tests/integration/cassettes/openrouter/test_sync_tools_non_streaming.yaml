@@ -1,0 +1,114 @@
+interactions:
+- request:
+    body: '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Add
+      10 and 5. Separately, subtract 3 from 20. Then tell me a joke. Use the tools
+      for each step."}],"stream":false,"tools":[{"type":"function","function":{"name":"add","description":"Adds
+      two numbers together.","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false}}},{"type":"function","function":{"name":"subtract","description":"Subtracts
+      the second number from the first.","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false}}},{"type":"function","function":{"name":"joke","description":"Returns
+      a joke.","parameters":{"type":"object","strict":true,"properties":{},"additionalProperties":false}}}]}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1007'
+      content-type:
+      - application/json
+      host:
+      - openrouter.ai
+    method: POST
+    uri: https://openrouter.ai/api/v1/chat/completions
+  response:
+    body:
+      string: "\n         \n\n         \n\n         \n\n         \n{\"id\":\"gen-1771372348-G8RasbNa9OjWLwmTfbZd\",\"provider\":\"OpenAI\",\"model\":\"openai/gpt-4o-mini\",\"object\":\"chat.completion\",\"created\":1771372348,\"choices\":[{\"logprobs\":null,\"finish_reason\":\"tool_calls\",\"native_finish_reason\":\"tool_calls\",\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"\",\"refusal\":null,\"reasoning\":null,\"tool_calls\":[{\"type\":\"function\",\"index\":0,\"id\":\"call_QSfvPqkX9NFqHX9CWTdov6pW\",\"function\":{\"name\":\"add\",\"arguments\":\"{\\\"x\\\":
+        10, \\\"y\\\": 5}\"}},{\"type\":\"function\",\"index\":1,\"id\":\"call_jDIto6wNhsZHmromYdSiOMri\",\"function\":{\"name\":\"subtract\",\"arguments\":\"{\\\"x\\\":
+        20, \\\"y\\\": 3}\"}},{\"type\":\"function\",\"index\":2,\"id\":\"call_kvdISDPNbnn7rB9xw4gw16Ro\",\"function\":{\"name\":\"joke\",\"arguments\":\"{}\"}}]}}],\"system_fingerprint\":\"fp_373a14eb6f\",\"usage\":{\"prompt_tokens\":131,\"completion_tokens\":62,\"total_tokens\":193,\"cost\":0.00005685,\"is_byok\":false,\"prompt_tokens_details\":{\"cached_tokens\":0,\"audio_tokens\":0},\"cost_details\":{\"upstream_inference_cost\":0.00005685,\"upstream_inference_prompt_cost\":0.00001965,\"upstream_inference_completions_cost\":0.0000372},\"completion_tokens_details\":{\"reasoning_tokens\":0,\"audio_tokens\":0}}}"
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      CF-RAY:
+      - 9cf932dbcf2d433f-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 17 Feb 2026 23:52:30 GMT
+      Permissions-Policy:
+      - payment=(self "https://checkout.stripe.com" "https://connect-js.stripe.com"
+        "https://js.stripe.com" "https://*.js.stripe.com" "https://hooks.stripe.com")
+      Referrer-Policy:
+      - no-referrer, strict-origin-when-cross-origin
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      content-length:
+      - '1173'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Add
+      10 and 5. Separately, subtract 3 from 20. Then tell me a joke. Use the tools
+      for each step."},{"role":"assistant","content":"","tool_calls":[{"id":"call_QSfvPqkX9NFqHX9CWTdov6pW","type":"function","function":{"name":"add","arguments":"{\"x\":
+      10, \"y\": 5}"}},{"id":"call_jDIto6wNhsZHmromYdSiOMri","type":"function","function":{"name":"subtract","arguments":"{\"x\":
+      20, \"y\": 3}"}},{"id":"call_kvdISDPNbnn7rB9xw4gw16Ro","type":"function","function":{"name":"joke","arguments":"{}"}}]},{"role":"tool","content":"15","tool_call_id":"call_QSfvPqkX9NFqHX9CWTdov6pW"},{"role":"tool","content":"17","tool_call_id":"call_jDIto6wNhsZHmromYdSiOMri"},{"role":"tool","content":"Why
+      did the chicken cross the road? To get to the other side!","tool_call_id":"call_kvdISDPNbnn7rB9xw4gw16Ro"}],"stream":false,"tools":[{"type":"function","function":{"name":"add","description":"Adds
+      two numbers together.","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false}}},{"type":"function","function":{"name":"subtract","description":"Subtracts
+      the second number from the first.","parameters":{"type":"object","strict":true,"properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"],"additionalProperties":false}}},{"type":"function","function":{"name":"joke","description":"Returns
+      a joke.","parameters":{"type":"object","strict":true,"properties":{},"additionalProperties":false}}}]}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1693'
+      content-type:
+      - application/json
+      host:
+      - openrouter.ai
+    method: POST
+    uri: https://openrouter.ai/api/v1/chat/completions
+  response:
+    body:
+      string: "\n         \n\n         \n\n         \n\n         \n{\"id\":\"gen-1771372350-l9gjidFJAxLh6JIL4NiN\",\"provider\":\"OpenAI\",\"model\":\"openai/gpt-4o-mini\",\"object\":\"chat.completion\",\"created\":1771372350,\"choices\":[{\"logprobs\":null,\"finish_reason\":\"stop\",\"native_finish_reason\":\"stop\",\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"The
+        sum of 10 and 5 is 15. \\n\\nThe result of subtracting 3 from 20 is 17. \\n\\nAnd
+        here's a joke for you: Why did the chicken cross the road? To get to the other
+        side!\",\"refusal\":null,\"reasoning\":null}}],\"system_fingerprint\":\"fp_373a14eb6f\",\"usage\":{\"prompt_tokens\":226,\"completion_tokens\":51,\"total_tokens\":277,\"cost\":0.0000645,\"is_byok\":false,\"prompt_tokens_details\":{\"cached_tokens\":0,\"audio_tokens\":0},\"cost_details\":{\"upstream_inference_cost\":0.0000645,\"upstream_inference_prompt_cost\":0.0000339,\"upstream_inference_completions_cost\":0.0000306},\"completion_tokens_details\":{\"reasoning_tokens\":0,\"audio_tokens\":0}}}"
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      CF-RAY:
+      - 9cf932e8294f433f-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 17 Feb 2026 23:52:31 GMT
+      Permissions-Policy:
+      - payment=(self "https://checkout.stripe.com" "https://connect-js.stripe.com"
+        "https://js.stripe.com" "https://*.js.stripe.com" "https://hooks.stripe.com")
+      Referrer-Policy:
+      - no-referrer, strict-origin-when-cross-origin
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      content-length:
+      - '935'
+    status:
+      code: 200
+      message: OK
+version: 1

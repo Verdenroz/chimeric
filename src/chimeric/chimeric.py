@@ -1,94 +1,64 @@
-from collections.abc import AsyncGenerator, Callable, Generator
+"""Chimeric — unified interface for multiple LLM providers."""
+
+from __future__ import annotations
+
+from dataclasses import replace
 import os
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
-from .base import ChimericAsyncClient, ChimericClient
-from .exceptions import ChimericError, ModelNotSupportedError, ProviderError, ProviderNotFoundError
-from .tools import ToolManager
-from .types import (
-    Capability,
-    ChimericStreamChunk,
-    CompletionResponse,
-    Input,
-    ModelSummary,
-    Provider,
-    StreamChunk,
-    Tool,
-    Tools,
+from .config import PROVIDER_REGISTRY
+from .exceptions import (
+    ModelNotSupportedError,
+    ProviderError,
+    ProviderNotFoundError,
+    StructuredOutputError,
 )
+from .http import HttpClient
+from .schema import build_response_format_kwargs, extract_json_schema, parse_json_response
+from .tools import ToolManager
+from .types import Provider
+from .utils import normalize_messages, normalize_tools
 
-__all__ = [
-    "ASYNC_PROVIDER_CLIENTS",
-    "PROVIDER_CLIENTS",
-    "Chimeric",
-]
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator, Callable, Generator
 
+    from pydantic import BaseModel
 
-# Build provider mappings conditionally based on available dependencies
-def _build_provider_mappings() -> tuple[dict[Provider, type], dict[Provider, type]]:
-    """Build provider client mappings, including only providers with available dependencies."""
-    sync_clients = {}
-    async_clients = {}
+    from .config import ProviderConfig
+    from .types import CompletionResponse, Input, ModelSummary, StreamChunk, Tool, Tools
 
-    # Define all possible providers with their import paths
-    provider_imports = {
-        Provider.OPENAI: ("chimeric.providers.openai.client", "OpenAIClient", "OpenAIAsyncClient"),
-        Provider.ANTHROPIC: (
-            "chimeric.providers.anthropic.client",
-            "AnthropicClient",
-            "AnthropicAsyncClient",
-        ),
-        Provider.GOOGLE: ("chimeric.providers.google.client", "GoogleClient", "GoogleAsyncClient"),
-        Provider.CEREBRAS: (
-            "chimeric.providers.cerebras.client",
-            "CerebrasClient",
-            "CerebrasAsyncClient",
-        ),
-        Provider.COHERE: ("chimeric.providers.cohere.client", "CohereClient", "CohereAsyncClient"),
-        Provider.GROK: ("chimeric.providers.grok.client", "GrokClient", "GrokAsyncClient"),
-        Provider.GROQ: ("chimeric.providers.groq.client", "GroqClient", "GroqAsyncClient"),
-    }
-
-    # Try to import each provider and add to mappings if successful
-    for provider, (module_path, sync_class, async_class) in provider_imports.items():
-        try:
-            module = __import__(module_path, fromlist=[sync_class, async_class])
-            sync_clients[provider] = getattr(module, sync_class)
-            async_clients[provider] = getattr(module, async_class)
-        except (ImportError, ModuleNotFoundError):
-            # Skip providers with missing dependencies
-            continue
-
-    return sync_clients, async_clients
-
-
-# Build the provider mappings with only available providers
-PROVIDER_CLIENTS, ASYNC_PROVIDER_CLIENTS = _build_provider_mappings()
+__all__ = ["Chimeric"]
 
 
 class Chimeric:
-    """Unified interface for multiple LLM providers with automatic provider detection.
+    """Unified interface for multiple LLM providers.
 
-    Supports OpenAI, Anthropic, Google AI, Cerebras, Cohere, xAI Grok, and Groq
-    with automatic model-to-provider routing and tool management.
+    Supports OpenAI, Anthropic, Google Gemini, Cerebras, Cohere, xAI Grok,
+    Groq, and OpenRouter with automatic model-to-provider routing and
+    integrated tool management.
+
+    API keys are resolved from explicit parameters first, then environment
+    variables.  Providers without a discoverable API key are silently skipped.
 
     Examples:
-        Basic usage:
+        Basic usage::
 
-        >>> client = Chimeric()  # Auto-detects API keys from environment
-        >>> response = client.generate(model="gpt-4o", messages="Hello!")
+            client = Chimeric()
+            response = client.generate("gpt-4o", "Hello!")
 
-        Streaming:
+        Streaming::
 
-        >>> for chunk in client.generate(model="gpt-4o", messages="Tell a story", stream=True):
-        ...     print(chunk.content, end="")
+            for chunk in client.generate("gpt-4o", "Tell a story", stream=True):
+                print(chunk.delta or "", end="", flush=True)
 
-        Tool registration:
+        Tool registration::
 
-        >>> @client.tool()
-        ... def get_weather(city: str) -> str:
-        ...     return f"Weather in {city}: Sunny"
-        >>> response = client.generate(model="gpt-4o", messages="What's the weather in NYC?")
+            @client.tool()
+            def get_weather(city: str) -> str:
+                '''Return weather for a city.'''
+                return f"Sunny in {city}"
+
+            response = client.generate("gpt-4o", "Weather in NYC?")
     """
 
     def __init__(
@@ -100,248 +70,105 @@ class Chimeric:
         cohere_api_key: str | None = None,
         grok_api_key: str | None = None,
         groq_api_key: str | None = None,
-        **kwargs: Any,
+        openrouter_api_key: str | None = None,
+        base_url: str | None = None,
+        api_key: str = "local",
+        timeout: float = 60.0,
+        **__kwargs: Any,
     ) -> None:
-        """Initialize Chimeric client with provider configuration.
-
-        API keys can be provided explicitly or via environment variables.
-
-        Environment variables:
-        - OPENAI_API_KEY
-        - ANTHROPIC_API_KEY
-        - GOOGLE_API_KEY or GEMINI_API_KEY
-        - CEREBRAS_API_KEY
-        - COHERE_API_KEY or CO_API_KEY
-        - GROK_API_KEY or XAI_API_KEY
-        - GROQ_API_KEY
+        """Initialise Chimeric with provider configuration.
 
         Args:
-            openai_api_key: OpenAI API key (defaults to OPENAI_API_KEY env var)
-            anthropic_api_key: Anthropic API key (defaults to ANTHROPIC_API_KEY env var)
-            google_api_key: Google AI API key (defaults to GOOGLE_API_KEY or GEMINI_API_KEY env var)
-            cerebras_api_key: Cerebras API key (defaults to CEREBRAS_API_KEY env var)
-            cohere_api_key: Cohere API key (defaults to COHERE_API_KEY or CO_API_KEY env var)
-            grok_api_key: xAI Grok API key (defaults to GROK_API_KEY or XAI_API_KEY env var)
-            groq_api_key: Groq API key (defaults to GROQ_API_KEY env var)
-            **kwargs: Provider-specific options (timeout, base_url, max_retries, etc.)
-
-        Raises:
-            ChimericError: If no providers can be initialized
+            openai_api_key: OpenAI API key (env: OPENAI_API_KEY).
+            anthropic_api_key: Anthropic API key (env: ANTHROPIC_API_KEY).
+            google_api_key: Google AI key (env: GOOGLE_API_KEY or GEMINI_API_KEY).
+            cerebras_api_key: Cerebras API key (env: CEREBRAS_API_KEY).
+            cohere_api_key: Cohere API key (env: COHERE_API_KEY or CO_API_KEY).
+            grok_api_key: xAI Grok key (env: GROK_API_KEY or XAI_API_KEY).
+            groq_api_key: Groq API key (env: GROQ_API_KEY).
+            openrouter_api_key: OpenRouter key (env: OPENROUTER_API_KEY).
+            base_url: Base URL for a custom OpenAI-compatible endpoint (e.g. a
+                local llama.cpp server).  When set, the endpoint is registered
+                as a provider named ``"custom"`` and its ``/models`` list is
+                used for automatic model routing.
+            api_key: API key for the ``base_url`` endpoint.  Defaults to
+                ``"local"`` for servers that do not validate credentials.
+            timeout: HTTP request timeout in seconds.
+            **__kwargs: Accepted but ignored for forward-compatibility.
         """
-        self.providers: dict[Provider, ChimericClient[Any, Any, Any]] = {}
-        self.async_providers: dict[Provider, ChimericAsyncClient[Any, Any, Any]] = {}
-        self.primary_provider: Provider | None = None
-
-        # Initialize the tool management system.
+        self._http = HttpClient(timeout=timeout)
         self._tool_manager = ToolManager()
 
-        # Mapping of canonical model names to their providers
-        self._model_provider_mapping: dict[str, Provider] = {}
+        # provider_name -> (ProviderConfig, api_key)
+        self._providers: dict[str, tuple[ProviderConfig, str]] = {}
+        # model id -> provider name
+        self._model_cache: dict[str, str] = {}
 
-        # Initialize providers from explicit API keys.
-        self._initialize_providers_from_config(
-            openai_api_key,
-            anthropic_api_key,
-            google_api_key,
-            cerebras_api_key,
-            cohere_api_key,
-            grok_api_key,
-            groq_api_key,
-            **kwargs,
-        )
-
-        # Auto-detect providers from environment variables.
-        self._detect_providers_from_environment(kwargs)
-
-    def _initialize_providers_from_config(
-        self,
-        openai_api_key: str | None = None,
-        anthropic_api_key: str | None = None,
-        google_api_key: str | None = None,
-        cerebras_api_key: str | None = None,
-        cohere_api_key: str | None = None,
-        grok_api_key: str | None = None,
-        groq_api_key: str | None = None,
-        **kwargs: Any,
-    ) -> None:
-        """Initializes providers from explicitly provided API keys.
-
-        Args:
-            openai_api_key: OpenAI API key.
-            anthropic_api_key: Anthropic API key.
-            google_api_key: Google API key.
-            cerebras_api_key: Cerebras API key.
-            cohere_api_key: Cohere API key.
-            grok_api_key: Grok API key.
-            groq_api_key: Groq API key.
-            **kwargs: Additional provider-specific configuration parameters.
-        """
-        provider_configs: list[tuple[Provider, str | None]] = [
-            (Provider.OPENAI, openai_api_key),
-            (Provider.ANTHROPIC, anthropic_api_key),
-            (Provider.GOOGLE, google_api_key),
-            (Provider.CEREBRAS, cerebras_api_key),
-            (Provider.COHERE, cohere_api_key),
-            (Provider.GROK, grok_api_key),
-            (Provider.GROQ, groq_api_key),
-        ]
-
-        # Initialize providers that have API keys provided.
-        for provider, api_key in provider_configs:
-            if api_key is not None:
-                self._add_provider(
-                    provider, api_key=api_key, tool_manager=self._tool_manager, **kwargs
-                )
-                self._add_async_provider(
-                    provider, api_key=api_key, tool_manager=self._tool_manager, **kwargs
-                )
-
-    def _detect_providers_from_environment(self, kwargs: dict[str, Any]) -> None:
-        """Auto-detects available providers from environment variables.
-
-        Args:
-            kwargs: Additional configuration options to pass to providers.
-        """
-        # Map providers to their possible environment variable names.
-        env_variable_map: dict[Provider, list[str]] = {
-            Provider.OPENAI: ["OPENAI_API_KEY"],
-            Provider.ANTHROPIC: ["ANTHROPIC_API_KEY"],
-            Provider.GOOGLE: ["GOOGLE_API_KEY", "GEMINI_API_KEY"],
-            Provider.CEREBRAS: ["CEREBRAS_API_KEY"],
-            Provider.COHERE: ["COHERE_API_KEY", "CO_API_KEY"],
-            Provider.GROK: ["GROK_API_KEY", "XAI_API_KEY"],
-            Provider.GROQ: ["GROQ_API_KEY"],
+        # Explicit keys take precedence over env vars
+        explicit: dict[str, str | None] = {
+            "openai": openai_api_key,
+            "anthropic": anthropic_api_key,
+            "google": google_api_key,
+            "cerebras": cerebras_api_key,
+            "cohere": cohere_api_key,
+            "grok": grok_api_key,
+            "groq": groq_api_key,
+            "openrouter": openrouter_api_key,
         }
+        for name, key in explicit.items():
+            if key:
+                self._register_provider(name, key)
 
-        # Check environment variables for each provider.
-        for provider, env_vars in env_variable_map.items():
-            if provider in self.providers:
-                continue  # Skip if already configured from explicit parameters.
-
-            # Skip if provider dependencies are not available
-            if provider not in PROVIDER_CLIENTS:
-                continue
-
-            for env_var in env_vars:
-                env_value = os.environ.get(env_var)
-                if env_value:
-                    # Create clean kwargs without a conflicting api_key parameter.
-                    clean_kwargs = kwargs.copy()
-                    clean_kwargs.pop("api_key", None)
-
-                    self._add_provider(
-                        provider, api_key=env_value, tool_manager=self._tool_manager, **clean_kwargs
-                    )
-                    self._add_async_provider(
-                        provider, api_key=env_value, tool_manager=self._tool_manager, **clean_kwargs
-                    )
+        # Auto-detect remaining providers from environment
+        for name, config in PROVIDER_REGISTRY.items():
+            if name in self._providers:
+                continue  # already registered
+            for env_var in config.api_key_env_vars:
+                key = os.environ.get(env_var)
+                if key:
+                    self._register_provider(name, key)
                     break
 
-    def _add_provider(self, provider: Provider, **kwargs: Any) -> None:
-        """Adds a provider client to the available providers.
+        # Custom OpenAI-compatible endpoint (e.g. local llama.cpp / llama-swap)
+        if base_url is not None:
+            self._register_custom(base_url.rstrip("/"), api_key)
 
-        Args:
-            provider: The provider enum to add.
-            **kwargs: Configuration options for the provider client.
+    # ------------------------------------------------------------------
+    # Provider management
+    # ------------------------------------------------------------------
 
-        Raises:
-            ProviderNotFoundError: If the provider is not supported.
-            ChimericError: If provider initialization fails.
-        """
-        if provider not in PROVIDER_CLIENTS:
-            available = [p.value for p in PROVIDER_CLIENTS]
-            raise ProviderNotFoundError(provider.value, available)
+    def _register_provider(self, name: str, api_key: str) -> None:
+        """Register a provider and populate the model cache."""
+        config = PROVIDER_REGISTRY.get(name)
+        if config is None:
+            return
+        self._providers[name] = (config, api_key)
+        self._populate_model_cache(name, config, api_key)
 
+    def _register_custom(self, base_url: str, api_key: str) -> None:
+        """Register a custom OpenAI-compatible endpoint as the 'custom' provider."""
+        template = PROVIDER_REGISTRY["openai"]
+        config = replace(template, name="custom", base_url=base_url)
+        self._providers["custom"] = (config, api_key)
+        self._populate_model_cache("custom", config, api_key)
+
+    def _populate_model_cache(self, name: str, config: ProviderConfig, api_key: str) -> None:
+        """Fetch available models and index them by model id."""
         try:
-            client_class = PROVIDER_CLIENTS[provider]
-            client = client_class(**kwargs)
+            models = self._http.list_models(config, api_key)
+        except Exception:
+            # Network errors at init time are non-fatal; routing falls back to
+            # live queries in _find_provider_for_model().
+            return
 
-            self.providers[provider] = client
+        for model in models:
+            for raw in (model.id, model.name):
+                if raw:
+                    self._model_cache[raw] = name
 
-            # Set the first successfully initialized provider as primary.
-            if self.primary_provider is None:
-                self.primary_provider = provider
-
-            # Populate model mapping for this provider
-            self._populate_models_for_provider(provider, client)
-
-        except (ImportError, ModuleNotFoundError) as e:
-            raise ChimericError(
-                f"Failed to initialize provider {provider.value}. Are you sure the provider is in the environment?: {e}"
-            ) from e
-
-    def _add_async_provider(self, provider: Provider, **kwargs: Any) -> None:
-        """Adds an async provider client to the available async providers.
-
-        Args:
-            provider: The provider enum to add.
-            **kwargs: Configuration options for the async provider client.
-
-        Raises:
-            ProviderNotFoundError: If the provider is not supported.
-            ChimericError: If provider initialization fails.
-        """
-        if provider not in ASYNC_PROVIDER_CLIENTS:
-            available = [p.value for p in ASYNC_PROVIDER_CLIENTS]
-            raise ProviderNotFoundError(f"Async provider {provider.value}", available)
-
-        try:
-            async_client_class = ASYNC_PROVIDER_CLIENTS[provider]
-            async_client = async_client_class(**kwargs)
-
-            self.async_providers[provider] = async_client
-
-        except (ImportError, ModuleNotFoundError, ValueError):
-            # Skip providers with missing dependencies instead of crashing
-            pass
-
-    def _populate_models_for_provider(
-        self, provider: Provider, client: ChimericClient[Any, Any, Any]
-    ) -> None:
-        """Populates the mapping with models from a specific provider.
-
-        Args:
-            provider: The provider enum.
-            client: The provider's client instance.
-
-        Raises:
-            ProviderError: If the provider fails to list models.
-        """
-        try:
-            models = client.list_models()
-
-            # Add both model IDs and names to mapping (using canonical form)
-            for model in models:
-                canon_id = "".join(ch for ch in model.id.lower() if ch.isalnum())
-                canon_name = "".join(ch for ch in model.name.lower() if ch.isalnum())
-
-                # Store both canonical ID and name pointing to this provider
-                self._model_provider_mapping[canon_id] = provider
-                if canon_name != canon_id:  # Avoid duplicate entries
-                    self._model_provider_mapping[canon_name] = provider
-
-        except Exception as e:
-            raise ProviderError(
-                provider=provider.value,
-                message=None,
-                error=e,
-            ) from e
-
-    @staticmethod
-    def _transform_stream(
-        stream: Generator[ChimericStreamChunk[Any], None, None], native: bool = False
-    ) -> Generator[StreamChunk, None, None]:
-        """Transform a ChimericStreamChunk generator to return the native or common format."""
-        for chunk in stream:
-            yield chunk.native if native else chunk.common
-
-    @staticmethod
-    async def _atransform_stream(
-        stream: AsyncGenerator[ChimericStreamChunk[Any]], native: bool = False
-    ) -> AsyncGenerator[StreamChunk, None]:
-        """Transform an async ChimericStreamChunk generator to return the native or common format."""
-        async for chunk in stream:
-            yield chunk.native if native else chunk.common
+    # ------------------------------------------------------------------
+    # Sync public API
+    # ------------------------------------------------------------------
 
     def generate(
         self,
@@ -350,99 +177,114 @@ class Chimeric:
         stream: bool = False,
         tools: Tools = None,
         auto_tool: bool = True,
-        native: bool = False,
-        provider: str | None = None,
+        provider: str | Provider | None = None,
+        response_model: type[BaseModel] | None = None,
         **kwargs: Any,
     ) -> CompletionResponse | Generator[StreamChunk, None, None]:
-        """Generate chat completion using the appropriate provider for the model.
+        """Generate a chat completion.
 
         Args:
-            model: Model name (e.g., "gpt-4o", "gemini-2.5-flash")
-            messages: Messages as string, dict, or list of dicts with 'role'/'content' keys
-            stream: If True, returns generator for streaming responses
-            tools: List of functions/Tool objects for model to call, or None
-            auto_tool: If True, includes all registered tools when tools=None
-            native: If True, returns provider's native response format
-            provider: Force specific provider ('openai', 'anthropic', etc.)
-            **kwargs: Provider options (temperature, max_tokens, top_p, etc.)
+            model: Model identifier (e.g. "gpt-4o", "claude-3-5-sonnet-20241022").
+            messages: User input — string, dict, Message, or list thereof.
+            stream: Yield StreamChunks instead of returning a CompletionResponse.
+            tools: Tools to make available for function calling.
+            auto_tool: Include all registered tools when tools is None.
+            provider: Force a specific provider instead of auto-routing.
+            response_model: Pydantic model class to parse the response into.
+                Mutually exclusive with ``tools``.  When set, ``parsed`` is
+                populated on the returned ``CompletionResponse`` (or on the
+                final ``StreamChunk`` when streaming).
+            **kwargs: Provider pass-through (temperature, max_tokens, etc.).
 
         Returns:
-            CompletionResponse or Generator[StreamChunk] for streaming
+            CompletionResponse for non-streaming; Generator[StreamChunk] for streaming.
 
         Raises:
-            ModelNotSupportedError: Model not available from any configured provider
-            ProviderNotFoundError: Specified provider not configured
-            ChimericError: Provider or authentication errors
-
-        Examples:
-            Basic text generation:
-
-            >>> response = client.generate(
-            ...     model="gpt-4o",
-            ...     messages=[{"role": "user", "content": "Hello, how are you?"}]
-            ... )
-            >>> print(response.content)
-
-            Streaming response:
-
-            >>> for chunk in client.generate(
-            ...     model="claude-3-5-haiku-latest",
-            ...     messages=[{"role": "user", "content": "Write a story"}],
-            ...     stream=True
-            ... ):
-            ...     print(chunk.content, end="", flush=True)
-
-            With tools/function calling:
-
-            >>> def get_weather(city: str) -> str:
-            ...     return f"Weather in {city}: Sunny, 72°F"
-            >>>
-            >>> response = client.generate(
-            ...     model="gpt-4o",
-            ...     messages=[{"role": "user", "content": "What's the weather in NYC?"}],
-            ...     tools=[get_weather]
-            ... )
-
-            Force specific provider:
-
-            >>> response = client.generate(
-            ...     model="gpt-4o",
-            ...     messages=[{"role": "user", "content": "Hello"}],
-            ...     provider="openai"  # Force OpenAI even if other providers support gpt-4o
-            ... )
-
-            Advanced parameters:
-
-            >>> response = client.generate(
-            ...     model="gpt-4o",
-            ...     messages=[{"role": "user", "content": "Generate JSON"}],
-            ...     temperature=0.7,
-            ...     max_tokens=1000,
-            ...     response_format={"type": "json_object"}
-            ... )
-
-        Note:
-            - Model names are matched using a canonical form (alphanumeric characters only)
-            - Provider selection uses a cached mapping for performance
-            - Providers with connection issues are silently skipped during model lookup
-            - Tool execution happens automatically when the model calls functions
+            ValueError: If both ``response_model`` and ``tools`` are supplied.
+            ModelNotSupportedError: Model not found in any configured provider.
+            ProviderNotFoundError: Explicit provider not configured.
+            ProviderError: Provider API call failed.
+            StructuredOutputError: Response could not be parsed into ``response_model``.
         """
-        target_provider = self._select_provider(model, provider)
-        client = self.providers[target_provider]
+        if response_model is not None and tools is not None:
+            raise ValueError("`response_model` and `tools` are mutually exclusive")
 
-        chimeric_completion = client.chat_completion(
-            messages=messages,
+        config, api_key = self._resolve_provider(model, provider)
+
+        if response_model is not None:
+            auto_tool = False
+            schema_name, schema = extract_json_schema(response_model)
+            format_kwargs = build_response_format_kwargs(Provider(config.name), schema_name, schema)
+            kwargs = {**kwargs, **format_kwargs}
+
+        resolved_tools = self._resolve_tools(tools, auto_tool)
+        normalized = normalize_messages(messages)
+
+        result = self._http.complete(
+            config=config,
+            api_key=api_key,
+            messages=normalized,
             model=model,
             stream=stream,
-            tools=tools,
-            auto_tool=auto_tool,
+            tools=resolved_tools or None,
             **kwargs,
         )
-        if isinstance(chimeric_completion, Generator):
-            # If the response is a generator, it means streaming is enabled.
-            return self._transform_stream(chimeric_completion, native=native)
 
-        return chimeric_completion.native if native else chimeric_completion.common
+        if response_model is None:
+            return result
+
+        if stream:
+            return self._wrap_stream_with_parsing(
+                cast("Generator[StreamChunk, None, None]", result), response_model
+            )
+
+        # Non-streaming: parse JSON content into the model
+        completion = cast("CompletionResponse", result)
+        content = completion.content if isinstance(completion.content, str) else ""
+        try:
+            completion.parsed = parse_json_response(content, response_model)
+        except Exception as exc:
+            raise StructuredOutputError(
+                model_name=response_model.__name__,
+                reason=str(exc),
+                raw_content=content,
+            ) from exc
+        return completion
+
+    def list_models(self, provider: str | Provider | None = None) -> list[ModelSummary]:
+        """List available models from one or all configured providers.
+
+        Args:
+            provider: Provider name to query, or None for all.
+
+        Returns:
+            List of ModelSummary objects tagged with their provider name.
+
+        Raises:
+            ProviderNotFoundError: Named provider is not configured.
+        """
+        if provider:
+            config, api_key = self._get_provider(provider)
+            models = self._http.list_models(config, api_key)
+            provider_name = provider.value if isinstance(provider, Provider) else provider
+            for m in models:
+                m.provider = provider_name
+            return models
+
+        all_models: list[ModelSummary] = []
+        for name, (config, api_key) in self._providers.items():
+            try:
+                models = self._http.list_models(config, api_key)
+                for m in models:
+                    m.provider = name
+                all_models.extend(models)
+            except (ProviderError, ConnectionError, TimeoutError):
+                continue  # skip unavailable providers
+        return all_models
+
+    # ------------------------------------------------------------------
+    # Async public API
+    # ------------------------------------------------------------------
 
     async def agenerate(
         self,
@@ -451,350 +293,99 @@ class Chimeric:
         stream: bool = False,
         tools: Tools = None,
         auto_tool: bool = True,
-        native: bool = False,
-        provider: str | None = None,
+        provider: str | Provider | None = None,
+        response_model: type[BaseModel] | None = None,
         **kwargs: Any,
     ) -> CompletionResponse | AsyncGenerator[StreamChunk, None]:
-        """Async version of generate() for non-blocking chat completion.
+        """Async version of generate().
 
         Args:
-            model: Model name (e.g., "gpt-4o", "claude-3-5-haiku-latest")
-            messages: Messages as string, dict, or list of dicts with 'role'/'content' keys
-            stream: If True, returns async generator for streaming responses
-            tools: List of functions/Tool objects for model to call, or None
-            auto_tool: If True, includes all registered tools when tools=None
-            native: If True, returns provider's native response format
-            provider: Force specific provider ('openai', 'anthropic', etc.)
-            **kwargs: Provider options (temperature, max_tokens, top_p, etc.)
+            model: Model identifier.
+            messages: User input.
+            stream: Return async generator instead of awaitable response.
+            tools: Tools to make available for function calling.
+            auto_tool: Include all registered tools when tools is None.
+            provider: Force a specific provider.
+            response_model: Pydantic model class to parse the response into.
+                Mutually exclusive with ``tools``.
+            **kwargs: Provider pass-through options.
 
         Returns:
-            CompletionResponse or AsyncGenerator[StreamChunk] for streaming
+            Awaitable CompletionResponse or AsyncGenerator[StreamChunk].
 
         Raises:
-            ModelNotSupportedError: Model not available from any configured provider
-            ProviderNotFoundError: Specified provider not configured
-            ChimericError: Provider or authentication errors
-
-        Examples:
-            Basic async text generation:
-
-            >>> import asyncio
-            >>> async def main():
-            ...     response = await client.agenerate(
-            ...         model="gpt-4o",
-            ...         messages=[{"role": "user", "content": "Hello, how are you?"}]
-            ...     )
-            ...     print(response.content)
-            ...     return response
-            >>> asyncio.run(main())
-
-            Async streaming response:
-
-            >>> async def stream_example():
-            ...     async for chunk in client.agenerate(
-            ...         model="claude-3-5-haiku-latest",
-            ...         messages=[{"role": "user", "content": "Write a story"}],
-            ...         stream=True
-            ...     ):
-            ...         print(chunk.content, end="", flush=True)
-            >>> asyncio.run(stream_example())
-
-            Async with tools/function calling:
-
-            >>> async def tool_example():
-            ...     def get_weather(city: str) -> str:
-            ...         return f"Weather in {city}: Sunny, 72°F"
-            ...
-            ...     response = await client.agenerate(
-            ...         model="gpt-4o",
-            ...         messages=[{"role": "user", "content": "What's the weather in NYC?"}],
-            ...         tools=[get_weather]
-            ...     )
-            ...     return response
-            >>> asyncio.run(tool_example())
-
-            Multiple concurrent requests:
-
-            >>> async def concurrent_example():
-            ...     tasks = [
-            ...         client.agenerate(model="gpt-4o", messages=[{"role": "user", "content": f"Tell me about {topic}"}])
-            ...         for topic in ["Python", "JavaScript", "Rust"]
-            ...     ]
-            ...     responses = await asyncio.gather(*tasks)
-            ...     return responses
-            >>> asyncio.run(concurrent_example())
-
-        Note:
-            - All error handling and provider selection logic is identical to generate()
-            - Async generators must be consumed with `async for` loops
-            - Multiple concurrent requests can be made using asyncio.gather()
-            - Tool execution happens automatically and asynchronously when the model calls functions
+            ValueError: If both ``response_model`` and ``tools`` are supplied.
+            StructuredOutputError: Response could not be parsed into ``response_model``.
         """
-        target_provider = self._select_async_provider(model, provider)
-        async_client = self.async_providers[target_provider]
+        if response_model is not None and tools is not None:
+            raise ValueError("`response_model` and `tools` are mutually exclusive")
 
-        chimeric_completion = await async_client.chat_completion(
+        config, api_key = self._resolve_provider(model, provider)
+
+        if response_model is not None:
+            auto_tool = False
+            schema_name, schema = extract_json_schema(response_model)
+            format_kwargs = build_response_format_kwargs(Provider(config.name), schema_name, schema)
+            kwargs = {**kwargs, **format_kwargs}
+
+        resolved_tools = self._resolve_tools(tools, auto_tool)
+        normalized = normalize_messages(messages)
+
+        result = await self._http.acomplete(
+            config=config,
+            api_key=api_key,
+            messages=normalized,
             model=model,
-            messages=messages,
             stream=stream,
-            tools=tools,
-            auto_tool=auto_tool,
+            tools=resolved_tools or None,
             **kwargs,
         )
-        if isinstance(chimeric_completion, AsyncGenerator):
-            # If the response is an async generator, it means streaming is enabled.
-            return self._atransform_stream(chimeric_completion, native=native)
 
-        return chimeric_completion.native if native else chimeric_completion.common
+        if response_model is None:
+            return result
 
-    def _select_provider(self, model: str, provider: str | None = None) -> Provider:
-        """Selects the appropriate provider based on explicit provider or model availability.
+        if stream:
+            return self._wrap_async_stream_with_parsing(
+                cast("AsyncGenerator[StreamChunk, None]", result), response_model
+            )
 
-        Args:
-            model: The name of the model to use.
-            provider: Optional provider name to force using a specific provider.
+        # Non-streaming: parse JSON content into the model
+        completion = cast("CompletionResponse", result)
+        content = completion.content if isinstance(completion.content, str) else ""
+        try:
+            completion.parsed = parse_json_response(content, response_model)
+        except Exception as exc:
+            raise StructuredOutputError(
+                model_name=response_model.__name__,
+                reason=str(exc),
+                raw_content=content,
+            ) from exc
+        return completion
 
-        Returns:
-            The provider enum to use for this model.
-
-        Raises:
-            ProviderNotFoundError: If the specified provider is not configured or
-                                 if no provider supports the requested model.
-        """
+    async def alist_models(self, provider: str | Provider | None = None) -> list[ModelSummary]:
+        """Async version of list_models()."""
         if provider:
-            # Use explicitly specified provider
-            try:
-                provider_enum = Provider(provider.lower())
-            except ValueError as e:
-                raise ProviderNotFoundError(f"Unknown provider: {provider}") from e
-
-            if provider_enum not in self.providers:
-                raise ProviderNotFoundError(f"Provider {provider} not configured")
-
-            return provider_enum
-
-        # Auto-detect provider by model
-        return self._select_provider_by_model(model)
-
-    def _select_async_provider(self, model: str, provider: str | None = None) -> Provider:
-        """Selects the appropriate async provider based on explicit provider or model availability.
-
-        Args:
-            model: The name of the model to use.
-            provider: Optional provider name to force using a specific provider.
-
-        Returns:
-            The provider enum to use for this model.
-
-        Raises:
-            ProviderNotFoundError: If the specified provider is not configured or
-                                 if no provider supports the requested model.
-        """
-        if provider:
-            # Use explicitly specified provider
-            try:
-                provider_enum = Provider(provider.lower())
-            except ValueError as e:
-                raise ProviderNotFoundError(f"Unknown provider: {provider}") from e
-
-            if provider_enum not in self.async_providers:
-                raise ProviderNotFoundError(f"Async provider {provider} not configured")
-
-            return provider_enum
-
-        # Auto-detect provider by model (use sync providers for model detection, same cache)
-        return self._select_provider_by_model(model)
-
-    def _select_provider_by_model(self, model: str) -> Provider:
-        """Selects the appropriate provider based on model availability.
-
-        This method uses preloaded model mapping for fast lookups and falls back
-        to individual provider queries if the model is not in the mapping.
-
-        Args:
-            model: The name of the model to use.
-
-        Returns:
-            The provider enum to use for this model.
-
-        Raises:
-            ModelNotSupportedError: If no provider supports the requested model.
-        """
-        canon_model = "".join(ch for ch in model.lower() if ch.isalnum())
-
-        # Check preloaded mapping first
-        provider = self._model_provider_mapping.get(canon_model)
-        if provider and provider in self.providers:
-            return provider
-
-        # If not in preloaded mapping, try dynamic lookup (fallback for new models)
-        for provider, client in self.providers.items():
-            try:
-                models = client.list_models()
-
-                # Build canonical sets for IDs and display names
-                canon_ids = {"".join(ch for ch in m.id.lower() if ch.isalnum()) for m in models}
-                canon_names = {"".join(ch for ch in m.name.lower() if ch.isalnum()) for m in models}
-
-                if canon_model in canon_ids or canon_model in canon_names:
-                    # Add to mapping for future lookups
-                    self._model_provider_mapping[canon_model] = provider
-                    return provider
-
-            except (
-                ImportError,
-                ModuleNotFoundError,
-                ValueError,
-                ProviderError,
-                ConnectionError,
-                TimeoutError,
-            ):
-                # Skip providers that fail due to connection or API issues
-                continue
-
-        # If no provider found, build list of available models and raise exception
-        available_models = []
-        for _provider, client in self.providers.items():
-            try:
-                models = client.list_models()
-                for m in models:
-                    available_models.append(f"{m.id}")
-            except (
-                ImportError,
-                ModuleNotFoundError,
-                ValueError,
-                ProviderError,
-                ConnectionError,
-                TimeoutError,
-            ):
-                # Skip providers that fail due to connection or API issues
-                continue
-
-        # If only one provider, include it in the error for more specific messaging
-        provider_name = (
-            next(iter(self.providers.keys())).value if len(self.providers) == 1 else None
-        )
-        raise ModelNotSupportedError(
-            model=model, provider=provider_name, supported_models=available_models
-        )
-
-    def list_models(self, provider: str | None = None) -> list[ModelSummary]:
-        """List available models from specified provider or all providers.
-
-        Args:
-            provider: Provider name ('openai', 'anthropic', etc.) or None for all
-
-        Returns:
-            List of ModelSummary objects with id, name, and provider fields
-
-        Raises:
-            ProviderNotFoundError: Specified provider not configured
-        """
-        if provider:
-            provider_enum = Provider(provider.lower())
-            if provider_enum not in self.providers:
-                raise ProviderNotFoundError(f"Provider {provider} not configured")
-
-            models = self.providers[provider_enum].list_models()
-            # Ensure provider information is set on each model.
-            for model in models:
-                if model.provider is None:
-                    model.provider = provider_enum.value
+            config, api_key = self._get_provider(provider)
+            models = await self._http.alist_models(config, api_key)
+            provider_name = provider.value if isinstance(provider, Provider) else provider
+            for m in models:
+                m.provider = provider_name
             return models
 
-        # Collect models from all configured providers.
         all_models: list[ModelSummary] = []
-        for provider_enum, client in self.providers.items():
+        for name, (config, api_key) in self._providers.items():
             try:
-                models = client.list_models()
-                # Ensure provider information is set on each model.
-                for model in models:
-                    model.provider = provider_enum.value
+                models = await self._http.alist_models(config, api_key)
+                for m in models:
+                    m.provider = name
                 all_models.extend(models)
-            except (
-                ImportError,
-                ModuleNotFoundError,
-                ValueError,
-                ProviderError,
-                ConnectionError,
-                TimeoutError,
-            ):
-                # Skip providers that fail due to connection or API issues.
+            except (ProviderError, ConnectionError, TimeoutError):
                 continue
         return all_models
 
-    @property
-    def capabilities(self) -> Capability:
-        """Merged capabilities from all configured providers."""
-        # Merge capabilities from all providers (union of all features).
-        merged_values = {
-            "streaming": False,
-            "tools": False,
-        }
-
-        # Collect capabilities from all providers
-        for client in self.providers.values():
-            capabilities = client.capabilities
-            for field_name in merged_values:
-                if getattr(capabilities, field_name):
-                    merged_values[field_name] = True
-
-        # Create a new instance with the merged values
-        return Capability(**merged_values)
-
-    def get_capabilities(self, provider: str | None = None) -> Capability:
-        """Get capabilities for specific provider or merged from all providers.
-
-        Args:
-            provider: Provider name or None for merged capabilities
-
-        Returns:
-            Capability object with streaming and tools boolean fields
-
-        Raises:
-            ProviderNotFoundError: Specified provider not configured
-        """
-        if provider:
-            provider_enum = Provider(provider.lower())
-            if provider_enum not in self.providers:
-                raise ProviderNotFoundError(f"Provider {provider} not configured")
-            return self.providers[provider_enum].capabilities
-
-        # Use the property for merged capabilities
-        return self.capabilities
-
-    def _get_provider_client(self, provider: str) -> ChimericClient[Any, Any, Any]:
-        """Gets direct access to a provider's client instance.
-
-        Args:
-            provider: Provider name to get the client for.
-
-        Returns:
-            The provider's client instance.
-
-        Raises:
-            ProviderNotFoundError: If the provider is not configured.
-        """
-        provider_enum = Provider(provider.lower())
-        if provider_enum not in self.providers:
-            raise ProviderNotFoundError(f"Provider {provider} not configured")
-        return self.providers[provider_enum]
-
-    def _clear_model_cache(self) -> None:
-        """Clears the model-to-provider mapping.
-
-        This can be useful if providers add or remove models dynamically.
-        The mapping will be repopulated with fresh data from all providers.
-        Providers that fail to list models will be skipped.
-        """
-        self._model_provider_mapping.clear()
-        # Repopulate the mapping from all configured providers
-        for provider, client in self.providers.items():
-            try:
-                self._populate_models_for_provider(provider, client)
-            except ProviderError:
-                # Skip providers that fail to list models
-                continue
+    # ------------------------------------------------------------------
+    # Tool management
+    # ------------------------------------------------------------------
 
     def tool(
         self,
@@ -802,21 +393,19 @@ class Chimeric:
         description: str | None = None,
         strict: bool = True,
     ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
-        """Decorator to register a function as a tool for LLM function calling.
+        """Decorator to register a callable as an LLM tool.
 
         Args:
-            name: Custom name for tool (defaults to function name)
-            description: Custom description (defaults to function docstring)
-            strict: Enforce strict type checking (default True)
+            name: Override the function name.
+            description: Override the docstring description.
+            strict: Enforce strict parameter validation.
 
-        Returns:
-            Decorator that registers function and returns it unchanged
+        Example::
 
-        Example:
-            >>> @client.tool()
-            ... def get_weather(city: str) -> str:
-            ...     '''Get weather for a city.'''
-            ...     return f"Sunny in {city}"
+            @client.tool()
+            def get_weather(city: str) -> str:
+                '''Get weather for a city.'''
+                return f"Sunny in {city}"
         """
 
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -828,21 +417,166 @@ class Chimeric:
 
     @property
     def tools(self) -> list[Tool]:
-        """List of all registered tools for function calling."""
+        """All currently registered tools."""
         return self._tool_manager.get_all_tools()
 
     @property
+    def providers(self) -> dict[Provider, tuple[ProviderConfig, str]]:
+        """Configured providers keyed by Provider enum."""
+        return {Provider(name): (config, key) for name, (config, key) in self._providers.items()}
+
+    @property
     def available_providers(self) -> list[str]:
-        """List of successfully configured provider names."""
-        return [provider.value for provider in self.providers]
+        """Names of all configured providers."""
+        return list(self._providers.keys())
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _get_provider(self, name: str | Provider) -> tuple[ProviderConfig, str]:
+        """Retrieve a configured provider by name.
+
+        Raises:
+            ProviderNotFoundError: Provider is not in the registry or not configured.
+        """
+        key = name.value if isinstance(name, Provider) else name
+        if key not in PROVIDER_REGISTRY:
+            raise ProviderNotFoundError(key, list(self._providers.keys()))
+        if key not in self._providers:
+            raise ProviderNotFoundError(key, list(self._providers.keys()))
+        return self._providers[key]
+
+    def _resolve_provider(
+        self, model: str, provider: str | Provider | None
+    ) -> tuple[ProviderConfig, str]:
+        """Return (config, api_key) for the target provider.
+
+        If provider is explicit, validate and return it.  Otherwise route
+        by model name via the cache or a live search.
+        """
+        if provider:
+            return self._get_provider(provider)
+        return self._find_provider_for_model(model)
+
+    def _find_provider_for_model(self, model: str) -> tuple[ProviderConfig, str]:
+        """Locate the provider that offers this model.
+
+        Checks the in-memory cache first.  Falls back to live model-listing
+        queries for models added after initialisation.
+
+        Raises:
+            ModelNotSupportedError: No configured provider recognises the model.
+        """
+        # Fast path: check pre-populated cache
+        provider_name = self._model_cache.get(model)
+        if provider_name and provider_name in self._providers:
+            return self._providers[provider_name]
+
+        # Slow path: query each provider live
+        for name, (config, api_key) in self._providers.items():
+            try:
+                models = self._http.list_models(config, api_key)
+            except (ProviderError, ConnectionError, TimeoutError):
+                continue
+
+            for m in models:
+                if m.id:
+                    self._model_cache[m.id] = name
+                if m.name:
+                    self._model_cache[m.name] = name
+
+            if model in self._model_cache:
+                return self._providers[self._model_cache[model]]
+
+        # Build a best-effort list of known models for the error message
+        available: list[str] = list(self._model_cache)
+        provider_name = next(iter(self._providers), None)
+        raise ModelNotSupportedError(
+            model=model,
+            provider=provider_name,
+            supported_models=available or None,
+        )
+
+    def _resolve_tools(self, tools: Tools, auto_tool: bool) -> list[Tool]:
+        """Return the effective tool list for this request.
+
+        If tools is None and auto_tool is True, include all registered tools.
+        Otherwise normalise the caller-supplied tools.
+        """
+        if tools is None:
+            return self._tool_manager.get_all_tools() if auto_tool else []
+        return normalize_tools(tools)
+
+    def _clear_model_cache(self) -> None:
+        """Invalidate the model cache (useful when providers add new models)."""
+        self._model_cache.clear()
+        for name, (config, api_key) in self._providers.items():
+            self._populate_model_cache(name, config, api_key)
+
+    @staticmethod
+    def _wrap_stream_with_parsing(
+        stream: Generator[StreamChunk, None, None],
+        response_model: type[BaseModel],
+    ) -> Generator[StreamChunk, None, None]:
+        """Wrap a sync stream to parse the final chunk into *response_model*.
+
+        Args:
+            stream: The upstream streaming generator.
+            response_model: Pydantic model class to parse the accumulated content.
+
+        Yields:
+            Each chunk unchanged; the final chunk (identified by a non-None
+            ``finish_reason``) has its ``parsed`` attribute set.
+
+        Raises:
+            StructuredOutputError: Final chunk content is not valid JSON or
+                does not match the model schema.
+        """
+        for chunk in stream:
+            if chunk.finish_reason is not None:
+                content = chunk.content if isinstance(chunk.content, str) else ""
+                try:
+                    chunk.parsed = parse_json_response(content, response_model)
+                except Exception as exc:
+                    raise StructuredOutputError(
+                        model_name=response_model.__name__,
+                        reason=str(exc),
+                        raw_content=content,
+                    ) from exc
+            yield chunk
+
+    @staticmethod
+    async def _wrap_async_stream_with_parsing(
+        stream: AsyncGenerator[StreamChunk, None],
+        response_model: type[BaseModel],
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """Async version of _wrap_stream_with_parsing.
+
+        Args:
+            stream: The upstream async streaming generator.
+            response_model: Pydantic model class to parse the accumulated content.
+
+        Yields:
+            Each chunk unchanged; the final chunk has its ``parsed`` attribute set.
+
+        Raises:
+            StructuredOutputError: Final chunk content is not valid JSON or
+                does not match the model schema.
+        """
+        async for chunk in stream:
+            if chunk.finish_reason is not None:
+                content = chunk.content if isinstance(chunk.content, str) else ""
+                try:
+                    chunk.parsed = parse_json_response(content, response_model)
+                except Exception as exc:
+                    raise StructuredOutputError(
+                        model_name=response_model.__name__,
+                        reason=str(exc),
+                        raw_content=content,
+                    ) from exc
+            yield chunk
 
     def __repr__(self) -> str:
-        """Returns a string representation of the Chimeric client.
-
-        Returns:
-            String representation showing configured providers and primary provider.
-        """
-        configured_providers = [provider.value for provider in self.providers]
-        primary_provider_name = self.primary_provider.value if self.primary_provider else None
-
-        return f"Chimeric(providers={configured_providers}, primary={primary_provider_name})"
+        """Return a concise string representation."""
+        return f"Chimeric(providers={self.available_providers})"

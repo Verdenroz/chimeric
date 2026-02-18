@@ -1,61 +1,49 @@
 interactions:
 - request:
-    body: '{"contents": [{"parts": [{"text": "What is 2+2-4-10+50? Tell me a joke."}],
-      "role": "user"}], "tools": [{"functionDeclarations": [{"description": "\nAdds
-      two numbers together.\nArgs:\n    x: the first number\n    y: the second number\n\nReturns:\n    The
-      sum of x and y.\n", "name": "add", "parameters": {"type": "OBJECT", "properties":
-      {"x": {"type": "INTEGER"}, "y": {"type": "INTEGER"}}}}, {"description": "\nSubtracts
-      the second number from the first.\nArgs:\n    x: the first number\n    y: the
-      second number\n\nReturns:\n    The result of x - y.\n", "name": "subtract",
-      "parameters": {"type": "OBJECT", "properties": {"x": {"type": "INTEGER"}, "y":
-      {"type": "INTEGER"}}}}, {"description": "\nReturns a joke.\n", "name": "joke"}]}],
-      "generationConfig": {}}'
+    body: '{"contents":[{"role":"user","parts":[{"text":"What is 2+2-4? Tell me a
+      joke."}]}],"tools":[{"functionDeclarations":[{"name":"add","description":"Adds
+      two numbers together.","parameters":{"type":"object","properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"]}},{"name":"subtract","description":"Subtracts
+      the second number from the first.","parameters":{"type":"object","properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"]}},{"name":"joke","description":"Returns
+      a joke.","parameters":{"type":"object","properties":{}}}]}]}'
     headers:
-      Accept:
+      accept:
       - '*/*'
-      Accept-Encoding:
+      accept-encoding:
       - gzip, deflate
-      Connection:
+      connection:
       - keep-alive
-      Content-Length:
-      - '761'
-      Content-Type:
+      content-length:
+      - '712'
+      content-type:
       - application/json
-      x-goog-api-client:
-      - google-genai-sdk/1.2.0 gl-python/3.13.5
+      host:
+      - generativelanguage.googleapis.com
     method: POST
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
   response:
     body:
       string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
         [\n          {\n            \"functionCall\": {\n              \"name\": \"add\",\n
         \             \"args\": {\n                \"x\": 2,\n                \"y\":
-        2\n              }\n            }\n          },\n          {\n            \"functionCall\":
-        {\n              \"name\": \"subtract\",\n              \"args\": {\n                \"x\":
-        4,\n                \"y\": 4\n              }\n            }\n          },\n
-        \         {\n            \"functionCall\": {\n              \"name\": \"subtract\",\n
-        \             \"args\": {\n                \"y\": 10,\n                \"x\":
-        0\n              }\n            }\n          },\n          {\n            \"functionCall\":
-        {\n              \"name\": \"add\",\n              \"args\": {\n                \"y\":
-        50,\n                \"x\": -10\n              }\n            }\n          },\n
-        \         {\n            \"functionCall\": {\n              \"name\": \"joke\",\n
-        \             \"args\": {}\n            }\n          }\n        ],\n        \"role\":
-        \"model\"\n      },\n      \"finishReason\": \"STOP\",\n      \"avgLogprobs\":
-        -0.013561163629804338\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
-        116,\n    \"candidatesTokenCount\": 21,\n    \"totalTokenCount\": 137,\n    \"promptTokensDetails\":
-        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 116\n
-        \     }\n    ],\n    \"candidatesTokensDetails\": [\n      {\n        \"modality\":
-        \"TEXT\",\n        \"tokenCount\": 21\n      }\n    ]\n  },\n  \"modelVersion\":
-        \"gemini-1.5-flash\",\n  \"responseId\": \"2hOJaNqlJMrBgLUPjrn2YQ\"\n}\n"
+        2\n              }\n            },\n            \"thoughtSignature\": \"CrAEAb4+9vs0mHgVQSzmD1QruxChU6FLycCXQjReE0ZULbOxZMVW5AnALMIarougrE7gSwph7gvM0dfL5coameW074YGlJ7ueYkDy9hv+alrnMZbLl156UYQ8EH9/5JG3cFlV+Wfyh28PPfafV1BVVCDM6YC3H9t3JkzxqQxMaI6eS4+lou/Qh8zT59vCGCP4xbfphjIt2iK2vu8MPJheYUaYSjJvFF/fjDPps32Ch8zPJBxDQBh6X3B8lQKmo4xBqVLq33NmF1+suOc/wtzBF4hai02x3A753J0C3CgMbqXHPUSzx+P4FHHFrKIg2mldY+gteBikxCgCsCSlCJ3GnHAY5kgvvDwyWwYGG3z5XBJZvuxeWApSCLkwdKES+dsTxAMr8qzI1ykwGLVn1LHnUKo90FqU4PcmHI34XRMq18SCdhygePnJvSfd5b9VWH/4xoCJHe8Id+6Jvq/Qte3uRvZHyaUEfuh3RHdpTYAnd9486tvtUdj8PUNx2EG2jeb2d2N4qvzjN/eFRk2cUATN0tsz/OE3pJyx2IhhD5bgd5fdbSB/kwf1BIb6LVmtKVg6rIJ4wRqlK+EKJc75RX6hhGbZ0IFjf5nPmIDM15zwYyYett4zozTMz8ul/wy4zireaGbYQ+sFQfcQRESOv+n5msVe9FXs92NvyGE3aLxkgAxXMn/P+ECVEuADPip6/6fYKct+zAsrN0AlKNSBNcQnWr/7oID8CrpShpcpF9DhC+xyM0=\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0,\n      \"finishMessage\": \"Model generated
+        function call(s).\"\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        142,\n    \"candidatesTokenCount\": 18,\n    \"totalTokenCount\": 301,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 142\n
+        \     }\n    ],\n    \"thoughtsTokenCount\": 141\n  },\n  \"modelVersion\":
+        \"gemini-2.5-flash\",\n  \"responseId\": \"SvKUaZOPKpz1jMcPr_DgsQI\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Tue, 29 Jul 2025 18:32:59 GMT
+      - Tue, 17 Feb 2026 22:57:15 GMT
       Server-Timing:
-      - gfet4t7; dur=851
+      - gfet4t7; dur=1009
       Transfer-Encoding:
       - chunked
       Vary:
@@ -69,67 +57,55 @@ interactions:
       X-XSS-Protection:
       - '0'
       content-length:
-      - '1479'
+      - '1531'
     status:
       code: 200
       message: OK
 - request:
-    body: '{"contents": [{"parts": [{"text": "What is 2+2-4-10+50? Tell me a joke."}],
-      "role": "user"}, {"parts": [{"functionCall": {"args": {"x": 2, "y": 2}, "name":
-      "add"}}, {"functionCall": {"args": {"x": 4, "y": 4}, "name": "subtract"}}, {"functionCall":
-      {"args": {"y": 10, "x": 0}, "name": "subtract"}}, {"functionCall": {"args":
-      {"y": 50, "x": -10}, "name": "add"}}, {"functionCall": {"args": {}, "name":
-      "joke"}}], "role": "model"}, {"parts": [{"functionResponse": {"name": "add",
-      "response": {"result": 4}}}, {"functionResponse": {"name": "subtract", "response":
-      {"result": 0}}}, {"functionResponse": {"name": "subtract", "response": {"result":
-      -10}}}, {"functionResponse": {"name": "add", "response": {"result": 40}}}, {"functionResponse":
-      {"name": "joke", "response": {"result": "Why did the chicken cross the road?
-      To get to the other side!"}}}], "role": "user"}], "tools": [{"functionDeclarations":
-      [{"description": "\nAdds two numbers together.\nArgs:\n    x: the first number\n    y:
-      the second number\n\nReturns:\n    The sum of x and y.\n", "name": "add", "parameters":
-      {"type": "OBJECT", "properties": {"x": {"type": "INTEGER"}, "y": {"type": "INTEGER"}}}},
-      {"description": "\nSubtracts the second number from the first.\nArgs:\n    x:
-      the first number\n    y: the second number\n\nReturns:\n    The result of x
-      - y.\n", "name": "subtract", "parameters": {"type": "OBJECT", "properties":
-      {"x": {"type": "INTEGER"}, "y": {"type": "INTEGER"}}}}, {"description": "\nReturns
-      a joke.\n", "name": "joke"}]}], "generationConfig": {}}'
+    body: '{"contents":[{"role":"user","parts":[{"text":"What is 2+2-4? Tell me a
+      joke."}]},{"role":"model","parts":[{"functionCall":{"name":"add","args":{"x":2,"y":2}}}]},{"role":"user","parts":[{"functionResponse":{"name":"add","response":{"result":"4"}}}]}],"tools":[{"functionDeclarations":[{"name":"add","description":"Adds
+      two numbers together.","parameters":{"type":"object","properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"]}},{"name":"subtract","description":"Subtracts
+      the second number from the first.","parameters":{"type":"object","properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"]}},{"name":"joke","description":"Returns
+      a joke.","parameters":{"type":"object","properties":{}}}]}]}'
     headers:
-      Accept:
+      accept:
       - '*/*'
-      Accept-Encoding:
+      accept-encoding:
       - gzip, deflate
-      Connection:
+      connection:
       - keep-alive
-      Content-Length:
-      - '1532'
-      Content-Type:
+      content-length:
+      - '880'
+      content-type:
       - application/json
-      x-goog-api-client:
-      - google-genai-sdk/1.2.0 gl-python/3.13.5
+      host:
+      - generativelanguage.googleapis.com
     method: POST
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
   response:
     body:
       string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
-        [\n          {\n            \"text\": \"2 + 2 - 4 - 10 + 50 = 40\\n\\nHere's
-        a joke: Why did the chicken cross the road? To get to the other side!\\n\"\n
+        [\n          {\n            \"functionCall\": {\n              \"name\": \"subtract\",\n
+        \             \"args\": {\n                \"x\": 4,\n                \"y\":
+        4\n              }\n            },\n            \"thoughtSignature\": \"Cv4BAb4+9vvBh2IYxETheaqBqFKKaQ7LZ9zNwCP6bFkUKWLLP8vczq3FXfVGpXwSYsOWgOeqCDWp7Anq+L+nPfnJVGHNwZmAB0Kkj1Px2uKqE36afnpcm3L4UaajXiw0ldBlg8e53bIKSzzLPW5/gSA+AfXCUb6h/JjPPRny/a9W3M+1i5EpgkOhQ4MM2xANOIeKuYJMiyH3HNi526alB40xF6g6gY+NtJjugrx+lonU6oHo0hr/NM97xpxDW8NFDOAhb/VRA/hh2YEoTEKFydQDQ/seH9CDi0uGT7yDJNTNaLvMMrL7CjKSUwAD+84tBc2it7aRGV5hwVd5eTj8MNw=\"\n
         \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
-        \"STOP\",\n      \"avgLogprobs\": -0.0013842451430502393\n    }\n  ],\n  \"usageMetadata\":
-        {\n    \"promptTokenCount\": 166,\n    \"candidatesTokenCount\": 42,\n    \"totalTokenCount\":
-        208,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
-        \       \"tokenCount\": 166\n      }\n    ],\n    \"candidatesTokensDetails\":
-        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 42\n
-        \     }\n    ]\n  },\n  \"modelVersion\": \"gemini-1.5-flash\",\n  \"responseId\":
-        \"2xOJaLGqJ6Sm1dkPk-X3qAg\"\n}\n"
+        \"STOP\",\n      \"index\": 0,\n      \"finishMessage\": \"Model generated
+        function call(s).\"\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        173,\n    \"candidatesTokenCount\": 18,\n    \"totalTokenCount\": 260,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 173\n
+        \     }\n    ],\n    \"thoughtsTokenCount\": 69\n  },\n  \"modelVersion\":
+        \"gemini-2.5-flash\",\n  \"responseId\": \"S_KUacXtLoK1jMcPgrGlmQI\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Tue, 29 Jul 2025 18:33:00 GMT
+      - Tue, 17 Feb 2026 22:57:16 GMT
       Server-Timing:
-      - gfet4t7; dur=683
+      - gfet4t7; dur=904
       Transfer-Encoding:
       - chunked
       Vary:
@@ -143,7 +119,127 @@ interactions:
       X-XSS-Protection:
       - '0'
       content-length:
-      - '757'
+      - '1127'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents":[{"role":"user","parts":[{"text":"What is 2+2-4? Tell me a
+      joke."}]},{"role":"model","parts":[{"functionCall":{"name":"add","args":{"x":2,"y":2}}}]},{"role":"user","parts":[{"functionResponse":{"name":"add","response":{"result":"4"}}}]},{"role":"model","parts":[{"functionCall":{"name":"subtract","args":{"x":4,"y":4}}}]},{"role":"user","parts":[{"functionResponse":{"name":"subtract","response":{"result":"0"}}}]}],"tools":[{"functionDeclarations":[{"name":"add","description":"Adds
+      two numbers together.","parameters":{"type":"object","properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"]}},{"name":"subtract","description":"Subtracts
+      the second number from the first.","parameters":{"type":"object","properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"]}},{"name":"joke","description":"Returns
+      a joke.","parameters":{"type":"object","properties":{}}}]}]}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1058'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"functionCall\": {\n              \"name\": \"joke\",\n
+        \             \"args\": {}\n            }\n          }\n        ],\n        \"role\":
+        \"model\"\n      },\n      \"finishReason\": \"STOP\",\n      \"index\": 0,\n
+        \     \"finishMessage\": \"Model generated function call(s).\"\n    }\n  ],\n
+        \ \"usageMetadata\": {\n    \"promptTokenCount\": 204,\n    \"candidatesTokenCount\":
+        8,\n    \"totalTokenCount\": 212,\n    \"promptTokensDetails\": [\n      {\n
+        \       \"modality\": \"TEXT\",\n        \"tokenCount\": 204\n      }\n    ]\n
+        \ },\n  \"modelVersion\": \"gemini-2.5-flash\",\n  \"responseId\": \"TPKUadvaL_TkjMcPld74kAI\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 17 Feb 2026 22:57:17 GMT
+      Server-Timing:
+      - gfet4t7; dur=365
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+      content-length:
+      - '650'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents":[{"role":"user","parts":[{"text":"What is 2+2-4? Tell me a
+      joke."}]},{"role":"model","parts":[{"functionCall":{"name":"add","args":{"x":2,"y":2}}}]},{"role":"user","parts":[{"functionResponse":{"name":"add","response":{"result":"4"}}}]},{"role":"model","parts":[{"functionCall":{"name":"subtract","args":{"x":4,"y":4}}}]},{"role":"user","parts":[{"functionResponse":{"name":"subtract","response":{"result":"0"}}}]},{"role":"model","parts":[{"functionCall":{"name":"joke","args":{}}}]},{"role":"user","parts":[{"functionResponse":{"name":"joke","response":{"result":"Why
+      did the chicken cross the road? To get to the other side!"}}}]}],"tools":[{"functionDeclarations":[{"name":"add","description":"Adds
+      two numbers together.","parameters":{"type":"object","properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"]}},{"name":"subtract","description":"Subtracts
+      the second number from the first.","parameters":{"type":"object","properties":{"x":{"type":"integer","description":"the
+      first number"},"y":{"type":"integer","description":"the second number"}},"required":["x","y"]}},{"name":"joke","description":"Returns
+      a joke.","parameters":{"type":"object","properties":{}}}]}]}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1277'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"2 + 2 - 4 = 0. Why did the chicken
+        cross the road? To get to the other side!\"\n          }\n        ],\n        \"role\":
+        \"model\"\n      },\n      \"finishReason\": \"STOP\",\n      \"index\": 0\n
+        \   }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\": 239,\n    \"candidatesTokenCount\":
+        26,\n    \"totalTokenCount\": 265,\n    \"promptTokensDetails\": [\n      {\n
+        \       \"modality\": \"TEXT\",\n        \"tokenCount\": 239\n      }\n    ]\n
+        \ },\n  \"modelVersion\": \"gemini-2.5-flash\",\n  \"responseId\": \"TfKUae_cCuHVjMcPoZGC4Ag\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 17 Feb 2026 22:57:17 GMT
+      Server-Timing:
+      - gfet4t7; dur=601
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+      content-length:
+      - '591'
     status:
       code: 200
       message: OK

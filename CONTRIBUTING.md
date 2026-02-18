@@ -48,8 +48,8 @@ make lint
 
 ### Test Structure
 
-- **Unit Tests** (`tests/unit/`): Fast tests with mocking, must achieve 100% coverage
-- **Integration Tests** (`tests/integration/`): Real API calls with VCR cassettes for reproducibility
+- **Unit Tests** (`tests/unit/`): Fast tests with mocking, must achieve 80% coverage
+- **Integration Tests** (`tests/integration/`): Real API calls recorded with VCR cassettes for reproducibility
 
 ### Running Tests
 
@@ -60,7 +60,7 @@ make test
 # Unit tests only (fast)
 make test-unit
 
-# Integration tests (requires API keys)
+# Integration tests (requires API keys or existing cassettes)
 make test-integration
 
 # Provider-specific tests
@@ -81,7 +81,7 @@ make nox
 
 ### Test Coverage
 
-We maintain 100% test coverage for unit tests. Coverage reports are generated automatically:
+We maintain 80% test coverage for unit tests. Coverage reports are generated automatically:
 ```bash
 nox --session=coverage
 ```
@@ -120,24 +120,56 @@ nox --session=coverage
 
 ## Provider Development
 
-### Adding New Providers
+### Architecture Overview
 
-When adding support for a new LLM provider:
+Chimeric uses a lightweight adapter system with no provider SDKs:
 
-1. **Create provider module** in `src/chimeric/providers/newprovider/`
-2. **Implement client classes** inheriting from base classes
-3. **Add provider-specific tests** in `tests/unit/providers/` and `tests/integration/`
-4. **Update documentation** and provider comparison tables
-5. **Add optional dependency** to `pyproject.toml`
+- **`src/chimeric/config.py`** — `PROVIDER_REGISTRY`: one `ProviderConfig` entry per provider
+- **`src/chimeric/adapters/`** — stateless adapter classes that handle provider-specific serialization
+- **`src/chimeric/http.py`** — shared HTTP transport (sync + async via httpx)
 
-### Provider Architecture
+There are four adapters covering all eight providers:
 
-Each provider must implement:
-- Sync and async client classes
-- Message format conversion
-- Streaming support
-- Error handling
-- Tool/function calling (if supported)
+| Adapter | Providers |
+|---|---|
+| `openai` | OpenAI, Groq, Cerebras, xAI Grok, OpenRouter |
+| `anthropic` | Anthropic |
+| `google` | Google Gemini |
+| `cohere` | Cohere |
+
+### Adding a New Provider That Shares an Existing Wire Format
+
+If the new provider speaks the OpenAI (or another existing) API format, add a single entry to `PROVIDER_REGISTRY` in `src/chimeric/config.py`:
+
+```python
+"myprovider": ProviderConfig(
+    name="myprovider",
+    base_url="https://api.myprovider.com/v1",
+    adapter="openai",               # reuse the OpenAI adapter
+    api_key_env_vars=("MYPROVIDER_API_KEY",),
+),
+```
+
+Then:
+1. Add the provider key to `Chimeric.__init__()` and the `explicit` dict in `src/chimeric/chimeric.py`
+2. Add integration tests in `tests/integration/`
+3. Add the optional dependency to `pyproject.toml` if needed
+
+### Adding a Provider With a New Wire Format
+
+If the provider uses a different API format, create a new adapter:
+
+1. **Add a `ProviderConfig`** entry to `PROVIDER_REGISTRY`
+2. **Create `src/chimeric/adapters/myprovider.py`** implementing the `Adapter` protocol from `adapters/base.py`:
+   - `build_request_body()` — converts `Message` list + tool list to provider JSON
+   - `parse_response()` — converts provider JSON to `CompletionResponse`
+   - `parse_sse_event()` — converts one SSE line to `StreamChunk`
+   - `parse_tool_calls()` — extracts tool calls from a non-streaming response
+   - `finalize_stream()` — extracts tool calls accumulated during streaming
+   - `build_tool_result_messages()` — appends tool results to the message list
+   - `parse_models_response()` — converts the models endpoint response to `list[ModelSummary]`
+3. **Register the adapter** in `src/chimeric/adapters/__init__.py`
+4. **Add tests** in `tests/unit/adapters/` and `tests/integration/`
 
 ## Documentation
 

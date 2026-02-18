@@ -1,0 +1,77 @@
+interactions:
+- request:
+    body: '{"model":"llama3.1-8b","messages":[{"role":"user","content":"What is 6
+      multiplied by 7? Return the numeric result and a one-sentence explanation."}],"stream":false,"max_tokens":150,"response_format":{"type":"json_schema","json_schema":{"name":"MathAnswer","schema":{"description":"Simple
+      arithmetic answer used across all provider tests.","properties":{"result":{"title":"Result","type":"integer"},"explanation":{"title":"Explanation","type":"string"}},"required":["result","explanation"],"type":"object","additionalProperties":false},"strict":true}}}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '551'
+      content-type:
+      - application/json
+      host:
+      - api.cerebras.ai
+    method: POST
+    uri: https://api.cerebras.ai/v1/chat/completions
+  response:
+    body:
+      string: '{"id":"chatcmpl-90e459c4-a5d0-40cc-8edf-f2f4e830d3ba","choices":[{"finish_reason":"stop","index":0,"message":{"content":"{\n  \"result\":
+        42,\n  \"explanation\": \"The product of 6 and 7\"\n}","role":"assistant"}}],"created":1771369418,"model":"llama3.1-8b","system_fingerprint":"fp_5198798116a66ebf301b","object":"chat.completion","usage":{"total_tokens":231,"completion_tokens":25,"completion_tokens_details":{"accepted_prediction_tokens":0,"rejected_prediction_tokens":0,"reasoning_tokens":0},"prompt_tokens":206,"prompt_tokens_details":{"cached_tokens":0}},"time_info":{"queue_time":0.129447702,"prompt_time":0.013805280999999996,"completion_time":0.010085887,"total_time":0.15440106391906738,"created":1771369418.8128498}}'
+    headers:
+      CF-RAY:
+      - 9cf8eb39c86db2c0-EWR
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 17 Feb 2026 23:03:35 GMT
+      Transfer-Encoding:
+      - chunked
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '727'
+      inference-id:
+      - chatcmpl-90e459c4-a5d0-40cc-8edf-f2f4e830d3ba
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      strict-transport-security:
+      - max-age=3600; includeSubDomains
+      x-content-type-options:
+      - nosniff
+      x-ratelimit-limit-requests-day:
+      - '14400'
+      x-ratelimit-limit-requests-hour:
+      - '900'
+      x-ratelimit-limit-requests-minute:
+      - '30'
+      x-ratelimit-limit-tokens-day:
+      - '1000000'
+      x-ratelimit-limit-tokens-hour:
+      - '1000000'
+      x-ratelimit-limit-tokens-minute:
+      - '60000'
+      x-ratelimit-remaining-requests-day:
+      - '14398'
+      x-ratelimit-remaining-requests-hour:
+      - '0'
+      x-ratelimit-remaining-requests-minute:
+      - '29'
+      x-ratelimit-remaining-tokens-day:
+      - '999814'
+      x-ratelimit-remaining-tokens-hour:
+      - '0'
+      x-ratelimit-remaining-tokens-minute:
+      - '59829'
+    status:
+      code: 200
+      message: OK
+version: 1
