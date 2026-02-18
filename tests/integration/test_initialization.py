@@ -20,7 +20,7 @@ _ALL_API_KEY_ENV_VARS = (
 )
 
 
-@pytest.fixture()
+@pytest.fixture
 def clean_provider_env(monkeypatch):
     """Remove all provider API key env vars so Chimeric starts from a blank slate."""
     for var in _ALL_API_KEY_ENV_VARS:

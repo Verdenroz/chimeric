@@ -129,7 +129,12 @@ def test_openrouter_sync_tools_non_streaming(api_keys):
 
         response = chimeric.generate(
             model="openai/gpt-4o-mini",
-            messages=[{"role": "user", "content": "Add 10 and 5. Separately, subtract 3 from 20. Then tell me a joke. Use the tools for each step."}],
+            messages=[
+                {
+                    "role": "user",
+                    "content": "Add 10 and 5. Separately, subtract 3 from 20. Then tell me a joke. Use the tools for each step.",
+                }
+            ],
             stream=False,
         )
 
@@ -199,7 +204,12 @@ def test_openrouter_sync_tools_streaming(api_keys):
 
         response = chimeric.generate(
             model="openai/gpt-4o-mini",
-            messages=[{"role": "user", "content": "Add 10 and 5. Separately, subtract 3 from 20. Then tell me a joke. Use the tools for each step."}],
+            messages=[
+                {
+                    "role": "user",
+                    "content": "Add 10 and 5. Separately, subtract 3 from 20. Then tell me a joke. Use the tools for each step.",
+                }
+            ],
             stream=True,
         )
 
@@ -274,7 +284,12 @@ async def test_openrouter_async_tools_streaming(api_keys):
 
         response = await chimeric.agenerate(
             model="openai/gpt-4o-mini",
-            messages=[{"role": "user", "content": "Add 10 and 5. Separately, subtract 3 from 20. Then tell me a joke. Use the tools for each step."}],
+            messages=[
+                {
+                    "role": "user",
+                    "content": "Add 10 and 5. Separately, subtract 3 from 20. Then tell me a joke. Use the tools for each step.",
+                }
+            ],
             stream=True,
         )
 
@@ -352,7 +367,12 @@ async def test_openrouter_async_tools_non_streaming(api_keys):
 
         response = await chimeric.agenerate(
             model="openai/gpt-4o-mini",
-            messages=[{"role": "user", "content": "Add 10 and 5. Separately, subtract 3 from 20. Then tell me a joke. Use the tools for each step."}],
+            messages=[
+                {
+                    "role": "user",
+                    "content": "Add 10 and 5. Separately, subtract 3 from 20. Then tell me a joke. Use the tools for each step.",
+                }
+            ],
             stream=False,
         )
 

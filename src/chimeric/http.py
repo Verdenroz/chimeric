@@ -20,12 +20,12 @@ from .adapters import ADAPTER_REGISTRY
 from .adapters.base import Adapter, StreamState
 from .adapters.google import GoogleAdapter
 from .exceptions import AuthenticationError, ProviderError, RateLimitError
-from .types import CompletionResponse, Message, ModelSummary, StreamChunk, Tool, ToolCall
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator
 
     from .config import ProviderConfig
+    from .types import CompletionResponse, Message, ModelSummary, StreamChunk, Tool, ToolCall
 
 __all__ = ["HttpClient"]
 

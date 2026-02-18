@@ -42,13 +42,10 @@ def _enforce_additional_properties(schema: dict[str, Any]) -> dict[str, Any]:
         schema["additionalProperties"] = False
         if "properties" in schema:
             schema["properties"] = {
-                k: _enforce_additional_properties(v)
-                for k, v in schema["properties"].items()
+                k: _enforce_additional_properties(v) for k, v in schema["properties"].items()
             }
     if "$defs" in schema:
-        schema["$defs"] = {
-            k: _enforce_additional_properties(v) for k, v in schema["$defs"].items()
-        }
+        schema["$defs"] = {k: _enforce_additional_properties(v) for k, v in schema["$defs"].items()}
     return schema
 
 
@@ -86,7 +83,11 @@ def _groq_format(schema_name: str, schema: dict[str, Any]) -> dict[str, Any]:
 
 
 def _anthropic_format(_schema_name: str, schema: dict[str, Any]) -> dict[str, Any]:
-    return {"output_config": {"format": {"type": "json_schema", "schema": _enforce_additional_properties(schema)}}}
+    return {
+        "output_config": {
+            "format": {"type": "json_schema", "schema": _enforce_additional_properties(schema)}
+        }
+    }
 
 
 def _google_format(_schema_name: str, schema: dict[str, Any]) -> dict[str, Any]:

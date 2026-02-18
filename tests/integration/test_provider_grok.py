@@ -1,7 +1,6 @@
 import pytest
 
 from chimeric import Chimeric
-from chimeric.exceptions import ProviderError
 
 # NOTE: VCR is not used for Grok tests because the xai-sdk uses gRPC instead of HTTP.
 # VCR can only record HTTP requests (requests, httpx, aiohttp) but cannot intercept

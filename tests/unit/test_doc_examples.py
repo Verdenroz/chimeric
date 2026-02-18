@@ -20,7 +20,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from chimeric import Chimeric
-from chimeric.exceptions import ChimericError, ModelNotSupportedError, ProviderNotFoundError
+from chimeric.exceptions import ChimericError
 from chimeric.types import (
     CompletionResponse,
     ModelSummary,
@@ -28,7 +28,6 @@ from chimeric.types import (
     StreamChunk,
     Usage,
 )
-
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -66,7 +65,9 @@ def _make_client(*model_ids: str, **kwargs: Any) -> tuple[Chimeric, MagicMock]:
     mock.list_models.return_value = _models(*model_ids) if model_ids else _models("gpt-4o")
     mock.complete.return_value = _completion()
     mock.acomplete = AsyncMock(return_value=_completion())
-    mock.alist_models = AsyncMock(return_value=_models(*model_ids) if model_ids else _models("gpt-4o"))
+    mock.alist_models = AsyncMock(
+        return_value=_models(*model_ids) if model_ids else _models("gpt-4o")
+    )
     with patch("chimeric.chimeric.HttpClient", return_value=mock):
         client = Chimeric(openai_api_key="sk-test", **kwargs)
     return client, mock
@@ -150,8 +151,8 @@ class TestGettingStartedExamples:
         response = client.generate(model="gpt-4o", messages="Explain quantum physics")
 
         # Documented fields
-        _ = response.content   # str | list
-        _ = response.model     # str | None
+        _ = response.content  # str | list
+        _ = response.model  # str | None
         _ = response.metadata  # dict | None
 
         # usage is nullable
@@ -186,7 +187,7 @@ class TestGettingStartedExamples:
             symbol: str,
             period: str = "1y",
             metrics: list[str] | None = None,
-        ) -> dict:
+        ) -> dict[str, Any]:
             """Analyze financial performance metrics for a given symbol.
 
             Args:
@@ -219,6 +220,7 @@ class TestGettingStartedExamples:
             async def _gen():
                 for chunk in _stream("Hello", " async"):
                     yield chunk
+
             return _gen()
 
         mock.acomplete.side_effect = _fake_acomplete
@@ -483,7 +485,7 @@ class TestResponseExamples:
         mock.acomplete = AsyncMock(return_value=_completion("Async hello"))
 
         async def run() -> None:
-            response = await client.agenerate(model="gpt-4o", messages="Hello")  # type: ignore[union-attr]
+            response = await client.agenerate(model="gpt-4o", messages="Hello")
             assert isinstance(response, CompletionResponse)
             assert response.content is not None
 
@@ -523,7 +525,7 @@ class TestToolExamples:
         client, _ = _make_client()
 
         @client.tool(name="fetch_stock_data", description="Retrieve real-time stock information")
-        def get_stock_price(symbol: str, include_history: bool = False) -> dict:
+        def get_stock_price(symbol: str, include_history: bool = False) -> dict[str, Any]:
             """Get stock price and optional historical data."""
             return {"symbol": symbol, "price": 150.25}
 
@@ -535,7 +537,7 @@ class TestToolExamples:
         client, _ = _make_client()
 
         @client.tool()
-        def analyze_data(data: list[float], method: str = "mean") -> dict:
+        def analyze_data(data: list[float], method: str = "mean") -> dict[str, Any]:
             """Analyze numerical data using statistical methods.
 
             Args:
@@ -623,7 +625,7 @@ class TestToolExamples:
         def complex_types_example(
             items: list[str],
             optional_param: str | None = None,
-        ) -> dict:
+        ) -> dict[str, Any]:
             """Example of complex type support."""
             return {}
 
@@ -837,8 +839,8 @@ class TestLocalAIExamples:
         """Local and cloud providers coexist; routing by model name works."""
         mock = MagicMock()
         mock.list_models.side_effect = [
-            _models("qwen2.5:3b"),   # custom provider at init
-            _models("gpt-4o"),       # openai provider at init
+            _models("qwen2.5:3b"),  # custom provider at init
+            _models("gpt-4o"),  # openai provider at init
         ]
         mock.complete.return_value = _completion("hello")
         with patch("chimeric.chimeric.HttpClient", return_value=mock):

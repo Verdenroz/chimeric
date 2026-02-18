@@ -26,31 +26,26 @@ from .types import (
 )
 
 __all__ = [
-    # Primary interface
-    "Chimeric",
-    # Exceptions
     "AuthenticationError",
+    "Chimeric",
     "ChimericError",
-    "ModelNotSupportedError",
-    "ProviderError",
-    "ProviderNotFoundError",
-    "RateLimitError",
-    "StructuredOutputError",
-    "ToolRegistrationError",
-    # Response types
     "CompletionResponse",
-    "StreamChunk",
-    "Usage",
-    # Input / routing types
-    "Provider",
     "Input",
     "Message",
     "Metadata",
+    "ModelNotSupportedError",
+    "ModelSummary",
+    "Provider",
+    "ProviderError",
+    "ProviderNotFoundError",
+    "RateLimitError",
+    "StreamChunk",
+    "StructuredOutputError",
     "Tool",
     "ToolCall",
+    "ToolRegistrationError",
     "Tools",
-    # Model discovery
-    "ModelSummary",
+    "Usage",
 ]
 
 __version__ = "0.2.0"
