@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Documentation Status](https://img.shields.io/badge/docs-latest-blue.svg)](https://verdenroz.github.io/chimeric/)
 [![CI](https://github.com/Verdenroz/chimeric/workflows/CI/badge.svg)](https://github.com/Verdenroz/chimeric/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/Verdenroz/chimeric/branch/main/graph/badge.svg)](https://codecov.io/gh/Verdenroz/chimeric)
+[![codecov](https://codecov.io/gh/Verdenroz/chimeric/graph/badge.svg?token=UOfsQnGQ3E)](https://codecov.io/gh/Verdenroz/chimeric)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![basedpyright](https://img.shields.io/badge/basedpyright-checked-42b883)](https://github.com/DetachHead/basedpyright)
 [![codespell](https://img.shields.io/badge/codespell-checked-42b883)](https://github.com/codespell-project/codespell)
