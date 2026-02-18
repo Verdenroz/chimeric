@@ -111,13 +111,19 @@ class TestBuildResponseFormatKwargs:
         "type": "object",
         "properties": {"x": {"type": "string"}},
     }
+    # _enforce_additional_properties adds additionalProperties: False on every object
+    ENRICHED_SCHEMA: ClassVar[dict[str, object]] = {
+        "type": "object",
+        "properties": {"x": {"type": "string"}},
+        "additionalProperties": False,
+    }
 
     def test_openai_format(self):
         result = build_response_format_kwargs(Provider.OPENAI, "MyModel", self.SCHEMA)
         assert result == {
             "response_format": {
                 "type": "json_schema",
-                "json_schema": {"name": "MyModel", "schema": self.SCHEMA, "strict": True},
+                "json_schema": {"name": "MyModel", "schema": self.ENRICHED_SCHEMA, "strict": True},
             }
         }
 
@@ -144,7 +150,7 @@ class TestBuildResponseFormatKwargs:
             "output_config": {
                 "format": {
                     "type": "json_schema",
-                    "schema": self.SCHEMA,
+                    "schema": self.ENRICHED_SCHEMA,
                 }
             }
         }

@@ -26,7 +26,7 @@ class TestGetCompletionPath:
 
     def test_streaming(self, adapter):
         path = adapter.get_completion_path("gemini-2.0-flash", True)
-        assert path == "/models/gemini-2.0-flash:streamGenerateContent"
+        assert path == "/models/gemini-2.0-flash:streamGenerateContent?alt=sse"
 
 
 class TestBuildRequestBody:
