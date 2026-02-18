@@ -5,6 +5,7 @@ Coverage map:
   docs/index.md                  → TestIndexExamples
   docs/usage/getting-started.md  → TestGettingStartedExamples
   docs/usage/configuration.md    → TestConfigurationExamples
+  docs/usage/local-ai.md         → TestLocalAIExamples
   docs/usage/streaming.md        → TestStreamingExamples
   docs/usage/responses.md        → TestResponseExamples
   docs/usage/tools.md            → TestToolExamples
@@ -718,3 +719,137 @@ class TestToolExamples:
             result += chunk.delta or ""
 
         assert result == "The time is 3pm. Enjoy!"
+
+
+# ---------------------------------------------------------------------------
+# docs/usage/local-ai.md
+# ---------------------------------------------------------------------------
+
+
+class TestLocalAIExamples:
+    """docs/usage/local-ai.md code block coverage."""
+
+    def test_basic_setup_no_api_key(self) -> None:
+        """Chimeric(base_url=...) registers a 'custom' provider."""
+        mock = MagicMock()
+        mock.list_models.return_value = _models("qwen2.5:3b")
+        mock.complete.return_value = _completion()
+        with patch("chimeric.chimeric.HttpClient", return_value=mock):
+            client = Chimeric(base_url="http://127.0.0.1:11434/v1")
+        assert "custom" in client.available_providers
+
+    def test_basic_setup_with_api_key(self) -> None:
+        """api_key is stored on the custom provider."""
+        mock = MagicMock()
+        mock.list_models.return_value = []
+        with patch("chimeric.chimeric.HttpClient", return_value=mock):
+            client = Chimeric(
+                base_url="http://127.0.0.1:11434/v1",
+                api_key="my-server-secret",
+            )
+        _, key = client._providers["custom"]
+        assert key == "my-server-secret"
+
+    def test_model_discovery(self) -> None:
+        """list_models() returns models from the custom endpoint."""
+        mock = MagicMock()
+        mock.list_models.return_value = [
+            ModelSummary(id="qwen2.5:3b", name="Qwen2.5 3B", provider="custom"),
+            ModelSummary(id="llama-3.2:1b", name="Llama 3.2 1B", provider="custom"),
+        ]
+        with patch("chimeric.chimeric.HttpClient", return_value=mock):
+            client = Chimeric(base_url="http://127.0.0.1:11434/v1")
+
+        models = client.list_models()
+        ids = [m.id for m in models]
+        assert "qwen2.5:3b" in ids
+
+    def test_generate_local_model(self) -> None:
+        """generate() routes to the custom provider by model name."""
+        mock = MagicMock()
+        mock.list_models.return_value = _models("qwen2.5:3b")
+        mock.complete.return_value = _completion("Neural networks learn from data.")
+        with patch("chimeric.chimeric.HttpClient", return_value=mock):
+            client = Chimeric(base_url="http://127.0.0.1:11434/v1")
+
+        response = client.generate(
+            model="qwen2.5:3b",
+            messages="Explain neural networks in one sentence.",
+        )
+        assert response.content == "Neural networks learn from data."
+
+    def test_streaming_local_model(self) -> None:
+        """Streaming with a local model yields delta chunks."""
+        mock = MagicMock()
+        mock.list_models.return_value = _models("qwen2.5:3b")
+        mock.complete.return_value = iter(_stream("Roses ", "are red."))
+        with patch("chimeric.chimeric.HttpClient", return_value=mock):
+            client = Chimeric(base_url="http://127.0.0.1:11434/v1")
+
+        stream = client.generate(
+            model="qwen2.5:3b",
+            messages="Write a short poem.",
+            stream=True,
+        )
+        result = "".join(chunk.delta or "" for chunk in stream)
+        assert result == "Roses are red."
+
+    def test_async_local_model(self) -> None:
+        """agenerate() works with the custom provider."""
+        mock = MagicMock()
+        mock.list_models.return_value = _models("qwen2.5:3b")
+        mock.acomplete = AsyncMock(return_value=_completion("4"))
+        with patch("chimeric.chimeric.HttpClient", return_value=mock):
+            client = Chimeric(base_url="http://127.0.0.1:11434/v1")
+
+        async def run() -> CompletionResponse:
+            return await client.agenerate(  # type: ignore[return-value]
+                model="qwen2.5:3b",
+                messages="What is 2 + 2?",
+            )
+
+        response = asyncio.run(run())
+        assert isinstance(response, CompletionResponse)
+
+    def test_tool_registration_local(self) -> None:
+        """@client.tool() works with a local-endpoint client."""
+        mock = MagicMock()
+        mock.list_models.return_value = _models("qwen2.5:3b")
+        mock.complete.return_value = _completion("It is sunny in Tokyo.")
+        with patch("chimeric.chimeric.HttpClient", return_value=mock):
+            client = Chimeric(base_url="http://127.0.0.1:11434/v1")
+
+        @client.tool()
+        def get_weather(city: str) -> str:
+            """Get current weather for a city.
+
+            Args:
+                city: Name of the city.
+
+            Returns:
+                A short weather description.
+            """
+            return f"Sunny, 22°C in {city}"
+
+        assert any(t.name == "get_weather" for t in client.tools)
+
+    def test_mixing_local_and_cloud(self) -> None:
+        """Local and cloud providers coexist; routing by model name works."""
+        mock = MagicMock()
+        mock.list_models.side_effect = [
+            _models("qwen2.5:3b"),   # custom provider at init
+            _models("gpt-4o"),       # openai provider at init
+        ]
+        mock.complete.return_value = _completion("hello")
+        with patch("chimeric.chimeric.HttpClient", return_value=mock):
+            client = Chimeric(
+                base_url="http://127.0.0.1:11434/v1",
+                openai_api_key="sk-...",
+            )
+
+        assert "custom" in client.available_providers
+        assert "openai" in client.available_providers
+
+        # Both models are routable
+        assert "qwen2.5:3b" in client._model_cache
+        assert "gpt-4o" in client._model_cache
