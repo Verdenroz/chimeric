@@ -4,7 +4,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 import pytest
 
-from chimeric import Chimeric, ToolManager
+from chimeric import Chimeric
+from chimeric.tools import ToolManager
 from chimeric.types import Message
 
 from .vcr_config import get_vcr

@@ -1,6 +1,6 @@
 """Shared test fixtures and base utilities."""
 
-from chimeric import ToolManager
+from chimeric.tools import ToolManager
 from chimeric.types import Message
 
 

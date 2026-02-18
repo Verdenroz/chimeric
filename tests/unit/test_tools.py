@@ -2,7 +2,7 @@ from typing import Any
 
 import pytest
 
-from chimeric import ToolManager
+from chimeric.tools import ToolManager
 from chimeric.exceptions import ToolRegistrationError
 
 

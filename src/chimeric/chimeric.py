@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from dataclasses import replace
 from typing import TYPE_CHECKING, Any, cast
 
 from .config import PROVIDER_REGISTRY
@@ -70,6 +71,8 @@ class Chimeric:
         grok_api_key: str | None = None,
         groq_api_key: str | None = None,
         openrouter_api_key: str | None = None,
+        base_url: str | None = None,
+        api_key: str = "local",
         timeout: float = 60.0,
         **__kwargs: Any,
     ) -> None:
@@ -84,6 +87,12 @@ class Chimeric:
             grok_api_key: xAI Grok key (env: GROK_API_KEY or XAI_API_KEY).
             groq_api_key: Groq API key (env: GROQ_API_KEY).
             openrouter_api_key: OpenRouter key (env: OPENROUTER_API_KEY).
+            base_url: Base URL for a custom OpenAI-compatible endpoint (e.g. a
+                local llama.cpp server).  When set, the endpoint is registered
+                as a provider named ``"custom"`` and its ``/models`` list is
+                used for automatic model routing.
+            api_key: API key for the ``base_url`` endpoint.  Defaults to
+                ``"local"`` for servers that do not validate credentials.
             timeout: HTTP request timeout in seconds.
             **__kwargs: Accepted but ignored for forward-compatibility.
         """
@@ -120,6 +129,10 @@ class Chimeric:
                     self._register_provider(name, key)
                     break
 
+        # Custom OpenAI-compatible endpoint (e.g. local llama.cpp / llama-swap)
+        if base_url is not None:
+            self._register_custom(base_url.rstrip("/"), api_key)
+
     # ------------------------------------------------------------------
     # Provider management
     # ------------------------------------------------------------------
@@ -131,6 +144,13 @@ class Chimeric:
             return
         self._providers[name] = (config, api_key)
         self._populate_model_cache(name, config, api_key)
+
+    def _register_custom(self, base_url: str, api_key: str) -> None:
+        """Register a custom OpenAI-compatible endpoint as the 'custom' provider."""
+        template = PROVIDER_REGISTRY["openai"]
+        config = replace(template, name="custom", base_url=base_url)
+        self._providers["custom"] = (config, api_key)
+        self._populate_model_cache("custom", config, api_key)
 
     def _populate_model_cache(self, name: str, config: ProviderConfig, api_key: str) -> None:
         """Fetch available models and index them by model id."""

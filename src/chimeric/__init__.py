@@ -11,7 +11,6 @@ from .exceptions import (
     StructuredOutputError,
     ToolRegistrationError,
 )
-from .tools import ToolManager
 from .types import (
     CompletionResponse,
     Input,
@@ -22,38 +21,36 @@ from .types import (
     StreamChunk,
     Tool,
     ToolCall,
-    ToolCallChunk,
-    ToolExecutionResult,
-    ToolParameters,
     Tools,
     Usage,
 )
 
 __all__ = [
-    "AuthenticationError",
+    # Primary interface
     "Chimeric",
+    # Exceptions
+    "AuthenticationError",
     "ChimericError",
-    "CompletionResponse",
-    "Input",
-    "Message",
-    "Metadata",
     "ModelNotSupportedError",
-    "ModelSummary",
-    "Provider",
     "ProviderError",
     "ProviderNotFoundError",
     "RateLimitError",
-    "StreamChunk",
     "StructuredOutputError",
+    "ToolRegistrationError",
+    # Response types
+    "CompletionResponse",
+    "StreamChunk",
+    "Usage",
+    # Input / routing types
+    "Provider",
+    "Input",
+    "Message",
+    "Metadata",
     "Tool",
     "ToolCall",
-    "ToolCallChunk",
-    "ToolExecutionResult",
-    "ToolManager",
-    "ToolParameters",
-    "ToolRegistrationError",
     "Tools",
-    "Usage",
+    # Model discovery
+    "ModelSummary",
 ]
 
 __version__ = "0.2.0"

@@ -93,6 +93,56 @@ class TestInitialisation:
         assert "openai" in client.available_providers
         assert "anthropic" in client.available_providers
 
+    def test_base_url_registers_custom_provider(self, mock_http):
+        """base_url registers an OpenAI-compatible 'custom' provider."""
+        mock_http.list_models.return_value = _make_models("qwen2.5:3b", "llama-3")
+        with patch("chimeric.chimeric.HttpClient", return_value=mock_http):
+            client = Chimeric(base_url="http://127.0.0.1:12434/v1")
+        assert "custom" in client.available_providers
+
+    def test_base_url_uses_openai_adapter(self, mock_http):
+        """Custom provider inherits the openai adapter and completion path."""
+        mock_http.list_models.return_value = _make_models("local-model")
+        with patch("chimeric.chimeric.HttpClient", return_value=mock_http):
+            client = Chimeric(base_url="http://localhost:8080/v1")
+        config, _ = client._providers["custom"]
+        assert config.adapter == "openai"
+        assert config.base_url == "http://localhost:8080/v1"
+
+    def test_base_url_trailing_slash_stripped(self, mock_http):
+        """Trailing slash on base_url is removed."""
+        mock_http.list_models.return_value = []
+        with patch("chimeric.chimeric.HttpClient", return_value=mock_http):
+            client = Chimeric(base_url="http://localhost:8080/v1/")
+        config, _ = client._providers["custom"]
+        assert not config.base_url.endswith("/")
+
+    def test_base_url_default_api_key_is_local(self, mock_http):
+        """Default api_key for custom provider is 'local'."""
+        mock_http.list_models.return_value = []
+        with patch("chimeric.chimeric.HttpClient", return_value=mock_http):
+            client = Chimeric(base_url="http://localhost:11434/v1")
+        _, key = client._providers["custom"]
+        assert key == "local"
+
+    def test_base_url_custom_api_key(self, mock_http):
+        """api_key parameter is used for the custom provider."""
+        mock_http.list_models.return_value = []
+        with patch("chimeric.chimeric.HttpClient", return_value=mock_http):
+            client = Chimeric(base_url="http://localhost:11434/v1", api_key="secret")
+        _, key = client._providers["custom"]
+        assert key == "secret"
+
+    def test_base_url_models_populate_cache(self, mock_http):
+        """Models from the custom endpoint are routable without provider=."""
+        mock_http.list_models.return_value = _make_models("qwen2.5:3b")
+        mock_http.complete.return_value = _make_completion("hi")
+        with patch("chimeric.chimeric.HttpClient", return_value=mock_http):
+            client = Chimeric(base_url="http://127.0.0.1:12434/v1")
+        # Should route to 'custom' without needing provider= arg
+        resp = client.generate("qwen2.5:3b", "Hello")
+        assert resp.content == "hi"
+
     def test_repr(self, chimeric):
         client, _ = chimeric
         assert "openai" in repr(client)

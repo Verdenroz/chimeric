@@ -1,6 +1,6 @@
 import pytest
 
-from chimeric import ToolManager
+from chimeric.tools import ToolManager
 from chimeric.types import Message
 
 
