@@ -12,12 +12,14 @@ from chimeric import Chimeric
 client = Chimeric()
 response = client.generate(model="gpt-4o", messages="Explain quantum physics")
 
-print(response.content)                  # str | list[Any] — generated text
-print(response.model)                    # str | None — model that responded
-print(response.usage.prompt_tokens)     # int — input tokens
-print(response.usage.completion_tokens) # int — output tokens
-print(response.usage.total_tokens)      # int — total tokens
-print(response.metadata)                # dict[str, Any] | None — provider extras
+print(response.content)   # str | list — generated text
+print(response.model)     # str | None — model that responded
+print(response.metadata)  # dict | None — provider-specific extras
+
+if response.usage:
+    print(response.usage.prompt_tokens)      # int — input tokens
+    print(response.usage.completion_tokens)  # int — output tokens
+    print(response.usage.total_tokens)       # int — total tokens
 ```
 
 `str(response)` returns the content text directly, so you can use the response object wherever a string is expected.
@@ -35,10 +37,10 @@ for chunk in stream:
 
 | Field | Type | Description |
 |---|---|---|
-| `content` | `str \| list[Any]` | Accumulated text up to this chunk |
-| `delta` | `str \| None` | New text added in this chunk |
-| `finish_reason` | `str \| None` | Present only on the final chunk |
-| `metadata` | `dict[str, Any] \| None` | Provider-specific extras |
+| `content` | `str | list[Any]` | Accumulated text up to this chunk |
+| `delta` | `str | None` | New text added in this chunk |
+| `finish_reason` | `str | None` | Present only on the final chunk |
+| `metadata` | `dict[str, Any] | None` | Provider-specific extras |
 
 `str(chunk)` returns `delta` (or `""` for metadata-only chunks).
 

@@ -114,7 +114,7 @@ response = client.generate(
     provider="groq",
 )
 
-# Enum form (IDE-friendly, no typos)
+# Enum form
 response = client.generate(
     model="llama-3.3-70b-versatile",
     messages="Hello",

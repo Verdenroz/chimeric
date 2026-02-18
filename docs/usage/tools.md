@@ -290,20 +290,14 @@ def fetch_user_profile(user_id: str, include_preferences: bool = False) -> dict:
 
 ### Provider Compatibility
 
-Not all providers support function calling. Check provider capabilities:
+Not all providers support function calling. **OpenAI, Anthropic, and Google** are the most reliable for tool use; other providers may have inconsistent behaviour.
 
 ```python
-# Check if provider supports tools
-if "openai" in client.available_providers:
-    caps = client.get_capabilities("openai") 
-    if caps.tools:
-        print("OpenAI supports function calling")
-        
-# Use tools only with compatible providers
+# Use tools only with providers known to support function calling
 response = client.generate(
-    model="gpt-4o",  # OpenAI supports tools
+    model="gpt-4o",
     messages="Process this data for me",
-    # tools will be used automatically
+    # registered tools are included automatically
 )
 ```
 
