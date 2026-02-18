@@ -36,7 +36,7 @@ def test_groq_sync_generation(api_keys):
         pytest.skip("Groq API key not found")
 
     chimeric = Chimeric(groq_api_key=api_keys["groq_api_key"])
-    cassette_path = get_cassette_path("google", "test_invalid_kwargs_raises_provider_error")
+    cassette_path = get_cassette_path("groq", "test_sync_generation")
 
     with get_vcr().use_cassette(cassette_path):
         response = chimeric.generate(
