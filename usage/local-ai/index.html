@@ -12,13 +12,13 @@
         <meta name="author" content="Harvey Tseng">
       
       
-        <link rel="canonical" href="https://verdenroz.github.io/chimeric/usage/responses/">
+        <link rel="canonical" href="https://verdenroz.github.io/chimeric/usage/local-ai/">
       
       
-        <link rel="prev" href="../local-ai/">
+        <link rel="prev" href="../configuration/">
       
       
-        <link rel="next" href="../streaming/">
+        <link rel="next" href="../responses/">
       
       
       <link rel="icon" href="../../assets/favicon.ico">
@@ -26,7 +26,7 @@
     
     
       
-        <title>Response Types - Chimeric</title>
+        <title>Local AI - Chimeric</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#response-types-and-formats" class="md-skip">
+        <a href="#local-ai" class="md-skip">
           Skip to content
         </a>
       
@@ -119,7 +119,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Response Types
+              Local AI
             
           </span>
         </div>
@@ -343,29 +343,6 @@
                 
   
   
-  
-  
-    <li class="md-nav__item">
-      <a href="../local-ai/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Local AI
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
     
   
   
@@ -383,7 +360,7 @@
   
   
   <span class="md-ellipsis">
-    Response Types
+    Local AI
     
   </span>
   
@@ -396,7 +373,7 @@
   
   
   <span class="md-ellipsis">
-    Response Types
+    Local AI
     
   </span>
   
@@ -419,36 +396,63 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#completionresponse" class="md-nav__link">
+  <a href="#basic-setup" class="md-nav__link">
     <span class="md-ellipsis">
-      CompletionResponse
+      Basic Setup
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#streamchunk" class="md-nav__link">
+  <a href="#model-discovery" class="md-nav__link">
     <span class="md-ellipsis">
-      StreamChunk
+      Model Discovery
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#cross-provider-consistency" class="md-nav__link">
+  <a href="#generating-text" class="md-nav__link">
     <span class="md-ellipsis">
-      Cross-Provider Consistency
+      Generating Text
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#async-support" class="md-nav__link">
+  <a href="#streaming" class="md-nav__link">
     <span class="md-ellipsis">
-      Async Support
+      Streaming
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#async" class="md-nav__link">
+    <span class="md-ellipsis">
+      Async
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tools
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mixing-local-and-cloud-providers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Mixing Local and Cloud Providers
     </span>
   </a>
   
@@ -458,6 +462,29 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../responses/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Response Types
+    
+  </span>
+  
+
+      </a>
     </li>
   
 
@@ -587,36 +614,63 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#completionresponse" class="md-nav__link">
+  <a href="#basic-setup" class="md-nav__link">
     <span class="md-ellipsis">
-      CompletionResponse
+      Basic Setup
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#streamchunk" class="md-nav__link">
+  <a href="#model-discovery" class="md-nav__link">
     <span class="md-ellipsis">
-      StreamChunk
+      Model Discovery
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#cross-provider-consistency" class="md-nav__link">
+  <a href="#generating-text" class="md-nav__link">
     <span class="md-ellipsis">
-      Cross-Provider Consistency
+      Generating Text
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#async-support" class="md-nav__link">
+  <a href="#streaming" class="md-nav__link">
     <span class="md-ellipsis">
-      Async Support
+      Streaming
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#async" class="md-nav__link">
+    <span class="md-ellipsis">
+      Async
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tools
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mixing-local-and-cloud-providers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Mixing Local and Cloud Providers
     </span>
   </a>
   
@@ -641,92 +695,113 @@
   
 
 
-<h1 id="response-types-and-formats">Response Types and Formats<a class="headerlink" href="#response-types-and-formats" title="Permanent link">&para;</a></h1>
-<p>Chimeric normalises all provider responses into consistent types so your code works identically regardless of which provider is behind the model.</p>
-<h2 id="completionresponse">CompletionResponse<a class="headerlink" href="#completionresponse" title="Permanent link">&para;</a></h2>
-<p>Non-streaming calls return a <code>CompletionResponse</code>:</p>
+<h1 id="local-ai">Local AI<a class="headerlink" href="#local-ai" title="Permanent link">&para;</a></h1>
+<p>Chimeric supports any <strong>OpenAI-compatible</strong> local inference server out of the box — no extra dependencies, no provider extras.  Just point <code>base_url</code> at the server and Chimeric handles the rest.</p>
+<p>Compatible servers include:</p>
+<ul>
+<li><a href="https://github.com/mostlygeek/llama-swap">llama-swap</a></li>
+<li><a href="https://github.com/ggerganov/llama.cpp">llama.cpp</a> (<code>--server</code> mode)</li>
+<li><a href="https://ollama.com/">Ollama</a> (<code>/v1</code> endpoint)</li>
+<li><a href="https://lmstudio.ai/">LM Studio</a> (local server)</li>
+<li>Any other server that speaks the OpenAI chat completions API</li>
+</ul>
+<h2 id="basic-setup">Basic Setup<a class="headerlink" href="#basic-setup" title="Permanent link">&para;</a></h2>
+<p>Pass <code>base_url</code> to <code>Chimeric</code>. The <code>api_key</code> defaults to <code>"local"</code> for servers that do not validate credentials:</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">chimeric</span><span class="w"> </span><span class="kn">import</span> <span class="n">Chimeric</span>
 
-<span class="n">client</span> <span class="o">=</span> <span class="n">Chimeric</span><span class="p">()</span>
-<span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4o&quot;</span><span class="p">,</span> <span class="n">messages</span><span class="o">=</span><span class="s2">&quot;Explain quantum physics&quot;</span><span class="p">)</span>
-
-<span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>   <span class="c1"># str | list — generated text</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>     <span class="c1"># str | None — model that responded</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>  <span class="c1"># dict | None — provider-specific extras</span>
-
-<span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">usage</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">usage</span><span class="o">.</span><span class="n">prompt_tokens</span><span class="p">)</span>      <span class="c1"># int — input tokens</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">usage</span><span class="o">.</span><span class="n">completion_tokens</span><span class="p">)</span>  <span class="c1"># int — output tokens</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">usage</span><span class="o">.</span><span class="n">total_tokens</span><span class="p">)</span>       <span class="c1"># int — total tokens</span>
+<span class="n">client</span> <span class="o">=</span> <span class="n">Chimeric</span><span class="p">(</span><span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;http://127.0.0.1:11434/v1&quot;</span><span class="p">)</span>
 </code></pre></div>
-<p><code>str(response)</code> returns the content text directly, so you can use the response object wherever a string is expected.</p>
-<h2 id="streamchunk">StreamChunk<a class="headerlink" href="#streamchunk" title="Permanent link">&para;</a></h2>
-<p>Streaming calls yield <code>StreamChunk</code> objects:</p>
-<div class="highlight"><pre><span></span><code><span class="n">stream</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4o&quot;</span><span class="p">,</span> <span class="n">messages</span><span class="o">=</span><span class="s2">&quot;Write a story&quot;</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<p>For servers that require a key:</p>
+<div class="highlight"><pre><span></span><code><span class="n">client</span> <span class="o">=</span> <span class="n">Chimeric</span><span class="p">(</span>
+    <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;http://127.0.0.1:11434/v1&quot;</span><span class="p">,</span>
+    <span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;my-server-secret&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+<p>The local endpoint is registered as a provider named <code>"custom"</code>. All standard Chimeric features — streaming, tools, structured output, async — work identically.</p>
+<h2 id="model-discovery">Model Discovery<a class="headerlink" href="#model-discovery" title="Permanent link">&para;</a></h2>
+<p>Chimeric queries <code>GET /models</code> at startup and caches the results, so model names are routed automatically:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># List everything the local server exposes</span>
+<span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="n">client</span><span class="o">.</span><span class="n">list_models</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="generating-text">Generating Text<a class="headerlink" href="#generating-text" title="Permanent link">&para;</a></h2>
+<p>Once the client is initialised, use <code>generate()</code> exactly as you would with any cloud provider:</p>
+<div class="highlight"><pre><span></span><code><span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;qwen2.5:3b&quot;</span><span class="p">,</span>
+    <span class="n">messages</span><span class="o">=</span><span class="s2">&quot;Explain neural networks in one sentence.&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="streaming">Streaming<a class="headerlink" href="#streaming" title="Permanent link">&para;</a></h2>
+<p>Streaming works identically to cloud providers:</p>
+<div class="highlight"><pre><span></span><code><span class="n">stream</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;qwen2.5:3b&quot;</span><span class="p">,</span>
+    <span class="n">messages</span><span class="o">=</span><span class="s2">&quot;Write a short poem.&quot;</span><span class="p">,</span>
+    <span class="n">stream</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
 
 <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">stream</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">chunk</span><span class="o">.</span><span class="n">delta</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># incremental text</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">chunk</span><span class="o">.</span><span class="n">delta</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </code></pre></div>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>content</code></td>
-<td><code>str | list[Any]</code></td>
-<td>Accumulated text up to this chunk</td>
-</tr>
-<tr>
-<td><code>delta</code></td>
-<td><code>str | None</code></td>
-<td>New text added in this chunk</td>
-</tr>
-<tr>
-<td><code>finish_reason</code></td>
-<td><code>str | None</code></td>
-<td>Present only on the final chunk</td>
-</tr>
-<tr>
-<td><code>metadata</code></td>
-<td><code>dict[str, Any] | None</code></td>
-<td>Provider-specific extras</td>
-</tr>
-</tbody>
-</table>
-<p><code>str(chunk)</code> returns <code>delta</code> (or <code>""</code> for metadata-only chunks).</p>
-<h2 id="cross-provider-consistency">Cross-Provider Consistency<a class="headerlink" href="#cross-provider-consistency" title="Permanent link">&para;</a></h2>
-<p>The unified types work the same across all providers:</p>
-<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">summarize</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-    <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">messages</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Summarize: </span><span class="si">{</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Used </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">usage</span><span class="o">.</span><span class="n">total_tokens</span><span class="si">}</span><span class="s2"> tokens&quot;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">content</span>
-
-<span class="c1"># All three use the same interface</span>
-<span class="n">summarize</span><span class="p">(</span><span class="s2">&quot;gpt-4o&quot;</span><span class="p">,</span> <span class="s2">&quot;...&quot;</span><span class="p">)</span>
-<span class="n">summarize</span><span class="p">(</span><span class="s2">&quot;claude-3-5-sonnet-20241022&quot;</span><span class="p">,</span> <span class="s2">&quot;...&quot;</span><span class="p">)</span>
-<span class="n">summarize</span><span class="p">(</span><span class="s2">&quot;gemini-1.5-pro&quot;</span><span class="p">,</span> <span class="s2">&quot;...&quot;</span><span class="p">)</span>
-</code></pre></div>
-<p>Provider-specific details that don't map to the standard fields are available in <code>response.metadata</code>.</p>
-<h2 id="async-support">Async Support<a class="headerlink" href="#async-support" title="Permanent link">&para;</a></h2>
-<p><code>agenerate()</code> is the async counterpart with the same return types:</p>
+<h2 id="async">Async<a class="headerlink" href="#async" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chimeric</span><span class="w"> </span><span class="kn">import</span> <span class="n">Chimeric</span>
+
 
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
-    <span class="c1"># Non-streaming</span>
-    <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">agenerate</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4o&quot;</span><span class="p">,</span> <span class="n">messages</span><span class="o">=</span><span class="s2">&quot;Hello&quot;</span><span class="p">)</span>
+    <span class="n">client</span> <span class="o">=</span> <span class="n">Chimeric</span><span class="p">(</span><span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;http://127.0.0.1:11434/v1&quot;</span><span class="p">)</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">agenerate</span><span class="p">(</span>
+        <span class="n">model</span><span class="o">=</span><span class="s2">&quot;qwen2.5:3b&quot;</span><span class="p">,</span>
+        <span class="n">messages</span><span class="o">=</span><span class="s2">&quot;What is 2 + 2?&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
 
-    <span class="c1"># Streaming</span>
-    <span class="n">stream</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">agenerate</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4o&quot;</span><span class="p">,</span> <span class="n">messages</span><span class="o">=</span><span class="s2">&quot;Tell a story&quot;</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="k">async</span> <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">stream</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="n">chunk</span><span class="o">.</span><span class="n">delta</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
 <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
+</code></pre></div>
+<h2 id="tools">Tools<a class="headerlink" href="#tools" title="Permanent link">&para;</a></h2>
+<p>Local models that support function calling work with the <code>@client.tool()</code> decorator:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">chimeric</span><span class="w"> </span><span class="kn">import</span> <span class="n">Chimeric</span>
+
+
+<span class="n">client</span> <span class="o">=</span> <span class="n">Chimeric</span><span class="p">(</span><span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;http://127.0.0.1:11434/v1&quot;</span><span class="p">)</span>
+
+
+<span class="nd">@client</span><span class="o">.</span><span class="n">tool</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_weather</span><span class="p">(</span><span class="n">city</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get current weather for a city.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        city: Name of the city.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        A short weather description.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Sunny, 22°C in </span><span class="si">{</span><span class="n">city</span><span class="si">}</span><span class="s2">&quot;</span>
+
+
+<span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;qwen2.5:3b&quot;</span><span class="p">,</span>
+    <span class="n">messages</span><span class="o">=</span><span class="s2">&quot;What is the weather in Tokyo?&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Tool calling support</p>
+<p>Tool calling reliability varies by model.  Larger instruction-tuned models (≥ 7B) generally handle function calling better than smaller ones.</p>
+</div>
+<h2 id="mixing-local-and-cloud-providers">Mixing Local and Cloud Providers<a class="headerlink" href="#mixing-local-and-cloud-providers" title="Permanent link">&para;</a></h2>
+<p>Local and cloud providers coexist in a single client. Chimeric routes each <code>generate()</code> call to whichever provider advertises that model:</p>
+<div class="highlight"><pre><span></span><code><span class="n">client</span> <span class="o">=</span> <span class="n">Chimeric</span><span class="p">(</span>
+    <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;http://127.0.0.1:11434/v1&quot;</span><span class="p">,</span>  <span class="c1"># local</span>
+    <span class="n">openai_api_key</span><span class="o">=</span><span class="s2">&quot;sk-...&quot;</span><span class="p">,</span>               <span class="c1"># cloud</span>
+<span class="p">)</span>
+
+<span class="c1"># Routes to local server</span>
+<span class="n">local_resp</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="s2">&quot;qwen2.5:3b&quot;</span><span class="p">,</span> <span class="s2">&quot;Hello from local!&quot;</span><span class="p">)</span>
+
+<span class="c1"># Routes to OpenAI</span>
+<span class="n">cloud_resp</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="s2">&quot;gpt-4o&quot;</span><span class="p">,</span> <span class="s2">&quot;Hello from the cloud!&quot;</span><span class="p">)</span>
 </code></pre></div>
 
 

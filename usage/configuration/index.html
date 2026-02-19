@@ -18,7 +18,7 @@
         <link rel="prev" href="../getting-started/">
       
       
-        <link rel="next" href="../responses/">
+        <link rel="next" href="../local-ai/">
       
       
       <link rel="icon" href="../../assets/favicon.ico">
@@ -410,18 +410,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#provider-specific-configuration" class="md-nav__link">
+  <a href="#timeout" class="md-nav__link">
     <span class="md-ellipsis">
-      Provider-Specific Configuration
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#common-configuration-options" class="md-nav__link">
-    <span class="md-ellipsis">
-      Common Configuration Options
+      Timeout
     </span>
   </a>
   
@@ -433,19 +424,37 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#provider-configuration" class="md-nav__link">
+  <a href="#provider-routing" class="md-nav__link">
     <span class="md-ellipsis">
-      Provider Configuration
+      Provider Routing
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Provider Configuration">
+    <nav class="md-nav" aria-label="Provider Routing">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#provider-information" class="md-nav__link">
+  <a href="#automatic-model-routing" class="md-nav__link">
     <span class="md-ellipsis">
-      Provider Information
+      Automatic Model Routing
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#explicit-provider-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      Explicit Provider Selection
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#provider-inspection" class="md-nav__link">
+    <span class="md-ellipsis">
+      Provider Inspection
     </span>
   </a>
   
@@ -457,16 +466,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#model-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      Model Configuration
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Model Configuration">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
   <a href="#model-discovery" class="md-nav__link">
     <span class="md-ellipsis">
       Model Discovery
@@ -474,9 +473,13 @@
   </a>
   
 </li>
-        
-      </ul>
-    </nav>
+      
+        <li class="md-nav__item">
+  <a href="#provider-pass-through" class="md-nav__link">
+    <span class="md-ellipsis">
+      Provider Pass-Through
+    </span>
+  </a>
   
 </li>
       
@@ -484,6 +487,29 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../local-ai/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Local AI
+    
+  </span>
+  
+
+      </a>
     </li>
   
 
@@ -673,18 +699,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#provider-specific-configuration" class="md-nav__link">
+  <a href="#timeout" class="md-nav__link">
     <span class="md-ellipsis">
-      Provider-Specific Configuration
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#common-configuration-options" class="md-nav__link">
-    <span class="md-ellipsis">
-      Common Configuration Options
+      Timeout
     </span>
   </a>
   
@@ -696,19 +713,37 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#provider-configuration" class="md-nav__link">
+  <a href="#provider-routing" class="md-nav__link">
     <span class="md-ellipsis">
-      Provider Configuration
+      Provider Routing
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Provider Configuration">
+    <nav class="md-nav" aria-label="Provider Routing">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#provider-information" class="md-nav__link">
+  <a href="#automatic-model-routing" class="md-nav__link">
     <span class="md-ellipsis">
-      Provider Information
+      Automatic Model Routing
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#explicit-provider-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      Explicit Provider Selection
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#provider-inspection" class="md-nav__link">
+    <span class="md-ellipsis">
+      Provider Inspection
     </span>
   </a>
   
@@ -720,16 +755,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#model-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      Model Configuration
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Model Configuration">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
   <a href="#model-discovery" class="md-nav__link">
     <span class="md-ellipsis">
       Model Discovery
@@ -737,9 +762,13 @@
   </a>
   
 </li>
-        
-      </ul>
-    </nav>
+      
+        <li class="md-nav__item">
+  <a href="#provider-pass-through" class="md-nav__link">
+    <span class="md-ellipsis">
+      Provider Pass-Through
+    </span>
+  </a>
   
 </li>
       
@@ -780,7 +809,7 @@
 
 <span class="c1"># Cohere (supports both variable names)</span>
 <span class="nb">export</span><span class="w"> </span><span class="nv">COHERE_API_KEY</span><span class="o">=</span><span class="s2">&quot;your-key&quot;</span>
-<span class="c1"># or  </span>
+<span class="c1"># or</span>
 <span class="nb">export</span><span class="w"> </span><span class="nv">CO_API_KEY</span><span class="o">=</span><span class="s2">&quot;your-key&quot;</span>
 
 <span class="c1"># Groq</span>
@@ -789,11 +818,15 @@
 <span class="c1"># Cerebras</span>
 <span class="nb">export</span><span class="w"> </span><span class="nv">CEREBRAS_API_KEY</span><span class="o">=</span><span class="s2">&quot;csk-...&quot;</span>
 
-<span class="c1"># Grok (supports both variable names)</span>
+<span class="c1"># Grok / xAI (supports both variable names)</span>
 <span class="nb">export</span><span class="w"> </span><span class="nv">GROK_API_KEY</span><span class="o">=</span><span class="s2">&quot;xai-...&quot;</span>
 <span class="c1"># or</span>
-<span class="nb">export</span><span class="w"> </span><span class="nv">GROK_API_TOKEN</span><span class="o">=</span><span class="s2">&quot;xai-...&quot;</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">XAI_API_KEY</span><span class="o">=</span><span class="s2">&quot;xai-...&quot;</span>
+
+<span class="c1"># OpenRouter</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">OPENROUTER_API_KEY</span><span class="o">=</span><span class="s2">&quot;sk-or-...&quot;</span>
 </code></pre></div>
+<p>Any provider with a discoverable key is registered automatically; providers without one are silently skipped.</p>
 <h3 id="direct-initialization">Direct Initialization<a class="headerlink" href="#direct-initialization" title="Permanent link">&para;</a></h3>
 <p>You can also provide API keys directly when creating the client:</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">chimeric</span><span class="w"> </span><span class="kn">import</span> <span class="n">Chimeric</span>
@@ -805,80 +838,80 @@
     <span class="n">cohere_api_key</span><span class="o">=</span><span class="s2">&quot;your-key&quot;</span><span class="p">,</span>
     <span class="n">groq_api_key</span><span class="o">=</span><span class="s2">&quot;gsk_...&quot;</span><span class="p">,</span>
     <span class="n">cerebras_api_key</span><span class="o">=</span><span class="s2">&quot;csk-...&quot;</span><span class="p">,</span>
-    <span class="n">grok_api_key</span><span class="o">=</span><span class="s2">&quot;xai-...&quot;</span>
+    <span class="n">grok_api_key</span><span class="o">=</span><span class="s2">&quot;xai-...&quot;</span><span class="p">,</span>
+    <span class="n">openrouter_api_key</span><span class="o">=</span><span class="s2">&quot;sk-or-...&quot;</span><span class="p">,</span>
 <span class="p">)</span>
 </code></pre></div>
+<p>Explicit keys take precedence over environment variables.</p>
 <h3 id="mixed-configuration">Mixed Configuration<a class="headerlink" href="#mixed-configuration" title="Permanent link">&para;</a></h3>
 <p>Combine environment variables with direct initialization:</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># Some keys from environment, others provided directly</span>
-<span class="n">client</span> <span class="o">=</span> <span class="n">Chimeric</span><span class="p">(</span>
-    <span class="n">openai_api_key</span><span class="o">=</span><span class="s2">&quot;sk-...&quot;</span><span class="p">,</span>  <span class="c1"># Explicit key</span>
-    <span class="c1"># anthropic_api_key will be read from ANTHROPIC_API_KEY env var</span>
-    <span class="c1"># google_api_key will be read from GOOGLE_API_KEY env var</span>
-<span class="p">)</span>
-</code></pre></div>
-<h3 id="provider-specific-configuration">Provider-Specific Configuration<a class="headerlink" href="#provider-specific-configuration" title="Permanent link">&para;</a></h3>
-<p>Pass any provider-specific configuration options directly to Chimeric. Chimeric uses signature introspection to automatically filter kwargs, ensuring each provider only receives parameters its constructor accepts:</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># All kwargs are passed to every provider, but automatically filtered</span>
+<div class="highlight"><pre><span></span><code><span class="c1"># Explicit key overrides env var; other providers read from env vars automatically</span>
 <span class="n">client</span> <span class="o">=</span> <span class="n">Chimeric</span><span class="p">(</span>
     <span class="n">openai_api_key</span><span class="o">=</span><span class="s2">&quot;sk-...&quot;</span><span class="p">,</span>
-    <span class="n">anthropic_api_key</span><span class="o">=</span><span class="s2">&quot;sk-ant-...&quot;</span><span class="p">,</span>
-    <span class="c1"># Google-specific parameters (ignored by other providers)</span>
-    <span class="n">vertexai</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="c1"># ANTHROPIC_API_KEY, GOOGLE_API_KEY, etc. are picked up from the environment</span>
 <span class="p">)</span>
 </code></pre></div>
-<h3 id="common-configuration-options">Common Configuration Options<a class="headerlink" href="#common-configuration-options" title="Permanent link">&para;</a></h3>
-<p>Parameters that work across multiple providers:</p>
-<div class="highlight"><pre><span></span><code><span class="n">client</span> <span class="o">=</span> <span class="n">Chimeric</span><span class="p">(</span>
-    <span class="n">openai_api_key</span><span class="o">=</span><span class="s2">&quot;sk-...&quot;</span><span class="p">,</span>
-    <span class="n">anthropic_api_key</span><span class="o">=</span><span class="s2">&quot;sk-ant-...&quot;</span><span class="p">,</span>
-    <span class="n">google_api_key</span><span class="o">=</span><span class="s2">&quot;AIza...&quot;</span><span class="p">,</span>
-
-    <span class="c1"># HTTP/Connection settings (widely supported)</span>
-    <span class="n">timeout</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span>                    <span class="c1"># Request timeout</span>
-    <span class="n">max_retries</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>                <span class="c1"># Retry configuration</span>
-
-    <span class="c1"># Custom endpoints (where supported)</span>
-    <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;https://api.your-company.com/v1&quot;</span><span class="p">,</span>
-
-    <span class="c1"># Headers (where supported)</span>
-    <span class="n">default_headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;User-Agent&quot;</span><span class="p">:</span> <span class="s2">&quot;YourApp/1.0&quot;</span><span class="p">},</span>
-<span class="p">)</span>
+<h3 id="timeout">Timeout<a class="headerlink" href="#timeout" title="Permanent link">&para;</a></h3>
+<p>The <code>timeout</code> parameter sets the HTTP request timeout (in seconds) for all providers:</p>
+<div class="highlight"><pre><span></span><code><span class="n">client</span> <span class="o">=</span> <span class="n">Chimeric</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mf">120.0</span><span class="p">)</span>  <span class="c1"># default is 60.0</span>
 </code></pre></div>
-<p><strong>Key Benefits:</strong>
-- <strong>Signature-Based Filtering</strong>: Uses Python introspection to validate parameters
-- <strong>No TypeErrors</strong>: Invalid parameters are automatically filtered out
-- <strong>Cross-Provider Compatibility</strong>: Same parameters work where applicable
-- <strong>Unified Configuration</strong>: Configure all providers with one constructor call</p>
-<h2 id="provider-configuration">Provider Configuration<a class="headerlink" href="#provider-configuration" title="Permanent link">&para;</a></h2>
-<h3 id="provider-information">Provider Information<a class="headerlink" href="#provider-information" title="Permanent link">&para;</a></h3>
-<p>Get information about configured providers:</p>
+<h2 id="provider-routing">Provider Routing<a class="headerlink" href="#provider-routing" title="Permanent link">&para;</a></h2>
+<h3 id="automatic-model-routing">Automatic Model Routing<a class="headerlink" href="#automatic-model-routing" title="Permanent link">&para;</a></h3>
+<p>Chimeric routes each request to the correct provider by matching the model name against each provider's model list. This happens at initialisation time and is cached:</p>
 <div class="highlight"><pre><span></span><code><span class="n">client</span> <span class="o">=</span> <span class="n">Chimeric</span><span class="p">()</span>
 
-<span class="c1"># List all configured providers</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Available providers:&quot;</span><span class="p">,</span> <span class="n">client</span><span class="o">.</span><span class="n">available_providers</span><span class="p">)</span>
-
-<span class="c1"># Check capabilities across all providers</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Merged capabilities:&quot;</span><span class="p">,</span> <span class="n">client</span><span class="o">.</span><span class="n">capabilities</span><span class="p">)</span>
-
-<span class="c1"># Check capabilities for a specific provider</span>
-<span class="k">if</span> <span class="s2">&quot;openai&quot;</span> <span class="ow">in</span> <span class="n">client</span><span class="o">.</span><span class="n">available_providers</span><span class="p">:</span>
-    <span class="n">openai_caps</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get_capabilities</span><span class="p">(</span><span class="s2">&quot;openai&quot;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;OpenAI capabilities: </span><span class="si">{</span><span class="n">openai_caps</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="c1"># Each call is automatically routed to the right provider</span>
+<span class="n">client</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="s2">&quot;gpt-4o&quot;</span><span class="p">,</span> <span class="s2">&quot;Hello&quot;</span><span class="p">)</span>                      <span class="c1"># → OpenAI</span>
+<span class="n">client</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="s2">&quot;claude-3-5-sonnet-20241022&quot;</span><span class="p">,</span> <span class="s2">&quot;Hello&quot;</span><span class="p">)</span>  <span class="c1"># → Anthropic</span>
+<span class="n">client</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="s2">&quot;gemini-1.5-pro&quot;</span><span class="p">,</span> <span class="s2">&quot;Hello&quot;</span><span class="p">)</span>              <span class="c1"># → Google</span>
 </code></pre></div>
-<h2 id="model-configuration">Model Configuration<a class="headerlink" href="#model-configuration" title="Permanent link">&para;</a></h2>
-<h3 id="model-discovery">Model Discovery<a class="headerlink" href="#model-discovery" title="Permanent link">&para;</a></h3>
-<p>Discover available models across providers:</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># List all models from all providers</span>
+<h3 id="explicit-provider-selection">Explicit Provider Selection<a class="headerlink" href="#explicit-provider-selection" title="Permanent link">&para;</a></h3>
+<p>Force a specific provider with the <code>provider</code> parameter, using either a string or the <code>Provider</code> enum:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">chimeric</span><span class="w"> </span><span class="kn">import</span> <span class="n">Chimeric</span><span class="p">,</span> <span class="n">Provider</span>
+
+<span class="n">client</span> <span class="o">=</span> <span class="n">Chimeric</span><span class="p">()</span>
+
+<span class="c1"># String form</span>
+<span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;llama-3.3-70b-versatile&quot;</span><span class="p">,</span>
+    <span class="n">messages</span><span class="o">=</span><span class="s2">&quot;Hello&quot;</span><span class="p">,</span>
+    <span class="n">provider</span><span class="o">=</span><span class="s2">&quot;groq&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Enum form</span>
+<span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;llama-3.3-70b-versatile&quot;</span><span class="p">,</span>
+    <span class="n">messages</span><span class="o">=</span><span class="s2">&quot;Hello&quot;</span><span class="p">,</span>
+    <span class="n">provider</span><span class="o">=</span><span class="n">Provider</span><span class="o">.</span><span class="n">GROQ</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+<h3 id="provider-inspection">Provider Inspection<a class="headerlink" href="#provider-inspection" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># List all configured providers</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">client</span><span class="o">.</span><span class="n">available_providers</span><span class="p">)</span>  <span class="c1"># [&quot;openai&quot;, &quot;anthropic&quot;, &quot;google&quot;, ...]</span>
+</code></pre></div>
+<h2 id="model-discovery">Model Discovery<a class="headerlink" href="#model-discovery" title="Permanent link">&para;</a></h2>
+<p>List available models from one or all configured providers:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># All providers</span>
 <span class="n">all_models</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">list_models</span><span class="p">()</span>
 <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="n">all_models</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">provider</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
 
-<span class="c1"># List models from a specific provider</span>
+<span class="c1"># One provider</span>
 <span class="n">openai_models</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">list_models</span><span class="p">(</span><span class="s2">&quot;openai&quot;</span><span class="p">)</span>
 <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="n">openai_models</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;OpenAI: </span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
 </code></pre></div>
+<p>The async counterpart is <code>alist_models()</code>.</p>
+<h2 id="provider-pass-through">Provider Pass-Through<a class="headerlink" href="#provider-pass-through" title="Permanent link">&para;</a></h2>
+<p>Extra keyword arguments passed to <code>generate()</code> / <code>agenerate()</code> are forwarded directly to the provider's API:</p>
+<div class="highlight"><pre><span></span><code><span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4o&quot;</span><span class="p">,</span>
+    <span class="n">messages</span><span class="o">=</span><span class="s2">&quot;Write a haiku&quot;</span><span class="p">,</span>
+    <span class="n">temperature</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span>
+    <span class="n">max_tokens</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+<p>Supported parameters vary by provider — consult each provider's API documentation for the full list.</p>
 
 
 

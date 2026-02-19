@@ -466,6 +466,29 @@
   
   
     <li class="md-nav__item">
+      <a href="../local-ai/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Local AI
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../responses/" class="md-nav__link">
         
   
@@ -725,7 +748,7 @@
 
 <span class="c1"># Messages can also be provided as a string</span>
 <span class="n">claude_response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
-    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;claude-3-5-haiku-latest&quot;</span><span class="p">,</span> 
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;claude-3-5-haiku-latest&quot;</span><span class="p">,</span>
     <span class="n">messages</span><span class="o">=</span><span class="s2">&quot;Hello, world!&quot;</span>
 <span class="p">)</span>
 
@@ -736,23 +759,18 @@
 </code></pre></div>
 <h3 id="unified-response-format">Unified Response Format<a class="headerlink" href="#unified-response-format" title="Permanent link">&para;</a></h3>
 <p>All providers return responses in a consistent format:</p>
-<div class="highlight"><pre><span></span><code><span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4o&quot;</span><span class="p">,</span> <span class="n">messages</span><span class="o">=</span><span class="p">[</span><span class="o">...</span><span class="p">])</span>
+<div class="highlight"><pre><span></span><code><span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4o&quot;</span><span class="p">,</span> <span class="n">messages</span><span class="o">=</span><span class="s2">&quot;Explain quantum physics&quot;</span><span class="p">)</span>
 
-<span class="c1"># Common interface</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>              <span class="c1"># Text content</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>                <span class="c1"># Model used</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">usage</span><span class="o">.</span><span class="n">prompt_tokens</span><span class="p">)</span>  <span class="c1"># Input token usage</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">usage</span><span class="o">.</span><span class="n">completion_tokens</span><span class="p">)</span>  <span class="c1"># Output token usage</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">usage</span><span class="o">.</span><span class="n">total_tokens</span><span class="p">)</span>   <span class="c1"># Total tokens</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>              <span class="c1"># str | list — generated text</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>                <span class="c1"># str | None — model that responded</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>             <span class="c1"># dict | None — provider-specific extras</span>
 
-<span class="c1"># Access native provider response with native=True parameter</span>
-<span class="n">native_response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
-    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;claude-3-5-haiku-latest&quot;</span><span class="p">,</span> 
-    <span class="n">messages</span><span class="o">=</span><span class="p">[</span><span class="o">...</span><span class="p">],</span> 
-    <span class="n">native</span><span class="o">=</span><span class="kc">True</span>
-<span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">native_response</span><span class="o">.</span><span class="n">stop_reason</span><span class="p">)</span>  <span class="c1"># Anthropic-specific stop reason</span>
+<span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">usage</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">usage</span><span class="o">.</span><span class="n">prompt_tokens</span><span class="p">)</span>      <span class="c1"># int — input tokens</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">usage</span><span class="o">.</span><span class="n">completion_tokens</span><span class="p">)</span>  <span class="c1"># int — output tokens</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">usage</span><span class="o">.</span><span class="n">total_tokens</span><span class="p">)</span>       <span class="c1"># int — total tokens</span>
 </code></pre></div>
+<p>Provider-specific details (e.g. stop reason, request ID) are available in <code>response.metadata</code>.</p>
 <h3 id="streaming-responses">Streaming Responses<a class="headerlink" href="#streaming-responses" title="Permanent link">&para;</a></h3>
 <p>Stream responses token-by-token for real-time applications:</p>
 <div class="highlight"><pre><span></span><code><span class="n">stream</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
@@ -762,8 +780,8 @@
 <span class="p">)</span>
 
 <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">stream</span><span class="p">:</span>
-    <span class="k">if</span> <span class="n">chunk</span><span class="o">.</span><span class="n">content</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="n">chunk</span><span class="o">.</span><span class="n">content</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">chunk</span><span class="o">.</span><span class="n">delta</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">chunk</span><span class="o">.</span><span class="n">delta</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="function-registration-and-execution">Function Registration and Execution<a class="headerlink" href="#function-registration-and-execution" title="Permanent link">&para;</a></h3>
 <p>Chimeric provides a decorator-based system for registering functions that models can invoke:</p>
@@ -771,9 +789,9 @@
 
 <span class="nd">@client</span><span class="o">.</span><span class="n">tool</span><span class="p">()</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">analyze_financial_data</span><span class="p">(</span>
-    <span class="n">symbol</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> 
-    <span class="n">period</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;1y&quot;</span><span class="p">,</span> 
-    <span class="n">metrics</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">symbol</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">period</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;1y&quot;</span><span class="p">,</span>
+    <span class="n">metrics</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Analyze financial performance metrics for a given symbol.</span>
 
@@ -804,6 +822,7 @@
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">chimeric</span><span class="w"> </span><span class="kn">import</span> <span class="n">Chimeric</span>
 
+
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
     <span class="n">client</span> <span class="o">=</span> <span class="n">Chimeric</span><span class="p">()</span>
 
@@ -813,6 +832,7 @@
     <span class="p">)</span>
 
     <span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
+
 
 <span class="c1"># Async streaming</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">stream_example</span><span class="p">():</span>
@@ -825,8 +845,9 @@
     <span class="p">)</span>
 
     <span class="k">async</span> <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">stream</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">chunk</span><span class="o">.</span><span class="n">content</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="n">chunk</span><span class="o">.</span><span class="n">content</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">chunk</span><span class="o">.</span><span class="n">delta</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">chunk</span><span class="o">.</span><span class="n">delta</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
 
 <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
 </code></pre></div>

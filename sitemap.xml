@@ -2,30 +2,34 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://verdenroz.github.io/chimeric/</loc>
-         <lastmod>2025-08-12</lastmod>
+         <lastmod>2026-02-19</lastmod>
     </url>
     <url>
          <loc>https://verdenroz.github.io/chimeric/contributing/</loc>
-         <lastmod>2025-08-12</lastmod>
+         <lastmod>2026-02-19</lastmod>
     </url>
     <url>
          <loc>https://verdenroz.github.io/chimeric/usage/configuration/</loc>
-         <lastmod>2025-08-12</lastmod>
+         <lastmod>2026-02-19</lastmod>
     </url>
     <url>
          <loc>https://verdenroz.github.io/chimeric/usage/getting-started/</loc>
-         <lastmod>2025-08-12</lastmod>
+         <lastmod>2026-02-19</lastmod>
+    </url>
+    <url>
+         <loc>https://verdenroz.github.io/chimeric/usage/local-ai/</loc>
+         <lastmod>2026-02-19</lastmod>
     </url>
     <url>
          <loc>https://verdenroz.github.io/chimeric/usage/responses/</loc>
-         <lastmod>2025-08-12</lastmod>
+         <lastmod>2026-02-19</lastmod>
     </url>
     <url>
          <loc>https://verdenroz.github.io/chimeric/usage/streaming/</loc>
-         <lastmod>2025-08-12</lastmod>
+         <lastmod>2026-02-19</lastmod>
     </url>
     <url>
          <loc>https://verdenroz.github.io/chimeric/usage/tools/</loc>
-         <lastmod>2025-08-12</lastmod>
+         <lastmod>2026-02-19</lastmod>
     </url>
 </urlset>
