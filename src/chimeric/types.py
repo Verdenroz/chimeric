@@ -80,6 +80,7 @@ class Provider(Enum):
     GROK = "grok"
     GROQ = "groq"
     OPENROUTER = "openrouter"
+    CUSTOM = "custom"
 
 
 ###################
