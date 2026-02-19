@@ -109,6 +109,7 @@ _FORMAT_BUILDERS: dict[Provider, _Builder] = {
     Provider.ANTHROPIC: _anthropic_format,
     Provider.GOOGLE: _google_format,
     Provider.COHERE: _cohere_format,
+    Provider.CUSTOM: _openai_format,
 }
 
 # ---------------------------------------------------------------------------
