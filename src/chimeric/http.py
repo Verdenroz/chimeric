@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Any
 import httpx
 
 from .adapters import ADAPTER_REGISTRY
-from .adapters.base import Adapter, StreamState
+from .adapters.base import Adapter, EmbeddingAdapter, StreamState
 from .adapters.google import GoogleAdapter
 from .exceptions import AuthenticationError, ProviderError, RateLimitError
 
@@ -25,7 +25,15 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator
 
     from .config import ProviderConfig
-    from .types import CompletionResponse, Message, ModelSummary, StreamChunk, Tool, ToolCall
+    from .types import (
+        CompletionResponse,
+        EmbeddingResponse,
+        Message,
+        ModelSummary,
+        StreamChunk,
+        Tool,
+        ToolCall,
+    )
 
 __all__ = ["HttpClient"]
 
@@ -84,6 +92,25 @@ class HttpClient:
         _raise_for_status(response, config.name)
         return adapter.parse_models_response(response.json())
 
+    def embed(
+        self,
+        config: ProviderConfig,
+        api_key: str,
+        input: str | list[str],
+        model: str,
+        **kwargs: Any,
+    ) -> EmbeddingResponse:
+        """Synchronous embedding request."""
+        adapter = _get_embedding_adapter(config)
+        batch = isinstance(input, list)
+        body = adapter.build_embedding_request(input, model, **kwargs)
+        url = _get_embedding_url(config, adapter, model, batch, api_key)
+        headers = _build_headers(config, api_key)
+
+        response = self._sync().post(url, json=body, headers=headers)
+        _raise_for_status(response, config.name)
+        return adapter.parse_embedding_response(response.json(), model, batch=batch)
+
     # ------------------------------------------------------------------
     # Async public API
     # ------------------------------------------------------------------
@@ -122,6 +149,25 @@ class HttpClient:
         response = await self._async().get(url, headers=headers)
         _raise_for_status(response, config.name)
         return adapter.parse_models_response(response.json())
+
+    async def aembed(
+        self,
+        config: ProviderConfig,
+        api_key: str,
+        input: str | list[str],
+        model: str,
+        **kwargs: Any,
+    ) -> EmbeddingResponse:
+        """Async embedding request."""
+        adapter = _get_embedding_adapter(config)
+        batch = isinstance(input, list)
+        body = adapter.build_embedding_request(input, model, **kwargs)
+        url = _get_embedding_url(config, adapter, model, batch, api_key)
+        headers = _build_headers(config, api_key)
+
+        response = await self._async().post(url, json=body, headers=headers)
+        _raise_for_status(response, config.name)
+        return adapter.parse_embedding_response(response.json(), model, batch=batch)
 
     # ------------------------------------------------------------------
     # Sync internals
@@ -308,6 +354,35 @@ class HttpClient:
 # ---------------------------------------------------------------------------
 # Module-level helpers — pure functions, no I/O
 # ---------------------------------------------------------------------------
+
+
+def _get_embedding_adapter(config: ProviderConfig) -> EmbeddingAdapter:
+    """Look up the adapter and verify it supports embeddings."""
+    adapter = ADAPTER_REGISTRY[config.adapter]
+    if not isinstance(adapter, EmbeddingAdapter):
+        msg = f"Provider '{config.name}' does not support embeddings"
+        raise ProviderError(error=None, provider=config.name, message=msg)
+    if config.embedding_path is None:
+        msg = f"Provider '{config.name}' has no embedding endpoint configured"
+        raise ProviderError(error=None, provider=config.name, message=msg)
+    return adapter
+
+
+def _get_embedding_url(
+    config: ProviderConfig,
+    adapter: EmbeddingAdapter,
+    model: str,
+    batch: bool,
+    api_key: str,
+) -> str:
+    """Resolve the embedding URL, letting the Google adapter substitute the model name."""
+    if isinstance(adapter, GoogleAdapter):
+        path = adapter.get_embedding_path(model, batch)
+    else:
+        if config.embedding_path is None:
+            raise ValueError(f"Provider '{config.name}' has no embedding_path configured")
+        path = config.embedding_path
+    return _build_url(config, path, api_key)
 
 
 def _build_headers(config: ProviderConfig, api_key: str) -> dict[str, str]:

@@ -14,6 +14,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 __all__ = [
     "CompletionResponse",
+    "EmbeddingResponse",
+    "EmbeddingUsage",
     "Input",
     "Message",
     "Metadata",
@@ -127,6 +129,26 @@ class Usage(BaseModel):
     prompt_tokens: int = 0
     completion_tokens: int = 0
     total_tokens: int = 0
+
+
+class EmbeddingUsage(BaseModel):
+    """Token-usage statistics for an embedding request."""
+
+    prompt_tokens: int = 0
+    total_tokens: int = 0
+
+
+class EmbeddingResponse(BaseModel):
+    """Unified response from an embedding call.
+
+    For single input (str): ``embedding`` is populated, ``embeddings`` is empty.
+    For batch input (list[str]): ``embeddings`` is populated, ``embedding`` is None.
+    """
+
+    embedding: list[float] | None = None
+    embeddings: list[list[float]] = Field(default_factory=list)
+    model: str | None = None
+    usage: EmbeddingUsage | None = None
 
 
 class CompletionResponse(BaseModel):

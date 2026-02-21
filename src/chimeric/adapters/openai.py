@@ -9,7 +9,17 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
-from ..types import CompletionResponse, Message, ModelSummary, StreamChunk, Tool, ToolCall, Usage
+from ..types import (
+    CompletionResponse,
+    EmbeddingResponse,
+    EmbeddingUsage,
+    Message,
+    ModelSummary,
+    StreamChunk,
+    Tool,
+    ToolCall,
+    Usage,
+)
 
 if TYPE_CHECKING:
     from .base import StreamState
@@ -167,6 +177,48 @@ class OpenAIAdapter:
             for tc in state.tool_calls.values()
         ]
         return calls if calls else None
+
+    # ------------------------------------------------------------------
+    # Embeddings
+    # ------------------------------------------------------------------
+
+    def build_embedding_request(
+        self,
+        input: str | list[str],
+        model: str,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        """Build a /v1/embeddings POST body."""
+        return {"input": input, "model": model, **kwargs}
+
+    def parse_embedding_response(
+        self,
+        data: dict[str, Any],
+        model: str,
+        *,
+        batch: bool,
+    ) -> EmbeddingResponse:
+        """Parse a /v1/embeddings response."""
+        raw_usage = data.get("usage", {})
+        usage = EmbeddingUsage(
+            prompt_tokens=raw_usage.get("prompt_tokens", 0),
+            total_tokens=raw_usage.get("total_tokens", 0),
+        )
+
+        sorted_data = sorted(data.get("data", []), key=lambda x: x.get("index", 0))
+        all_embeddings = [item["embedding"] for item in sorted_data]
+
+        if batch:
+            return EmbeddingResponse(
+                embeddings=all_embeddings,
+                model=data.get("model", model),
+                usage=usage,
+            )
+        return EmbeddingResponse(
+            embedding=all_embeddings[0] if all_embeddings else None,
+            model=data.get("model", model),
+            usage=usage,
+        )
 
     # ------------------------------------------------------------------
     # Model listing

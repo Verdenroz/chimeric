@@ -46,6 +46,7 @@ class ProviderConfig:
     auth_style: str = "header"  # "header" | "query_param"
     auth_query_param: str = "key"
     default_kwargs: dict[str, Any] = field(default_factory=dict)
+    embedding_path: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -60,6 +61,7 @@ PROVIDER_REGISTRY: dict[str, ProviderConfig] = {
         base_url="https://api.openai.com/v1",
         adapter="openai",
         api_key_env_vars=("OPENAI_API_KEY",),
+        embedding_path="/embeddings",
     ),
     "anthropic": ProviderConfig(
         name="anthropic",
@@ -86,6 +88,8 @@ PROVIDER_REGISTRY: dict[str, ProviderConfig] = {
         completion_path="/models/{model}:generateContent",
         stream_path="/models/{model}:streamGenerateContent",
         models_path="/models",
+        # Embedding path is also dynamic; GoogleAdapter.get_embedding_path() overrides it
+        embedding_path="/models/{model}:embedContent",
     ),
     "cohere": ProviderConfig(
         name="cohere",
@@ -94,6 +98,7 @@ PROVIDER_REGISTRY: dict[str, ProviderConfig] = {
         api_key_env_vars=("COHERE_API_KEY", "CO_API_KEY"),
         completion_path="/chat",
         stream_path="/chat",
+        embedding_path="/embed",
     ),
     "groq": ProviderConfig(
         name="groq",

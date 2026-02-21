@@ -14,7 +14,17 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
-from ..types import CompletionResponse, Message, ModelSummary, StreamChunk, Tool, ToolCall, Usage
+from ..types import (
+    CompletionResponse,
+    EmbeddingResponse,
+    EmbeddingUsage,
+    Message,
+    ModelSummary,
+    StreamChunk,
+    Tool,
+    ToolCall,
+    Usage,
+)
 
 if TYPE_CHECKING:
     from .base import StreamState
@@ -72,10 +82,55 @@ class GoogleAdapter:
         return body
 
     def get_completion_path(self, model: str, stream: bool) -> str:
-        """Return the model-specific endpoint path."""
+        """Return the model-specific completion endpoint path."""
         if stream:
             return f"/models/{model}:streamGenerateContent?alt=sse"
         return f"/models/{model}:generateContent"
+
+    def get_embedding_path(self, model: str, batch: bool) -> str:
+        """Return the model-specific embedding endpoint path."""
+        if batch:
+            return f"/models/{model}:batchEmbedContents"
+        return f"/models/{model}:embedContent"
+
+    # ------------------------------------------------------------------
+    # Embedding
+    # ------------------------------------------------------------------
+
+    def build_embedding_request(
+        self,
+        input: str | list[str],
+        model: str,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        """Build a Gemini embedContent or batchEmbedContents POST body."""
+        if isinstance(input, list):
+            return {
+                "requests": [
+                    {
+                        "model": f"models/{model}",
+                        "content": {"parts": [{"text": t}]},
+                    }
+                    for t in input
+                ]
+            }
+        return {"content": {"parts": [{"text": input}]}}
+
+    def parse_embedding_response(
+        self,
+        data: dict[str, Any],
+        model: str,
+        *,
+        batch: bool,
+    ) -> EmbeddingResponse:
+        """Parse a Gemini embedContent or batchEmbedContents response."""
+        # Google embedding API does not return token counts
+        usage = EmbeddingUsage(prompt_tokens=0, total_tokens=0)
+        if batch:
+            vectors = [e["values"] for e in data.get("embeddings", [])]
+            return EmbeddingResponse(embeddings=vectors, model=model, usage=usage)
+        values: list[float] = data.get("embedding", {}).get("values", [])
+        return EmbeddingResponse(embedding=values, model=model, usage=usage)
 
     # ------------------------------------------------------------------
     # Non-streaming response parsing

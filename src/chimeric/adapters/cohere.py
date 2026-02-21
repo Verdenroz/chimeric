@@ -12,7 +12,17 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
-from ..types import CompletionResponse, Message, ModelSummary, StreamChunk, Tool, ToolCall, Usage
+from ..types import (
+    CompletionResponse,
+    EmbeddingResponse,
+    EmbeddingUsage,
+    Message,
+    ModelSummary,
+    StreamChunk,
+    Tool,
+    ToolCall,
+    Usage,
+)
 
 if TYPE_CHECKING:
     from .base import StreamState
@@ -182,6 +192,45 @@ class CohereAdapter:
             for tc in state.tool_calls.values()
         ]
         return calls if calls else None
+
+    # ------------------------------------------------------------------
+    # Embedding
+    # ------------------------------------------------------------------
+
+    def build_embedding_request(
+        self,
+        input: str | list[str],
+        model: str,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        """Build a Cohere v2 /embed POST body."""
+        texts = [input] if isinstance(input, str) else list(input)
+        return {
+            "model": model,
+            "texts": texts,
+            "input_type": kwargs.get("input_type", "search_document"),
+            "embedding_types": ["float"],
+        }
+
+    def parse_embedding_response(
+        self,
+        data: dict[str, Any],
+        model: str,
+        *,
+        batch: bool,
+    ) -> EmbeddingResponse:
+        """Parse a Cohere v2 /embed response."""
+        vectors: list[list[float]] = data.get("embeddings", {}).get("float", [])
+        meta = data.get("meta", {})
+        tokens: int = meta.get("billed_units", {}).get("input_tokens", 0)
+        usage = EmbeddingUsage(prompt_tokens=tokens, total_tokens=tokens)
+        if batch:
+            return EmbeddingResponse(embeddings=vectors, model=model, usage=usage)
+        return EmbeddingResponse(
+            embedding=vectors[0] if vectors else [],
+            model=model,
+            usage=usage,
+        )
 
     # ------------------------------------------------------------------
     # Model listing
