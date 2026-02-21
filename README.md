@@ -113,6 +113,28 @@ print(response.parsed.label)    # "positive"
 print(response.parsed.score)    # 0.98
 ```
 
+### Embeddings
+
+```python
+# Single text → result.embedding (list[float])
+result = client.embed(
+    model="text-embedding-3-small",
+    input="Python developer with 5 years experience",
+)
+print(len(result.embedding))   # e.g. 1536
+
+# Batch → result.embeddings (list[list[float]])
+result = client.embed(
+    model="text-embedding-3-small",
+    input=["Python developer", "Go engineer", "React developer"],
+)
+print(len(result.embeddings))  # 3
+
+# Also available via Google and Cohere
+result = client.embed(model="gemini-embedding-001", input="Hello")
+result = client.embed(model="embed-english-v3.0", input="Hello")
+```
+
 ### Multi-Provider Switching
 ```python
 # Seamlessly switch between providers
@@ -132,6 +154,7 @@ for model in models:
 - **Multi-Provider Support**: Switch between 8 major AI providers seamlessly
 - **Automatic Detection**: Auto-detects available API keys from environment
 - **Unified Interface**: Consistent API across all providers
+- **Embeddings**: Single and batch text embeddings via OpenAI, Google, and Cohere
 - **Structured Output**: Parse responses directly into Pydantic models
 - **Streaming Support**: Real-time response streaming
 - **Function Calling**: Tool integration with decorators

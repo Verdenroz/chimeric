@@ -9,6 +9,7 @@ Coverage map:
   docs/usage/streaming.md        → TestStreamingExamples
   docs/usage/responses.md        → TestResponseExamples
   docs/usage/tools.md            → TestToolExamples
+  docs/usage/embeddings.md       → TestEmbeddingExamples
 """
 
 from __future__ import annotations
@@ -23,6 +24,8 @@ from chimeric import Chimeric
 from chimeric.exceptions import ChimericError
 from chimeric.types import (
     CompletionResponse,
+    EmbeddingResponse,
+    EmbeddingUsage,
     ModelSummary,
     Provider,
     StreamChunk,
@@ -59,6 +62,22 @@ def _stream(*deltas: str) -> list[StreamChunk]:
     return chunks
 
 
+def _embedding(
+    vectors: list[list[float]] | None = None,
+    model: str = "text-embedding-3-small",
+) -> EmbeddingResponse:
+    """Build a minimal EmbeddingResponse for tests."""
+    vecs = vectors or [[0.1, 0.2, 0.3]]
+    single = vecs[0] if len(vecs) == 1 else None
+    batch = vecs if len(vecs) > 1 else []
+    return EmbeddingResponse(
+        embedding=single,
+        embeddings=batch,
+        model=model,
+        usage=EmbeddingUsage(prompt_tokens=5, total_tokens=5),
+    )
+
+
 def _make_client(*model_ids: str, **kwargs: Any) -> tuple[Chimeric, MagicMock]:
     """Return a Chimeric instance wired to a mock HttpClient."""
     mock = MagicMock()
@@ -68,6 +87,8 @@ def _make_client(*model_ids: str, **kwargs: Any) -> tuple[Chimeric, MagicMock]:
     mock.alist_models = AsyncMock(
         return_value=_models(*model_ids) if model_ids else _models("gpt-4o")
     )
+    mock.embed.return_value = _embedding()
+    mock.aembed = AsyncMock(return_value=_embedding())
     with patch("chimeric.chimeric.HttpClient", return_value=mock):
         client = Chimeric(openai_api_key="sk-test", **kwargs)
     return client, mock
@@ -855,3 +876,147 @@ class TestLocalAIExamples:
         # Both models are routable
         assert "qwen2.5:3b" in client._model_cache
         assert "gpt-4o" in client._model_cache
+
+
+# ---------------------------------------------------------------------------
+# docs/usage/embeddings.md
+# ---------------------------------------------------------------------------
+
+
+class TestEmbeddingExamples:
+    """docs/usage/embeddings.md code block coverage."""
+
+    def test_single_embed_returns_embedding_field(self) -> None:
+        """Single string input populates embedding, leaves embeddings empty."""
+        client, mock = _make_client("text-embedding-3-small")
+        mock.embed.return_value = _embedding([[0.1, 0.2, 0.3]])
+
+        result = client.embed(
+            model="text-embedding-3-small",
+            input="Python developer with 5 years experience",
+        )
+
+        assert isinstance(result, EmbeddingResponse)
+        assert result.embedding == [0.1, 0.2, 0.3]
+        assert result.embeddings == []
+
+    def test_batch_embed_returns_embeddings_field(self) -> None:
+        """List input populates embeddings; embedding is None."""
+        client, mock = _make_client("text-embedding-3-small")
+        vecs = [[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]]
+        mock.embed.return_value = EmbeddingResponse(
+            embedding=None,
+            embeddings=vecs,
+            model="text-embedding-3-small",
+            usage=EmbeddingUsage(prompt_tokens=15, total_tokens=15),
+        )
+
+        result = client.embed(
+            model="text-embedding-3-small",
+            input=["Python backend developer", "Go backend engineer", "Frontend React developer"],
+        )
+
+        assert result.embedding is None
+        assert len(result.embeddings) == 3
+
+    def test_embedding_response_fields(self) -> None:
+        """All documented EmbeddingResponse fields are accessible."""
+        client, mock = _make_client("text-embedding-3-small")
+        mock.embed.return_value = EmbeddingResponse(
+            embedding=[0.1, 0.2, 0.3],
+            embeddings=[],
+            model="text-embedding-3-small",
+            usage=EmbeddingUsage(prompt_tokens=7, total_tokens=7),
+        )
+
+        result = client.embed(model="text-embedding-3-small", input="Hello")
+
+        assert isinstance(result.embedding, list)
+        assert result.model == "text-embedding-3-small"
+        assert result.usage is not None
+        assert result.usage.prompt_tokens == 7
+        assert result.usage.total_tokens == 7
+
+    def test_dimensions_kwarg_forwarded(self) -> None:
+        """dimensions= kwarg is passed through to the HTTP layer."""
+        client, mock = _make_client("text-embedding-3-small")
+        mock.embed.return_value = _embedding([[0.0] * 256])
+
+        client.embed(model="text-embedding-3-small", input="Hello world", dimensions=256)
+
+        _, call_kwargs = mock.embed.call_args
+        assert call_kwargs.get("dimensions") == 256
+
+    def test_async_aembed_single(self) -> None:
+        """aembed() with a single string returns EmbeddingResponse."""
+        client, mock = _make_client("text-embedding-3-small")
+        mock.aembed = AsyncMock(return_value=_embedding([[0.1, 0.2, 0.3]]))
+
+        async def run() -> EmbeddingResponse:
+            return await client.aembed(
+                model="text-embedding-3-small",
+                input="Hello from async",
+            )
+
+        result = asyncio.run(run())
+        assert isinstance(result, EmbeddingResponse)
+        assert result.embedding is not None
+
+    def test_async_aembed_batch(self) -> None:
+        """aembed() with a list returns embeddings."""
+        client, mock = _make_client("text-embedding-3-small")
+        mock.aembed = AsyncMock(
+            return_value=EmbeddingResponse(
+                embedding=None,
+                embeddings=[[0.1, 0.2], [0.3, 0.4]],
+                model="text-embedding-3-small",
+            )
+        )
+
+        async def run() -> EmbeddingResponse:
+            return await client.aembed(
+                model="text-embedding-3-small",
+                input=["text one", "text two"],
+            )
+
+        result = asyncio.run(run())
+        assert result.embedding is None
+        assert len(result.embeddings) == 2
+
+    def test_cross_provider_same_call_pattern(self) -> None:
+        """embed() call is identical regardless of provider; only model differs."""
+        mock = MagicMock()
+        mock.list_models.return_value = _models(
+            "text-embedding-3-small", "gemini-embedding-001", "embed-english-v3.0"
+        )
+        mock.embed.return_value = _embedding()
+        with patch("chimeric.chimeric.HttpClient", return_value=mock):
+            client = Chimeric(openai_api_key="sk-test")
+
+        for model in ("text-embedding-3-small", "gemini-embedding-001", "embed-english-v3.0"):
+            result = client.embed(model=model, input="machine learning engineer")
+            assert isinstance(result, EmbeddingResponse)
+
+        assert mock.embed.call_count == 3
+
+    def test_cosine_similarity_helper(self) -> None:
+        """The documented cosine_similarity helper produces correct values."""
+        import math
+
+        def cosine_similarity(a: list[float], b: list[float]) -> float:
+            dot = sum(x * y for x, y in zip(a, b))
+            norm_a = math.sqrt(sum(x * x for x in a))
+            norm_b = math.sqrt(sum(x * x for x in b))
+            return dot / (norm_a * norm_b) if norm_a and norm_b else 0.0
+
+        # Identical vectors → similarity 1.0
+        v = [1.0, 0.0, 0.0]
+        assert cosine_similarity(v, v) == pytest.approx(1.0)
+
+        # Orthogonal vectors → similarity 0.0
+        a = [1.0, 0.0]
+        b = [0.0, 1.0]
+        assert cosine_similarity(a, b) == pytest.approx(0.0)
+
+        # Zero vector → returns 0.0 without error
+        assert cosine_similarity([0.0, 0.0], [1.0, 0.0]) == 0.0
