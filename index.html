@@ -514,6 +514,29 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="usage/embeddings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Embeddings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -707,6 +730,18 @@ switching.</p>
 <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">stream</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">chunk</span><span class="o">.</span><span class="n">delta</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </code></pre></div>
+<p><strong>Embeddings:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Single text</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">embed</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span> <span class="nb">input</span><span class="o">=</span><span class="s2">&quot;Python developer&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">embedding</span><span class="p">))</span>   <span class="c1"># e.g. 1536</span>
+
+<span class="c1"># Batch</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">embed</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span>
+    <span class="nb">input</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Python developer&quot;</span><span class="p">,</span> <span class="s2">&quot;Go engineer&quot;</span><span class="p">,</span> <span class="s2">&quot;React developer&quot;</span><span class="p">],</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">embeddings</span><span class="p">))</span>  <span class="c1"># 3</span>
+</code></pre></div>
 <p><strong>Function Calling:</strong></p>
 <div class="highlight"><pre><span></span><code><span class="nd">@client</span><span class="o">.</span><span class="n">tool</span><span class="p">()</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_weather</span><span class="p">(</span><span class="n">city</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -745,7 +780,6 @@ switching.</p>
 </ul>
 <h2 id="roadmap">Roadmap<a class="headerlink" href="#roadmap" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Embeddings Support</strong>: Unified interface for text embeddings across providers</li>
 <li><strong>Multi-Modal Support</strong>: Enhanced support for images and audio</li>
 <li><strong>Cost Tracking</strong>: Built-in usage and cost monitoring</li>
 <li><strong>Advanced Routing</strong>: Load balancing and failover between providers</li>

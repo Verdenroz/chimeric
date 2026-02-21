@@ -12,13 +12,13 @@
         <meta name="author" content="Harvey Tseng">
       
       
-        <link rel="canonical" href="https://verdenroz.github.io/chimeric/usage/responses/">
+        <link rel="canonical" href="https://verdenroz.github.io/chimeric/usage/embeddings/">
       
       
-        <link rel="prev" href="../local-ai/">
+        <link rel="prev" href="../tools/">
       
       
-        <link rel="next" href="../streaming/">
+        <link rel="next" href="../../contributing/">
       
       
       <link rel="icon" href="../../assets/favicon.ico">
@@ -26,7 +26,7 @@
     
     
       
-        <title>Response Types - Chimeric</title>
+        <title>Embeddings - Chimeric</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#response-types-and-formats" class="md-skip">
+        <a href="#embeddings" class="md-skip">
           Skip to content
         </a>
       
@@ -119,7 +119,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Response Types
+              Embeddings
             
           </span>
         </div>
@@ -366,32 +366,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    Response Types
-    
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../responses/" class="md-nav__link">
         
   
   
@@ -402,71 +380,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#completionresponse" class="md-nav__link">
-    <span class="md-ellipsis">
-      CompletionResponse
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#streamchunk" class="md-nav__link">
-    <span class="md-ellipsis">
-      StreamChunk
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#cross-provider-consistency" class="md-nav__link">
-    <span class="md-ellipsis">
-      Cross-Provider Consistency
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#embeddingresponse" class="md-nav__link">
-    <span class="md-ellipsis">
-      EmbeddingResponse
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#async-support" class="md-nav__link">
-    <span class="md-ellipsis">
-      Async Support
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -522,10 +435,32 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../embeddings/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Embeddings
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -536,6 +471,98 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#supported-providers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Providers
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#single-embedding" class="md-nav__link">
+    <span class="md-ellipsis">
+      Single Embedding
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#batch-embedding" class="md-nav__link">
+    <span class="md-ellipsis">
+      Batch Embedding
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#embeddingresponse-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      EmbeddingResponse Fields
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#custom-dimensions-openai" class="md-nav__link">
+    <span class="md-ellipsis">
+      Custom Dimensions (OpenAI)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#async-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Async Usage
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cross-provider-switching" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cross-Provider Switching
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cosine-similarity" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cosine Similarity
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -619,45 +646,72 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#completionresponse" class="md-nav__link">
+  <a href="#supported-providers" class="md-nav__link">
     <span class="md-ellipsis">
-      CompletionResponse
+      Supported Providers
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#streamchunk" class="md-nav__link">
+  <a href="#single-embedding" class="md-nav__link">
     <span class="md-ellipsis">
-      StreamChunk
+      Single Embedding
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#cross-provider-consistency" class="md-nav__link">
+  <a href="#batch-embedding" class="md-nav__link">
     <span class="md-ellipsis">
-      Cross-Provider Consistency
+      Batch Embedding
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#embeddingresponse" class="md-nav__link">
+  <a href="#embeddingresponse-fields" class="md-nav__link">
     <span class="md-ellipsis">
-      EmbeddingResponse
+      EmbeddingResponse Fields
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#async-support" class="md-nav__link">
+  <a href="#custom-dimensions-openai" class="md-nav__link">
     <span class="md-ellipsis">
-      Async Support
+      Custom Dimensions (OpenAI)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#async-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Async Usage
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cross-provider-switching" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cross-Provider Switching
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cosine-similarity" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cosine Similarity
     </span>
   </a>
   
@@ -682,95 +736,60 @@
   
 
 
-<h1 id="response-types-and-formats">Response Types and Formats<a class="headerlink" href="#response-types-and-formats" title="Permanent link">&para;</a></h1>
-<p>Chimeric normalises all provider responses into consistent types so your code works identically regardless of which provider is behind the model.</p>
-<h2 id="completionresponse">CompletionResponse<a class="headerlink" href="#completionresponse" title="Permanent link">&para;</a></h2>
-<p>Non-streaming calls return a <code>CompletionResponse</code>:</p>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">chimeric</span><span class="w"> </span><span class="kn">import</span> <span class="n">Chimeric</span>
-
-<span class="n">client</span> <span class="o">=</span> <span class="n">Chimeric</span><span class="p">()</span>
-<span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4o&quot;</span><span class="p">,</span> <span class="n">messages</span><span class="o">=</span><span class="s2">&quot;Explain quantum physics&quot;</span><span class="p">)</span>
-
-<span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>   <span class="c1"># str | list — generated text</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>     <span class="c1"># str | None — model that responded</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>  <span class="c1"># dict | None — provider-specific extras</span>
-
-<span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">usage</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">usage</span><span class="o">.</span><span class="n">prompt_tokens</span><span class="p">)</span>      <span class="c1"># int — input tokens</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">usage</span><span class="o">.</span><span class="n">completion_tokens</span><span class="p">)</span>  <span class="c1"># int — output tokens</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">usage</span><span class="o">.</span><span class="n">total_tokens</span><span class="p">)</span>       <span class="c1"># int — total tokens</span>
-</code></pre></div>
-<p><code>str(response)</code> returns the content text directly, so you can use the response object wherever a string is expected.</p>
-<h2 id="streamchunk">StreamChunk<a class="headerlink" href="#streamchunk" title="Permanent link">&para;</a></h2>
-<p>Streaming calls yield <code>StreamChunk</code> objects:</p>
-<div class="highlight"><pre><span></span><code><span class="n">stream</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4o&quot;</span><span class="p">,</span> <span class="n">messages</span><span class="o">=</span><span class="s2">&quot;Write a story&quot;</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-<span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">stream</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">chunk</span><span class="o">.</span><span class="n">delta</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># incremental text</span>
-</code></pre></div>
+<h1 id="embeddings">Embeddings<a class="headerlink" href="#embeddings" title="Permanent link">&para;</a></h1>
+<p>Chimeric provides a unified embedding API across OpenAI, Google, and Cohere through <code>embed()</code> and <code>aembed()</code>. Pass a single string for one vector or a list of strings for batch embedding — the response shape adjusts automatically.</p>
+<h2 id="supported-providers">Supported Providers<a class="headerlink" href="#supported-providers" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Field</th>
-<th>Type</th>
-<th>Description</th>
+<th>Provider</th>
+<th>Example models</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>content</code></td>
-<td><code>str | list[Any]</code></td>
-<td>Accumulated text up to this chunk</td>
+<td>OpenAI</td>
+<td><code>text-embedding-3-small</code>, <code>text-embedding-3-large</code>, <code>text-embedding-ada-002</code></td>
 </tr>
 <tr>
-<td><code>delta</code></td>
-<td><code>str | None</code></td>
-<td>New text added in this chunk</td>
+<td>Google</td>
+<td><code>gemini-embedding-001</code></td>
 </tr>
 <tr>
-<td><code>finish_reason</code></td>
-<td><code>str | None</code></td>
-<td>Present only on the final chunk</td>
-</tr>
-<tr>
-<td><code>metadata</code></td>
-<td><code>dict[str, Any] | None</code></td>
-<td>Provider-specific extras</td>
+<td>Cohere</td>
+<td><code>embed-english-v3.0</code>, <code>embed-english-light-v3.0</code>, <code>embed-multilingual-v3.0</code>, <code>embed-v4.0</code></td>
 </tr>
 </tbody>
 </table>
-<p><code>str(chunk)</code> returns <code>delta</code> (or <code>""</code> for metadata-only chunks).</p>
-<h2 id="cross-provider-consistency">Cross-Provider Consistency<a class="headerlink" href="#cross-provider-consistency" title="Permanent link">&para;</a></h2>
-<p>The unified types work the same across all providers:</p>
-<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">summarize</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-    <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">messages</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Summarize: </span><span class="si">{</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Used </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">usage</span><span class="o">.</span><span class="n">total_tokens</span><span class="si">}</span><span class="s2"> tokens&quot;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">content</span>
+<h2 id="single-embedding">Single Embedding<a class="headerlink" href="#single-embedding" title="Permanent link">&para;</a></h2>
+<p>Pass a plain string to get one vector back in <code>result.embedding</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">chimeric</span><span class="w"> </span><span class="kn">import</span> <span class="n">Chimeric</span>
 
-<span class="c1"># All three use the same interface</span>
-<span class="n">summarize</span><span class="p">(</span><span class="s2">&quot;gpt-4o&quot;</span><span class="p">,</span> <span class="s2">&quot;...&quot;</span><span class="p">)</span>
-<span class="n">summarize</span><span class="p">(</span><span class="s2">&quot;claude-3-5-sonnet-20241022&quot;</span><span class="p">,</span> <span class="s2">&quot;...&quot;</span><span class="p">)</span>
-<span class="n">summarize</span><span class="p">(</span><span class="s2">&quot;gemini-1.5-pro&quot;</span><span class="p">,</span> <span class="s2">&quot;...&quot;</span><span class="p">)</span>
-</code></pre></div>
-<p>Provider-specific details that don't map to the standard fields are available in <code>response.metadata</code>.</p>
-<h2 id="embeddingresponse">EmbeddingResponse<a class="headerlink" href="#embeddingresponse" title="Permanent link">&para;</a></h2>
-<p><code>embed()</code> and <code>aembed()</code> return an <code>EmbeddingResponse</code>:</p>
-<div class="highlight"><pre><span></span><code><span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">embed</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span> <span class="nb">input</span><span class="o">=</span><span class="s2">&quot;Hello&quot;</span><span class="p">)</span>
+<span class="n">client</span> <span class="o">=</span> <span class="n">Chimeric</span><span class="p">()</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">embedding</span><span class="p">)</span>           <span class="c1"># list[float] — single vector</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>               <span class="c1"># str | None — model used</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">usage</span><span class="o">.</span><span class="n">prompt_tokens</span><span class="p">)</span> <span class="c1"># int</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">usage</span><span class="o">.</span><span class="n">total_tokens</span><span class="p">)</span>  <span class="c1"># int</span>
-</code></pre></div>
-<p>For batch input the vectors arrive in <code>embeddings</code> and <code>embedding</code> is <code>None</code>:</p>
-<div class="highlight"><pre><span></span><code><span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">embed</span><span class="p">(</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">embed</span><span class="p">(</span>
     <span class="n">model</span><span class="o">=</span><span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span>
-    <span class="nb">input</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;first text&quot;</span><span class="p">,</span> <span class="s2">&quot;second text&quot;</span><span class="p">],</span>
+    <span class="nb">input</span><span class="o">=</span><span class="s2">&quot;Python developer with 5 years experience&quot;</span><span class="p">,</span>
 <span class="p">)</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">embedding</span><span class="p">)</span>   <span class="c1"># None</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">embeddings</span><span class="p">)</span>  <span class="c1"># list[list[float]] — one vector per input</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">embedding</span><span class="p">)</span>             <span class="c1"># list[float]</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>                 <span class="c1"># &quot;text-embedding-3-small&quot;</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">usage</span><span class="o">.</span><span class="n">prompt_tokens</span><span class="p">)</span>   <span class="c1"># int</span>
 </code></pre></div>
+<h2 id="batch-embedding">Batch Embedding<a class="headerlink" href="#batch-embedding" title="Permanent link">&para;</a></h2>
+<p>Pass a list of strings to embed multiple texts in a single request. Results arrive in <code>result.embeddings</code> in the same order as the input:</p>
+<div class="highlight"><pre><span></span><code><span class="n">texts</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;Python backend developer&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Go backend engineer&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Frontend React developer&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">embed</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span> <span class="nb">input</span><span class="o">=</span><span class="n">texts</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">embeddings</span><span class="p">))</span>  <span class="c1"># 3</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">embedding</span><span class="p">)</span>        <span class="c1"># None for batch requests</span>
+</code></pre></div>
+<h2 id="embeddingresponse-fields">EmbeddingResponse Fields<a class="headerlink" href="#embeddingresponse-fields" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
@@ -782,47 +801,92 @@
 <tbody>
 <tr>
 <td><code>embedding</code></td>
-<td><code>list[float] \| None</code></td>
-<td>Single vector; <code>None</code> for batch</td>
+<td><code>list[float] | None</code></td>
+<td>Single embedding vector; <code>None</code> for batch requests</td>
 </tr>
 <tr>
 <td><code>embeddings</code></td>
 <td><code>list[list[float]]</code></td>
-<td>All vectors for batch; empty for single</td>
+<td>All vectors for batch requests; empty for single</td>
 </tr>
 <tr>
 <td><code>model</code></td>
-<td><code>str \| None</code></td>
+<td><code>str | None</code></td>
 <td>Model that produced the response</td>
 </tr>
 <tr>
 <td><code>usage</code></td>
-<td><code>EmbeddingUsage \| None</code></td>
-<td><code>prompt_tokens</code> and <code>total_tokens</code></td>
+<td><code>EmbeddingUsage | None</code></td>
+<td>Token usage (<code>prompt_tokens</code>, <code>total_tokens</code>)</td>
 </tr>
 </tbody>
 </table>
-<h2 id="async-support">Async Support<a class="headerlink" href="#async-support" title="Permanent link">&para;</a></h2>
-<p><code>agenerate()</code> and <code>aembed()</code> are the async counterparts with the same return types:</p>
+<h2 id="custom-dimensions-openai">Custom Dimensions (OpenAI)<a class="headerlink" href="#custom-dimensions-openai" title="Permanent link">&para;</a></h2>
+<p>OpenAI's <code>text-embedding-3</code> family supports truncating embeddings to a smaller dimension, useful for reducing storage and latency:</p>
+<div class="highlight"><pre><span></span><code><span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">embed</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span>
+    <span class="nb">input</span><span class="o">=</span><span class="s2">&quot;Hello world&quot;</span><span class="p">,</span>
+    <span class="n">dimensions</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">embedding</span><span class="p">))</span>  <span class="c1"># 256</span>
+</code></pre></div>
+<h2 id="async-usage">Async Usage<a class="headerlink" href="#async-usage" title="Permanent link">&para;</a></h2>
+<p>Use <code>aembed()</code> in async contexts — it mirrors <code>embed()</code> exactly:</p>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chimeric</span><span class="w"> </span><span class="kn">import</span> <span class="n">Chimeric</span>
 
 
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
-    <span class="c1"># Non-streaming completion</span>
-    <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">agenerate</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4o&quot;</span><span class="p">,</span> <span class="n">messages</span><span class="o">=</span><span class="s2">&quot;Hello&quot;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
+    <span class="n">client</span> <span class="o">=</span> <span class="n">Chimeric</span><span class="p">()</span>
 
-    <span class="c1"># Streaming completion</span>
-    <span class="n">stream</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">agenerate</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4o&quot;</span><span class="p">,</span> <span class="n">messages</span><span class="o">=</span><span class="s2">&quot;Tell a story&quot;</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="k">async</span> <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">stream</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="n">chunk</span><span class="o">.</span><span class="n">delta</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-    <span class="c1"># Embedding</span>
-    <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">aembed</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span> <span class="nb">input</span><span class="o">=</span><span class="s2">&quot;Hello&quot;</span><span class="p">)</span>
+    <span class="c1"># Single</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">aembed</span><span class="p">(</span>
+        <span class="n">model</span><span class="o">=</span><span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span>
+        <span class="nb">input</span><span class="o">=</span><span class="s2">&quot;Hello from async&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">embedding</span><span class="p">))</span>
+
+    <span class="c1"># Batch</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">aembed</span><span class="p">(</span>
+        <span class="n">model</span><span class="o">=</span><span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span>
+        <span class="nb">input</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;text one&quot;</span><span class="p">,</span> <span class="s2">&quot;text two&quot;</span><span class="p">],</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">embeddings</span><span class="p">))</span>  <span class="c1"># 2</span>
 
 
 <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
+</code></pre></div>
+<h2 id="cross-provider-switching">Cross-Provider Switching<a class="headerlink" href="#cross-provider-switching" title="Permanent link">&para;</a></h2>
+<p>The same call pattern works across all supported providers — only the model name changes:</p>
+<div class="highlight"><pre><span></span><code><span class="n">openai_result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">embed</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span> <span class="nb">input</span><span class="o">=</span><span class="s2">&quot;machine learning engineer&quot;</span><span class="p">)</span>
+<span class="n">google_result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">embed</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;gemini-embedding-001&quot;</span><span class="p">,</span> <span class="nb">input</span><span class="o">=</span><span class="s2">&quot;machine learning engineer&quot;</span><span class="p">)</span>
+<span class="n">cohere_result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">embed</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">&quot;embed-english-v3.0&quot;</span><span class="p">,</span> <span class="nb">input</span><span class="o">=</span><span class="s2">&quot;machine learning engineer&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="cosine-similarity">Cosine Similarity<a class="headerlink" href="#cosine-similarity" title="Permanent link">&para;</a></h2>
+<p>Embeddings are most useful when compared. Here is a minimal cosine similarity helper:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">cosine_similarity</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">b</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+    <span class="n">dot</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">x</span> <span class="o">*</span> <span class="n">y</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">))</span>
+    <span class="n">norm_a</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">x</span> <span class="o">*</span> <span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">a</span><span class="p">))</span>
+    <span class="n">norm_b</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">x</span> <span class="o">*</span> <span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">b</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">dot</span> <span class="o">/</span> <span class="p">(</span><span class="n">norm_a</span> <span class="o">*</span> <span class="n">norm_b</span><span class="p">)</span> <span class="k">if</span> <span class="n">norm_a</span> <span class="ow">and</span> <span class="n">norm_b</span> <span class="k">else</span> <span class="mf">0.0</span>
+
+
+<span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">embed</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;text-embedding-3-small&quot;</span><span class="p">,</span>
+    <span class="nb">input</span><span class="o">=</span><span class="p">[</span>
+        <span class="s2">&quot;Python backend developer&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;Python backend engineer&quot;</span><span class="p">,</span>  <span class="c1"># similar</span>
+        <span class="s2">&quot;Chocolate cake recipe&quot;</span><span class="p">,</span>    <span class="c1"># dissimilar</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+
+<span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">embeddings</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">cosine_similarity</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">))</span>  <span class="c1"># ~0.96 — high similarity</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">cosine_similarity</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">c</span><span class="p">))</span>  <span class="c1"># ~0.70 — low similarity</span>
 </code></pre></div>
 
 

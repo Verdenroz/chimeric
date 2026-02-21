@@ -410,9 +410,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#timeout" class="md-nav__link">
+  <a href="#http-client-options" class="md-nav__link">
     <span class="md-ellipsis">
-      Timeout
+      HTTP Client Options
     </span>
   </a>
   
@@ -584,6 +584,29 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../embeddings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Embeddings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -699,9 +722,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#timeout" class="md-nav__link">
+  <a href="#http-client-options" class="md-nav__link">
     <span class="md-ellipsis">
-      Timeout
+      HTTP Client Options
     </span>
   </a>
   
@@ -851,10 +874,56 @@
     <span class="c1"># ANTHROPIC_API_KEY, GOOGLE_API_KEY, etc. are picked up from the environment</span>
 <span class="p">)</span>
 </code></pre></div>
-<h3 id="timeout">Timeout<a class="headerlink" href="#timeout" title="Permanent link">&para;</a></h3>
-<p>The <code>timeout</code> parameter sets the HTTP request timeout (in seconds) for all providers:</p>
-<div class="highlight"><pre><span></span><code><span class="n">client</span> <span class="o">=</span> <span class="n">Chimeric</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mf">120.0</span><span class="p">)</span>  <span class="c1"># default is 60.0</span>
+<h3 id="http-client-options">HTTP Client Options<a class="headerlink" href="#http-client-options" title="Permanent link">&para;</a></h3>
+<p>These parameters configure the underlying httpx transport and apply to every provider:</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>timeout</code></td>
+<td><code>float</code></td>
+<td><code>60.0</code></td>
+<td>Request timeout in seconds</td>
+</tr>
+<tr>
+<td><code>max_retries</code></td>
+<td><code>int</code></td>
+<td><code>2</code></td>
+<td>Retries on connection errors and 5xx responses</td>
+</tr>
+<tr>
+<td><code>default_headers</code></td>
+<td><code>dict[str, str] \| None</code></td>
+<td><code>None</code></td>
+<td>Extra headers sent with every request</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><span class="n">client</span> <span class="o">=</span> <span class="n">Chimeric</span><span class="p">(</span>
+    <span class="n">timeout</span><span class="o">=</span><span class="mf">120.0</span><span class="p">,</span>  <span class="c1"># longer timeout for slow models</span>
+    <span class="n">max_retries</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>  <span class="c1"># retry up to 3 times before raising</span>
+<span class="p">)</span>
+
+<span class="c1"># Set to 0 to disable retries entirely</span>
+<span class="n">client</span> <span class="o">=</span> <span class="n">Chimeric</span><span class="p">(</span><span class="n">max_retries</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 </code></pre></div>
+<p>Use <code>default_headers</code> for organisation IDs, tracing headers, or any static metadata your infrastructure requires:</p>
+<div class="highlight"><pre><span></span><code><span class="n">client</span> <span class="o">=</span> <span class="n">Chimeric</span><span class="p">(</span>
+    <span class="n">openai_api_key</span><span class="o">=</span><span class="s2">&quot;sk-...&quot;</span><span class="p">,</span>
+    <span class="n">default_headers</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;OpenAI-Organization&quot;</span><span class="p">:</span> <span class="s2">&quot;org-...&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;X-Trace-ID&quot;</span><span class="p">:</span> <span class="s2">&quot;my-trace-id&quot;</span><span class="p">,</span>
+    <span class="p">},</span>
+<span class="p">)</span>
+</code></pre></div>
+<p>These parameters mirror the initialisation options available in the native OpenAI, Anthropic, and Groq SDKs, so migrating from them requires no behavioural changes.</p>
 <h2 id="provider-routing">Provider Routing<a class="headerlink" href="#provider-routing" title="Permanent link">&para;</a></h2>
 <h3 id="automatic-model-routing">Automatic Model Routing<a class="headerlink" href="#automatic-model-routing" title="Permanent link">&para;</a></h3>
 <p>Chimeric routes each request to the correct provider by matching the model name against each provider's model list. This happens at initialisation time and is cached:</p>
