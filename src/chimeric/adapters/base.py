@@ -10,9 +10,17 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    from ..types import CompletionResponse, Message, ModelSummary, StreamChunk, Tool, ToolCall
+    from ..types import (
+        CompletionResponse,
+        EmbeddingResponse,
+        Message,
+        ModelSummary,
+        StreamChunk,
+        Tool,
+        ToolCall,
+    )
 
-__all__ = ["Adapter", "StreamState"]
+__all__ = ["Adapter", "EmbeddingAdapter", "StreamState"]
 
 
 @dataclass
@@ -93,4 +101,40 @@ class Adapter(Protocol):
 
     def parse_models_response(self, data: dict[str, Any]) -> list[ModelSummary]:
         """Parse the provider's model-listing response into ModelSummary objects."""
+        ...
+
+
+@runtime_checkable
+class EmbeddingAdapter(Protocol):
+    """Contract for adapters that support embedding requests.
+
+    Separate from :class:`Adapter` so that providers without embedding
+    support (Anthropic, Google, Cohere) need no stub methods.
+    """
+
+    def build_embedding_request(
+        self,
+        input: str | list[str],
+        model: str,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        """Serialize embedding input into the provider's POST body."""
+        ...
+
+    def parse_embedding_response(
+        self,
+        data: dict[str, Any],
+        model: str,
+        *,
+        batch: bool,
+    ) -> EmbeddingResponse:
+        """Parse the provider's embedding API response.
+
+        Args:
+            data: Raw JSON response from the provider.
+            model: Model identifier used in the request.
+            batch: True when the caller passed a list of strings, False for a
+                   single string.  Controls whether ``embedding`` or
+                   ``embeddings`` is populated on the result.
+        """
         ...

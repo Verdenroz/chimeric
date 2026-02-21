@@ -25,7 +25,15 @@ if TYPE_CHECKING:
     from pydantic import BaseModel
 
     from .config import ProviderConfig
-    from .types import CompletionResponse, Input, ModelSummary, StreamChunk, Tool, Tools
+    from .types import (
+        CompletionResponse,
+        EmbeddingResponse,
+        Input,
+        ModelSummary,
+        StreamChunk,
+        Tool,
+        Tools,
+    )
 
 __all__ = ["Chimeric"]
 
@@ -74,7 +82,8 @@ class Chimeric:
         base_url: str | None = None,
         api_key: str = "local",
         timeout: float = 60.0,
-        **__kwargs: Any,
+        max_retries: int = 2,
+        default_headers: dict[str, str] | None = None,
     ) -> None:
         """Initialise Chimeric with provider configuration.
 
@@ -93,10 +102,19 @@ class Chimeric:
                 used for automatic model routing.
             api_key: API key for the ``base_url`` endpoint.  Defaults to
                 ``"local"`` for servers that do not validate credentials.
-            timeout: HTTP request timeout in seconds.
-            **__kwargs: Accepted but ignored for forward-compatibility.
+            timeout: HTTP request timeout in seconds.  Default ``60.0``.
+            max_retries: Number of times to retry a failed request before
+                raising.  Retries apply to connection errors and 5xx responses.
+                Default ``2``.  Set to ``0`` to disable retries.
+            default_headers: Extra HTTP headers sent with every request to
+                every provider.  Useful for tracing headers, organisation IDs,
+                or any other static metadata your infrastructure requires.
         """
-        self._http = HttpClient(timeout=timeout)
+        self._http = HttpClient(
+            timeout=timeout,
+            max_retries=max_retries,
+            default_headers=default_headers,
+        )
         self._tool_manager = ToolManager()
 
         # provider_name -> (ProviderConfig, api_key)
@@ -282,6 +300,31 @@ class Chimeric:
                 continue  # skip unavailable providers
         return all_models
 
+    def embed(
+        self,
+        model: str,
+        input: str | list[str],
+        provider: str | Provider | None = None,
+        **kwargs: Any,
+    ) -> EmbeddingResponse:
+        """Generate embeddings for one or more texts.
+
+        Args:
+            model: Embedding model identifier.
+            input: Single text string or list of strings to embed.
+            provider: Force a specific provider instead of auto-routing.
+            **kwargs: Provider pass-through (dimensions, encoding_format, etc.).
+
+        Returns:
+            EmbeddingResponse with ``embedding`` (single) or ``embeddings`` (batch).
+
+        Raises:
+            ModelNotSupportedError: Model not found in any configured provider.
+            ProviderError: Provider does not support embeddings or API call failed.
+        """
+        config, api_key = self._resolve_provider(model, provider)
+        return self._http.embed(config, api_key, input, model, **kwargs)
+
     # ------------------------------------------------------------------
     # Async public API
     # ------------------------------------------------------------------
@@ -382,6 +425,17 @@ class Chimeric:
             except (ProviderError, ConnectionError, TimeoutError):
                 continue
         return all_models
+
+    async def aembed(
+        self,
+        model: str,
+        input: str | list[str],
+        provider: str | Provider | None = None,
+        **kwargs: Any,
+    ) -> EmbeddingResponse:
+        """Async version of embed()."""
+        config, api_key = self._resolve_provider(model, provider)
+        return await self._http.aembed(config, api_key, input, model, **kwargs)
 
     # ------------------------------------------------------------------
     # Tool management

@@ -6,7 +6,7 @@ HttpClient uses ADAPTER_REGISTRY to look up the adapter for a given provider.
 from __future__ import annotations
 
 from .anthropic import AnthropicAdapter
-from .base import Adapter, StreamState
+from .base import Adapter, EmbeddingAdapter, StreamState
 from .cohere import CohereAdapter
 from .google import GoogleAdapter
 from .openai import OpenAIAdapter
@@ -16,6 +16,7 @@ __all__ = [
     "Adapter",
     "AnthropicAdapter",
     "CohereAdapter",
+    "EmbeddingAdapter",
     "GoogleAdapter",
     "OpenAIAdapter",
     "StreamState",

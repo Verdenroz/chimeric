@@ -376,10 +376,6 @@ def test_google_init_kwargs_propagation(api_keys):
         google_api_key=api_keys["google_api_key"],
         timeout=60,
         max_retries=3,
-        # Fake params that other providers might use
-        openai_fake_param="should_be_ignored",
-        anthropic_fake_param="should_be_ignored",
-        cohere_fake_setting=True,
     )
 
     cassette_path = get_cassette_path("google", "test_kwargs_propagation")

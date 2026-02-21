@@ -10,7 +10,14 @@ import pytest
 
 from chimeric import Chimeric
 from chimeric.exceptions import ModelNotSupportedError, ProviderNotFoundError, StructuredOutputError
-from chimeric.types import CompletionResponse, ModelSummary, StreamChunk, Usage
+from chimeric.types import (
+    CompletionResponse,
+    EmbeddingResponse,
+    EmbeddingUsage,
+    ModelSummary,
+    StreamChunk,
+    Usage,
+)
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -146,6 +153,39 @@ class TestInitialisation:
     def test_repr(self, chimeric):
         client, _ = chimeric
         assert "openai" in repr(client)
+
+    def test_max_retries_forwarded_to_http_client(self, mock_http):
+        """max_retries is passed through to HttpClient."""
+        with patch("chimeric.chimeric.HttpClient") as mock_cls:
+            mock_cls.return_value = mock_http
+            Chimeric(openai_api_key="sk-test", max_retries=5)
+        _, call_kwargs = mock_cls.call_args
+        assert call_kwargs["max_retries"] == 5
+
+    def test_default_headers_forwarded_to_http_client(self, mock_http):
+        """default_headers is passed through to HttpClient."""
+        headers = {"X-Org-ID": "my-org", "X-Trace-ID": "abc123"}
+        with patch("chimeric.chimeric.HttpClient") as mock_cls:
+            mock_cls.return_value = mock_http
+            Chimeric(openai_api_key="sk-test", default_headers=headers)
+        _, call_kwargs = mock_cls.call_args
+        assert call_kwargs["default_headers"] == headers
+
+    def test_default_max_retries_is_two(self, mock_http):
+        """Default max_retries is 2 (matches OpenAI/Anthropic/Groq SDK defaults)."""
+        with patch("chimeric.chimeric.HttpClient") as mock_cls:
+            mock_cls.return_value = mock_http
+            Chimeric(openai_api_key="sk-test")
+        _, call_kwargs = mock_cls.call_args
+        assert call_kwargs["max_retries"] == 2
+
+    def test_zero_max_retries_disables_retries(self, mock_http):
+        """max_retries=0 is accepted and forwarded (disables retries)."""
+        with patch("chimeric.chimeric.HttpClient") as mock_cls:
+            mock_cls.return_value = mock_http
+            Chimeric(openai_api_key="sk-test", max_retries=0)
+        _, call_kwargs = mock_cls.call_args
+        assert call_kwargs["max_retries"] == 0
 
 
 # ---------------------------------------------------------------------------
@@ -454,3 +494,50 @@ class TestListModels:
         mock.list_models.return_value = _make_models("gpt-4o", "gpt-4o-mini")
         models = client.list_models(provider="openai")
         assert all(m.provider == "openai" for m in models)
+
+
+# ---------------------------------------------------------------------------
+# Embedding tests
+# ---------------------------------------------------------------------------
+
+
+def _make_embedding_response(embedding: list[float] | None = None) -> EmbeddingResponse:
+    return EmbeddingResponse(
+        embedding=embedding or [0.1, 0.2, 0.3],
+        model="text-embedding-3-small",
+        usage=EmbeddingUsage(prompt_tokens=5, total_tokens=5),
+    )
+
+
+class TestEmbed:
+    def test_embed_routes_to_http(self, chimeric):
+        client, mock = chimeric
+        mock.embed.return_value = _make_embedding_response()
+        result = client.embed("gpt-4o", "hello")
+        assert isinstance(result, EmbeddingResponse)
+        assert result.embedding == [0.1, 0.2, 0.3]
+        mock.embed.assert_called_once()
+
+    def test_embed_forwards_kwargs(self, chimeric):
+        client, mock = chimeric
+        mock.embed.return_value = _make_embedding_response()
+        client.embed("gpt-4o", "hello", dimensions=512)
+        call_kwargs = mock.embed.call_args
+        assert call_kwargs.kwargs.get("dimensions") == 512
+
+    def test_embed_explicit_provider(self, chimeric):
+        client, mock = chimeric
+        mock.embed.return_value = _make_embedding_response()
+        client.embed("text-embedding-3-small", "hello", provider="openai")
+        mock.embed.assert_called_once()
+
+    async def test_aembed_routes_to_http(self, chimeric):
+        client, mock = chimeric
+
+        async def _coro(*args: Any, **kwargs: Any) -> EmbeddingResponse:
+            return _make_embedding_response()
+
+        mock.aembed.side_effect = _coro
+        result = await client.aembed("gpt-4o", "hello")
+        assert isinstance(result, EmbeddingResponse)
+        assert result.embedding == [0.1, 0.2, 0.3]

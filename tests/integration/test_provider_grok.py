@@ -234,11 +234,6 @@ def test_grok_init_kwargs_propagation(api_keys):
         grok_api_key=api_keys["grok_api_key"],
         timeout=60,
         max_retries=3,
-        # Fake params that other providers might use
-        openai_fake_param="should_be_ignored",
-        anthropic_fake_param="should_be_ignored",
-        google_vertex_project="fake_project",
-        cohere_fake_setting=True,
     )
 
     # Test with generation kwargs

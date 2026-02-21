@@ -6,7 +6,7 @@ import pytest
 
 from chimeric.adapters.base import StreamState
 from chimeric.adapters.openai import OpenAIAdapter
-from chimeric.types import Message, Tool, ToolCall, ToolParameters
+from chimeric.types import EmbeddingResponse, Message, Tool, ToolCall, ToolParameters
 
 
 @pytest.fixture
@@ -241,3 +241,88 @@ class TestParseModelsResponse:
 
     def test_empty_response(self, adapter):
         assert adapter.parse_models_response({}) == []
+
+
+# ---------------------------------------------------------------------------
+# Embedding tests
+# ---------------------------------------------------------------------------
+
+
+class TestBuildEmbeddingRequest:
+    def test_single_input(self, adapter):
+        body = adapter.build_embedding_request("hello", "text-embedding-3-small")
+        assert body == {"input": "hello", "model": "text-embedding-3-small"}
+
+    def test_batch_input(self, adapter):
+        body = adapter.build_embedding_request(["a", "b"], "text-embedding-3-small")
+        assert body["input"] == ["a", "b"]
+        assert body["model"] == "text-embedding-3-small"
+
+    def test_kwargs_passed_through(self, adapter):
+        body = adapter.build_embedding_request(
+            "hello", "model", dimensions=512, encoding_format="float"
+        )
+        assert body["dimensions"] == 512
+        assert body["encoding_format"] == "float"
+
+
+class TestParseEmbeddingResponse:
+    def test_single_embedding(self, adapter):
+        data = {
+            "object": "list",
+            "data": [{"object": "embedding", "embedding": [0.1, 0.2, 0.3], "index": 0}],
+            "model": "text-embedding-3-small",
+            "usage": {"prompt_tokens": 5, "total_tokens": 5},
+        }
+        result = adapter.parse_embedding_response(data, "text-embedding-3-small", batch=False)
+        assert isinstance(result, EmbeddingResponse)
+        assert result.embedding == [0.1, 0.2, 0.3]
+        assert result.embeddings == []
+        assert result.model == "text-embedding-3-small"
+        assert result.usage.prompt_tokens == 5
+        assert result.usage.total_tokens == 5
+
+    def test_batch_embeddings(self, adapter):
+        data = {
+            "data": [
+                {"embedding": [0.1, 0.2], "index": 0},
+                {"embedding": [0.3, 0.4], "index": 1},
+            ],
+            "model": "text-embedding-3-small",
+            "usage": {"prompt_tokens": 10, "total_tokens": 10},
+        }
+        result = adapter.parse_embedding_response(data, "text-embedding-3-small", batch=True)
+        assert result.embedding is None
+        assert len(result.embeddings) == 2
+        assert result.embeddings[0] == [0.1, 0.2]
+        assert result.embeddings[1] == [0.3, 0.4]
+
+    def test_batch_sorts_by_index(self, adapter):
+        data = {
+            "data": [
+                {"embedding": [0.3, 0.4], "index": 1},
+                {"embedding": [0.1, 0.2], "index": 0},
+            ],
+            "model": "model",
+            "usage": {"prompt_tokens": 5, "total_tokens": 5},
+        }
+        result = adapter.parse_embedding_response(data, "model", batch=True)
+        assert result.embeddings[0] == [0.1, 0.2]
+        assert result.embeddings[1] == [0.3, 0.4]
+
+    def test_single_item_list_uses_batch_flag(self, adapter):
+        """When batch=True but only one embedding returned, populate embeddings not embedding."""
+        data = {
+            "data": [{"embedding": [0.1, 0.2], "index": 0}],
+            "model": "model",
+            "usage": {},
+        }
+        result = adapter.parse_embedding_response(data, "model", batch=True)
+        assert result.embedding is None
+        assert result.embeddings == [[0.1, 0.2]]
+
+    def test_missing_usage_defaults(self, adapter):
+        data = {"data": [{"embedding": [0.5], "index": 0}], "model": "model"}
+        result = adapter.parse_embedding_response(data, "model", batch=False)
+        assert result.usage.prompt_tokens == 0
+        assert result.usage.total_tokens == 0

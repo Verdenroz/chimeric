@@ -68,6 +68,21 @@ for chunk in stream:
     print(chunk.delta or "", end="", flush=True)
 ```
 
+**Embeddings:**
+
+```python
+# Single text
+result = client.embed(model="text-embedding-3-small", input="Python developer")
+print(len(result.embedding))   # e.g. 1536
+
+# Batch
+result = client.embed(
+    model="text-embedding-3-small",
+    input=["Python developer", "Go engineer", "React developer"],
+)
+print(len(result.embeddings))  # 3
+```
+
 **Function Calling:**
 
 ```python
@@ -112,7 +127,6 @@ asyncio.run(main())
 
 ## Roadmap
 
-- **Embeddings Support**: Unified interface for text embeddings across providers
 - **Multi-Modal Support**: Enhanced support for images and audio
 - **Cost Tracking**: Built-in usage and cost monitoring
 - **Advanced Routing**: Load balancing and failover between providers

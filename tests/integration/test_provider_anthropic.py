@@ -40,7 +40,7 @@ def test_anthropic_sync_generation(api_keys):
 
     with get_vcr().use_cassette(cassette_path):
         response = chimeric.generate(
-            model="claude-3-5-haiku-20241022",
+            model="claude-haiku-4-5-20251001",
             messages=[{"role": "user", "content": "Hello, respond briefly."}],
             stream=False,
             max_tokens=20,
@@ -62,7 +62,7 @@ async def test_anthropic_async_generation(api_keys):
 
     with get_vcr().use_cassette(cassette_path):
         response = await chimeric.agenerate(
-            model="claude-3-5-haiku-20241022",
+            model="claude-haiku-4-5-20251001",
             messages=[{"role": "user", "content": "Hello, respond briefly."}],
             stream=False,
             max_tokens=20,
@@ -125,7 +125,7 @@ def test_anthropic_sync_tools_non_streaming(api_keys):
             return "Why did the chicken cross the road? To get to the other side!"
 
         response = chimeric.generate(
-            model="claude-3-5-haiku-20241022",
+            model="claude-haiku-4-5-20251001",
             messages=[{"role": "user", "content": "What is 2+2-4-10+50? Tell me a joke."}],
             stream=False,
         )
@@ -195,7 +195,7 @@ def test_anthropic_sync_tools_streaming(api_keys):
             return "Why did the chicken cross the road? To get to the other side!"
 
         response = chimeric.generate(
-            model="claude-3-5-haiku-20241022",
+            model="claude-haiku-4-5-20251001",
             messages=[{"role": "user", "content": "What is 2+2-4-10+50? Tell me a joke."}],
             stream=True,
         )
@@ -270,7 +270,7 @@ async def test_anthropic_async_tools_streaming(api_keys):
             return "Why did the chicken cross the road? To get to the other side!"
 
         response = await chimeric.agenerate(
-            model="claude-3-5-haiku-20241022",
+            model="claude-haiku-4-5-20251001",
             messages=[{"role": "user", "content": "What is 2+2-4-10+50? Tell me a joke."}],
             stream=True,
         )
@@ -346,7 +346,7 @@ async def test_anthropic_async_tools_non_streaming(api_keys):
             return "Why did the chicken cross the road? To get to the other side!"
 
         response = await chimeric.agenerate(
-            model="claude-3-5-haiku-20241022",
+            model="claude-haiku-4-5-20251001",
             messages=[{"role": "user", "content": "What is 2+2-4-10+50? Tell me a joke."}],
             stream=False,
         )
@@ -365,19 +365,14 @@ async def test_anthropic_async_tools_non_streaming(api_keys):
 
 @pytest.mark.anthropic
 def test_anthropic_init_kwargs_propagation(api_keys):
-    """Test Anthropic kwargs propagation through the stack with fake cross-provider params."""
+    """Test that timeout and max_retries are accepted at initialisation."""
     if "anthropic_api_key" not in api_keys:
         pytest.skip("Anthropic API key not found")
 
-    # Test with custom initialization kwargs including fake params from other providers
     chimeric = Chimeric(
         anthropic_api_key=api_keys["anthropic_api_key"],
         timeout=60,
         max_retries=3,
-        # Fake params that other providers might use
-        openai_fake_param="should_be_ignored",
-        google_vertex_project="fake_project",
-        cohere_fake_setting=True,
     )
 
     cassette_path = get_cassette_path("anthropic", "test_kwargs_propagation")
@@ -385,7 +380,7 @@ def test_anthropic_init_kwargs_propagation(api_keys):
     with get_vcr().use_cassette(cassette_path):
         # Test with generation kwargs
         response = chimeric.generate(
-            model="claude-3-5-haiku-20241022",
+            model="claude-haiku-4-5-20251001",
             messages=[{"role": "user", "content": "Hello, respond briefly."}],
             temperature=0.1,
             max_tokens=20,
@@ -409,7 +404,7 @@ def test_anthropic_invalid_generate_kwargs_raises_provider_error(api_keys):
         # Test with an invalid parameter that doesn't exist in Anthropic API
         with pytest.raises(ProviderError) as exc_info:
             chimeric.generate(
-                model="claude-3-5-haiku-20241022",
+                model="claude-haiku-4-5-20251001",
                 messages=[{"role": "user", "content": "Hello"}],
                 invalid_anthropic_parameter="this_should_fail",
                 stream=False,

@@ -71,6 +71,7 @@ nav:
     - Response Types: usage/responses.md
     - Streaming: usage/streaming.md
     - Tools: usage/tools.md
+    - Embeddings: usage/embeddings.md
   - Contributing: contributing.md
   - Changelog: https://github.com/Verdenroz/chimeric/releases
 

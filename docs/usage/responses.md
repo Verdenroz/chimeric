@@ -62,22 +62,60 @@ summarize("gemini-1.5-pro", "...")
 
 Provider-specific details that don't map to the standard fields are available in `response.metadata`.
 
+## EmbeddingResponse
+
+`embed()` and `aembed()` return an `EmbeddingResponse`:
+
+```python
+result = client.embed(model="text-embedding-3-small", input="Hello")
+
+print(result.embedding)           # list[float] — single vector
+print(result.model)               # str | None — model used
+print(result.usage.prompt_tokens) # int
+print(result.usage.total_tokens)  # int
+```
+
+For batch input the vectors arrive in `embeddings` and `embedding` is `None`:
+
+```python
+result = client.embed(
+    model="text-embedding-3-small",
+    input=["first text", "second text"],
+)
+
+print(result.embedding)   # None
+print(result.embeddings)  # list[list[float]] — one vector per input
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `embedding` | `list[float] \| None` | Single vector; `None` for batch |
+| `embeddings` | `list[list[float]]` | All vectors for batch; empty for single |
+| `model` | `str \| None` | Model that produced the response |
+| `usage` | `EmbeddingUsage \| None` | `prompt_tokens` and `total_tokens` |
+
 ## Async Support
 
-`agenerate()` is the async counterpart with the same return types:
+`agenerate()` and `aembed()` are the async counterparts with the same return types:
 
 ```python
 import asyncio
 
+
 async def main():
-    # Non-streaming
+    # Non-streaming completion
     response = await client.agenerate(model="gpt-4o", messages="Hello")
     print(response.content)
 
-    # Streaming
+    # Streaming completion
     stream = await client.agenerate(model="gpt-4o", messages="Tell a story", stream=True)
     async for chunk in stream:
         print(chunk.delta or "", end="", flush=True)
+
+    # Embedding
+    result = await client.aembed(model="text-embedding-3-small", input="Hello")
+    print(len(result.embedding))
+
 
 asyncio.run(main())
 ```
