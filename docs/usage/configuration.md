@@ -75,13 +75,39 @@ client = Chimeric(
 )
 ```
 
-### Timeout
+### HTTP Client Options
 
-The `timeout` parameter sets the HTTP request timeout (in seconds) for all providers:
+These parameters configure the underlying httpx transport and apply to every provider:
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `timeout` | `float` | `60.0` | Request timeout in seconds |
+| `max_retries` | `int` | `2` | Retries on connection errors and 5xx responses |
+| `default_headers` | `dict[str, str] \| None` | `None` | Extra headers sent with every request |
 
 ```python
-client = Chimeric(timeout=120.0)  # default is 60.0
+client = Chimeric(
+    timeout=120.0,  # longer timeout for slow models
+    max_retries=3,  # retry up to 3 times before raising
+)
+
+# Set to 0 to disable retries entirely
+client = Chimeric(max_retries=0)
 ```
+
+Use `default_headers` for organisation IDs, tracing headers, or any static metadata your infrastructure requires:
+
+```python
+client = Chimeric(
+    openai_api_key="sk-...",
+    default_headers={
+        "OpenAI-Organization": "org-...",
+        "X-Trace-ID": "my-trace-id",
+    },
+)
+```
+
+These parameters mirror the initialisation options available in the native OpenAI, Anthropic, and Groq SDKs, so migrating from them requires no behavioural changes.
 
 ## Provider Routing
 

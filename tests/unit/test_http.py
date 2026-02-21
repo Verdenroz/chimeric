@@ -40,6 +40,57 @@ def _sse_response(lines: list[str], status: int = 200) -> httpx.Response:
 # ---------------------------------------------------------------------------
 
 
+class TestHttpClientInit:
+    def test_default_max_retries_is_two(self):
+        """Default max_retries matches the SDK convention (OpenAI/Anthropic/Groq all default to 2)."""
+        client = HttpClient()
+        assert client._max_retries == 2
+
+    def test_custom_max_retries_stored(self):
+        client = HttpClient(max_retries=5)
+        assert client._max_retries == 5
+
+    def test_zero_max_retries_stored(self):
+        client = HttpClient(max_retries=0)
+        assert client._max_retries == 0
+
+    def test_default_headers_none_becomes_empty_dict(self):
+        client = HttpClient()
+        assert client._default_headers == {}
+
+    def test_custom_default_headers_stored(self):
+        headers = {"X-Org-ID": "my-org", "X-Trace-ID": "abc"}
+        client = HttpClient(default_headers=headers)
+        assert client._default_headers == headers
+
+    def test_sync_client_uses_transport_retries(self):
+        """_sync() creates an httpx.Client with an HTTPTransport wired to max_retries."""
+        client = HttpClient(max_retries=3)
+        sync = client._sync()
+        assert isinstance(sync, httpx.Client)
+        assert sync._transport._pool._retries == 3
+
+    def test_async_client_uses_transport_retries(self):
+        """_async() creates an httpx.AsyncClient with an AsyncHTTPTransport wired to max_retries."""
+        client = HttpClient(max_retries=4)
+        async_client = client._async()
+        assert isinstance(async_client, httpx.AsyncClient)
+        assert async_client._transport._pool._retries == 4
+
+    def test_sync_client_sends_default_headers(self):
+        """Default headers are merged into every request via the httpx client."""
+        headers = {"X-Custom": "value"}
+        client = HttpClient(default_headers=headers)
+        sync = client._sync()
+        assert sync.headers.get("x-custom") == "value"
+
+    def test_async_client_sends_default_headers(self):
+        headers = {"X-Custom": "value"}
+        client = HttpClient(default_headers=headers)
+        async_client = client._async()
+        assert async_client.headers.get("x-custom") == "value"
+
+
 class TestBuildHeaders:
     def test_bearer_auth(self):
         config = PROVIDER_REGISTRY["openai"]

@@ -365,19 +365,14 @@ async def test_anthropic_async_tools_non_streaming(api_keys):
 
 @pytest.mark.anthropic
 def test_anthropic_init_kwargs_propagation(api_keys):
-    """Test Anthropic kwargs propagation through the stack with fake cross-provider params."""
+    """Test that timeout and max_retries are accepted at initialisation."""
     if "anthropic_api_key" not in api_keys:
         pytest.skip("Anthropic API key not found")
 
-    # Test with custom initialization kwargs including fake params from other providers
     chimeric = Chimeric(
         anthropic_api_key=api_keys["anthropic_api_key"],
         timeout=60,
         max_retries=3,
-        # Fake params that other providers might use
-        openai_fake_param="should_be_ignored",
-        google_vertex_project="fake_project",
-        cohere_fake_setting=True,
     )
 
     cassette_path = get_cassette_path("anthropic", "test_kwargs_propagation")

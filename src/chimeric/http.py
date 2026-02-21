@@ -48,8 +48,15 @@ class HttpClient:
     both sync and async transports.
     """
 
-    def __init__(self, timeout: float = 60.0) -> None:
+    def __init__(
+        self,
+        timeout: float = 60.0,
+        max_retries: int = 2,
+        default_headers: dict[str, str] | None = None,
+    ) -> None:
         self._timeout = timeout
+        self._max_retries = max_retries
+        self._default_headers: dict[str, str] = default_headers or {}
         # Lazy-initialised; created on first use to avoid overhead when unused
         self._sync_client: httpx.Client | None = None
         self._async_client: httpx.AsyncClient | None = None
@@ -316,12 +323,20 @@ class HttpClient:
 
     def _sync(self) -> httpx.Client:
         if self._sync_client is None:
-            self._sync_client = httpx.Client(timeout=self._timeout)
+            self._sync_client = httpx.Client(
+                timeout=self._timeout,
+                transport=httpx.HTTPTransport(retries=self._max_retries),
+                headers=self._default_headers,
+            )
         return self._sync_client
 
     def _async(self) -> httpx.AsyncClient:
         if self._async_client is None:
-            self._async_client = httpx.AsyncClient(timeout=self._timeout)
+            self._async_client = httpx.AsyncClient(
+                timeout=self._timeout,
+                transport=httpx.AsyncHTTPTransport(retries=self._max_retries),
+                headers=self._default_headers,
+            )
         return self._async_client
 
     def close(self) -> None:

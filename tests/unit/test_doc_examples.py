@@ -295,7 +295,7 @@ class TestConfigurationExamples:
         with patch("chimeric.chimeric.HttpClient") as mock_cls:
             mock_cls.return_value.list_models.return_value = []
             Chimeric(timeout=120.0)
-        mock_cls.assert_called_once_with(timeout=120.0)
+        mock_cls.assert_called_once_with(timeout=120.0, max_retries=2, default_headers=None)
 
     def test_explicit_provider_string(self) -> None:
         """provider='groq' string form is accepted."""
@@ -1004,7 +1004,7 @@ class TestEmbeddingExamples:
         import math
 
         def cosine_similarity(a: list[float], b: list[float]) -> float:
-            dot = sum(x * y for x, y in zip(a, b))
+            dot = sum(x * y for x, y in zip(a, b, strict=False))
             norm_a = math.sqrt(sum(x * x for x in a))
             norm_b = math.sqrt(sum(x * x for x in b))
             return dot / (norm_a * norm_b) if norm_a and norm_b else 0.0

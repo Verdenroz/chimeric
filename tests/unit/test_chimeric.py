@@ -154,6 +154,39 @@ class TestInitialisation:
         client, _ = chimeric
         assert "openai" in repr(client)
 
+    def test_max_retries_forwarded_to_http_client(self, mock_http):
+        """max_retries is passed through to HttpClient."""
+        with patch("chimeric.chimeric.HttpClient") as mock_cls:
+            mock_cls.return_value = mock_http
+            Chimeric(openai_api_key="sk-test", max_retries=5)
+        _, call_kwargs = mock_cls.call_args
+        assert call_kwargs["max_retries"] == 5
+
+    def test_default_headers_forwarded_to_http_client(self, mock_http):
+        """default_headers is passed through to HttpClient."""
+        headers = {"X-Org-ID": "my-org", "X-Trace-ID": "abc123"}
+        with patch("chimeric.chimeric.HttpClient") as mock_cls:
+            mock_cls.return_value = mock_http
+            Chimeric(openai_api_key="sk-test", default_headers=headers)
+        _, call_kwargs = mock_cls.call_args
+        assert call_kwargs["default_headers"] == headers
+
+    def test_default_max_retries_is_two(self, mock_http):
+        """Default max_retries is 2 (matches OpenAI/Anthropic/Groq SDK defaults)."""
+        with patch("chimeric.chimeric.HttpClient") as mock_cls:
+            mock_cls.return_value = mock_http
+            Chimeric(openai_api_key="sk-test")
+        _, call_kwargs = mock_cls.call_args
+        assert call_kwargs["max_retries"] == 2
+
+    def test_zero_max_retries_disables_retries(self, mock_http):
+        """max_retries=0 is accepted and forwarded (disables retries)."""
+        with patch("chimeric.chimeric.HttpClient") as mock_cls:
+            mock_cls.return_value = mock_http
+            Chimeric(openai_api_key="sk-test", max_retries=0)
+        _, call_kwargs = mock_cls.call_args
+        assert call_kwargs["max_retries"] == 0
+
 
 # ---------------------------------------------------------------------------
 # Provider selection / routing

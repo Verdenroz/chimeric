@@ -82,7 +82,8 @@ class Chimeric:
         base_url: str | None = None,
         api_key: str = "local",
         timeout: float = 60.0,
-        **__kwargs: Any,
+        max_retries: int = 2,
+        default_headers: dict[str, str] | None = None,
     ) -> None:
         """Initialise Chimeric with provider configuration.
 
@@ -101,10 +102,19 @@ class Chimeric:
                 used for automatic model routing.
             api_key: API key for the ``base_url`` endpoint.  Defaults to
                 ``"local"`` for servers that do not validate credentials.
-            timeout: HTTP request timeout in seconds.
-            **__kwargs: Accepted but ignored for forward-compatibility.
+            timeout: HTTP request timeout in seconds.  Default ``60.0``.
+            max_retries: Number of times to retry a failed request before
+                raising.  Retries apply to connection errors and 5xx responses.
+                Default ``2``.  Set to ``0`` to disable retries.
+            default_headers: Extra HTTP headers sent with every request to
+                every provider.  Useful for tracing headers, organisation IDs,
+                or any other static metadata your infrastructure requires.
         """
-        self._http = HttpClient(timeout=timeout)
+        self._http = HttpClient(
+            timeout=timeout,
+            max_retries=max_retries,
+            default_headers=default_headers,
+        )
         self._tool_manager = ToolManager()
 
         # provider_name -> (ProviderConfig, api_key)

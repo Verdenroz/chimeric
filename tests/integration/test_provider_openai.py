@@ -377,10 +377,6 @@ def test_openai_init_kwargs_propagation(api_keys):
         openai_api_key=api_keys["openai_api_key"],
         timeout=60,
         max_retries=3,
-        # Fake params that other providers might use
-        anthropic_fake_param="should_be_ignored",
-        google_vertex_project="fake_project",
-        cohere_fake_setting=True,
     )
 
     cassette_path = get_cassette_path("openai", "test_kwargs_propagation")
