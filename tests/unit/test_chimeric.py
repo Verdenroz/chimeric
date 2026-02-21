@@ -10,7 +10,14 @@ import pytest
 
 from chimeric import Chimeric
 from chimeric.exceptions import ModelNotSupportedError, ProviderNotFoundError, StructuredOutputError
-from chimeric.types import CompletionResponse, ModelSummary, StreamChunk, Usage
+from chimeric.types import (
+    CompletionResponse,
+    EmbeddingResponse,
+    EmbeddingUsage,
+    ModelSummary,
+    StreamChunk,
+    Usage,
+)
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -454,3 +461,50 @@ class TestListModels:
         mock.list_models.return_value = _make_models("gpt-4o", "gpt-4o-mini")
         models = client.list_models(provider="openai")
         assert all(m.provider == "openai" for m in models)
+
+
+# ---------------------------------------------------------------------------
+# Embedding tests
+# ---------------------------------------------------------------------------
+
+
+def _make_embedding_response(embedding: list[float] | None = None) -> EmbeddingResponse:
+    return EmbeddingResponse(
+        embedding=embedding or [0.1, 0.2, 0.3],
+        model="text-embedding-3-small",
+        usage=EmbeddingUsage(prompt_tokens=5, total_tokens=5),
+    )
+
+
+class TestEmbed:
+    def test_embed_routes_to_http(self, chimeric):
+        client, mock = chimeric
+        mock.embed.return_value = _make_embedding_response()
+        result = client.embed("gpt-4o", "hello")
+        assert isinstance(result, EmbeddingResponse)
+        assert result.embedding == [0.1, 0.2, 0.3]
+        mock.embed.assert_called_once()
+
+    def test_embed_forwards_kwargs(self, chimeric):
+        client, mock = chimeric
+        mock.embed.return_value = _make_embedding_response()
+        client.embed("gpt-4o", "hello", dimensions=512)
+        call_kwargs = mock.embed.call_args
+        assert call_kwargs.kwargs.get("dimensions") == 512
+
+    def test_embed_explicit_provider(self, chimeric):
+        client, mock = chimeric
+        mock.embed.return_value = _make_embedding_response()
+        client.embed("text-embedding-3-small", "hello", provider="openai")
+        mock.embed.assert_called_once()
+
+    async def test_aembed_routes_to_http(self, chimeric):
+        client, mock = chimeric
+
+        async def _coro(*args: Any, **kwargs: Any) -> EmbeddingResponse:
+            return _make_embedding_response()
+
+        mock.aembed.side_effect = _coro
+        result = await client.aembed("gpt-4o", "hello")
+        assert isinstance(result, EmbeddingResponse)
+        assert result.embedding == [0.1, 0.2, 0.3]

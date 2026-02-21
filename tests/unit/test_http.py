@@ -6,10 +6,10 @@ import json
 import httpx
 import pytest
 
-from chimeric.config import PROVIDER_REGISTRY
+from chimeric.config import PROVIDER_REGISTRY, ProviderConfig
 from chimeric.exceptions import AuthenticationError, ProviderError, RateLimitError
 from chimeric.http import HttpClient, _build_headers, _build_url, _raise_for_status
-from chimeric.types import Message, Tool
+from chimeric.types import EmbeddingResponse, Message, Tool
 
 # ---------------------------------------------------------------------------
 # Helpers to build mock responses
@@ -278,3 +278,104 @@ class TestHttpClientAsync:
         config = PROVIDER_REGISTRY["openai"]
         models = await client.alist_models(config, "sk-test")
         assert len(models) == 1
+
+
+# ---------------------------------------------------------------------------
+# Embedding tests
+# ---------------------------------------------------------------------------
+
+_EMBEDDING_RESPONSE = {
+    "object": "list",
+    "data": [{"object": "embedding", "embedding": [0.1, 0.2, 0.3], "index": 0}],
+    "model": "text-embedding-3-small",
+    "usage": {"prompt_tokens": 5, "total_tokens": 5},
+}
+
+_BATCH_EMBEDDING_RESPONSE = {
+    "object": "list",
+    "data": [
+        {"object": "embedding", "embedding": [0.1, 0.2], "index": 0},
+        {"object": "embedding", "embedding": [0.3, 0.4], "index": 1},
+    ],
+    "model": "text-embedding-3-small",
+    "usage": {"prompt_tokens": 10, "total_tokens": 10},
+}
+
+
+class TestHttpClientEmbed:
+    def test_embed_single(self):
+        transport = _make_transport(_json_response(_EMBEDDING_RESPONSE))
+        client = HttpClient()
+        client._sync_client = httpx.Client(transport=transport)
+
+        config = PROVIDER_REGISTRY["openai"]
+        result = client.embed(config, "sk-test", "hello", "text-embedding-3-small")
+
+        assert isinstance(result, EmbeddingResponse)
+        assert result.embedding == [0.1, 0.2, 0.3]
+        assert result.embeddings == []
+        assert result.model == "text-embedding-3-small"
+
+    def test_embed_batch(self):
+        transport = _make_transport(_json_response(_BATCH_EMBEDDING_RESPONSE))
+        client = HttpClient()
+        client._sync_client = httpx.Client(transport=transport)
+
+        config = PROVIDER_REGISTRY["openai"]
+        result = client.embed(config, "sk-test", ["text1", "text2"], "text-embedding-3-small")
+
+        assert result.embedding is None
+        assert len(result.embeddings) == 2
+
+    def test_embed_unsupported_provider(self):
+        """Providers whose adapter doesn't implement EmbeddingAdapter raise ProviderError."""
+        client = HttpClient()
+        config = PROVIDER_REGISTRY["anthropic"]
+        with pytest.raises(ProviderError, match="does not support embeddings"):
+            client.embed(config, "sk-test", "hello", "model")
+
+    def test_embed_no_embedding_path(self):
+        """Providers with embedding_path=None raise ProviderError."""
+        config = ProviderConfig(
+            name="test",
+            base_url="https://example.com/v1",
+            adapter="openai",
+            api_key_env_vars=("KEY",),
+            embedding_path=None,
+        )
+        client = HttpClient()
+        with pytest.raises(ProviderError, match="no embedding endpoint"):
+            client.embed(config, "key", "hello", "model")
+
+    def test_embed_http_401(self):
+        transport = _make_transport(_json_response({"error": {"message": "Bad key"}}, 401))
+        client = HttpClient()
+        client._sync_client = httpx.Client(transport=transport)
+
+        config = PROVIDER_REGISTRY["openai"]
+        with pytest.raises(AuthenticationError):
+            client.embed(config, "bad-key", "hello", "model")
+
+
+class TestHttpClientAembed:
+    async def test_aembed_single(self):
+        transport = _make_transport(_json_response(_EMBEDDING_RESPONSE))
+        client = HttpClient()
+        client._async_client = httpx.AsyncClient(transport=transport)
+
+        config = PROVIDER_REGISTRY["openai"]
+        result = await client.aembed(config, "sk-test", "hello", "text-embedding-3-small")
+
+        assert isinstance(result, EmbeddingResponse)
+        assert result.embedding == [0.1, 0.2, 0.3]
+
+    async def test_aembed_batch(self):
+        transport = _make_transport(_json_response(_BATCH_EMBEDDING_RESPONSE))
+        client = HttpClient()
+        client._async_client = httpx.AsyncClient(transport=transport)
+
+        config = PROVIDER_REGISTRY["openai"]
+        result = await client.aembed(config, "sk-test", ["a", "b"], "text-embedding-3-small")
+
+        assert result.embedding is None
+        assert len(result.embeddings) == 2
